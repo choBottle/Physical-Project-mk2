@@ -54,7 +54,7 @@
 | `MK2_WS_TOKEN` | **없음** | 뷰어 토큰. **loopback 바인딩이면 없어도 연다**(개발·테스트). **loopback 이 아닌데 비어 있으면 기동 시점에 이름을 대며 죽는다**(`default_writer()` 규율 — 조용히 폴백하지 않는다) |
 | `MK2_MEDIA_INGEST_PORT` / `MK2_MEDIA_INGEST_HOST` | `8766` / `127.0.0.1` | 엣지 입구(`/ingest`). **포트 `0`이면 열지 않는다**(단계 8 되돌림이 이 한 줄). 호스트는 단일 주소(단계 7에서 `<서버 tailscale IP>`) |
 | `MK2_EDGE_TOKEN` | **없음** | 엣지 토큰(`MK2_WS_TOKEN`과 같은 규칙) |
-| `MK2_MEDIA_INGEST_URL` | `ws://127.0.0.1:8766/ingest`(`MK2_EDGE_TOKEN`이 있으면 `?token=…`) | 송신 fixture·tests 가 붙을 주소(`source_id`는 호출부가 붙인다) |
+| `MK2_MEDIA_INGEST_URL` | `ws://127.0.0.1:8766/ingest`(`MK2_EDGE_TOKEN`이 있으면 `?token=…`) | 송신 fixture·tests 가 붙을 주소(`camera_id`는 호출부가 붙인다) |
 | `MK2_MEDIA_DROP_WINDOW_MS` | `150` | `T_drop`의 시간 기준(× 배출률) |
 | `MK2_MEDIA_BUFFER_MAX_BYTES` | `1048576` | `T_drop` 상한(1MB) |
 | `MK2_MEDIA_MAX_FRAME_BYTES` | `8388608` | `websockets` `max_size`(엣지 입구 수신 상한). 기본값 1MB 에 맡기면 큰 AU·JPEG 이 close 1009 로 엣지를 끊는다 — 넉넉히 올리고 **상한 판정은 우리 코드에서** 프레임만 버린다 |
@@ -238,9 +238,10 @@ def ws_url() -> str:
     return _with_token("ws://127.0.0.1:{}/state".format(ws_port()), ws_token())
 
 
-def ws_media_url(source_id: str) -> str:
-    """뷰어 영상 소켓 주소 — `/media?source_id=…(&token=…)`. 소켓 하나당 소스 하나."""
-    return _with_token("ws://127.0.0.1:{}/media?source_id={}".format(ws_port(), source_id), ws_token())
+def ws_media_url(camera_id: str) -> str:
+    """뷰어 영상 소켓 주소 — `/media?camera_id=…(&token=…)`. 소켓 하나당 카메라 하나.
+    (2026-10-13 통합데이터규약 BE-07 — 쿼리 이름 source_id → camera_id. 서버는 과도기 동안 옛 이름도 받는다.)"""
+    return _with_token("ws://127.0.0.1:{}/media?camera_id={}".format(ws_port(), camera_id), ws_token())
 
 
 # ── 미디어 경로 — 엣지 입구·drop-old (Phase 4) ─────────────────────────────
@@ -260,11 +261,11 @@ def edge_token() -> str:
     return os.environ.get("MK2_EDGE_TOKEN", "").strip()
 
 
-def media_ingest_url(source_id: Optional[str] = None) -> str:
-    """송신 fixture·tests 가 붙을 엣지 입구 주소. `source_id`를 주면 쿼리에 붙인다."""
+def media_ingest_url(camera_id: Optional[str] = None) -> str:
+    """송신 fixture·tests 가 붙을 엣지 입구 주소. `camera_id`를 주면 쿼리에 붙인다(BE-07 — 옛 쿼리 이름 source_id)."""
     base = os.environ.get("MK2_MEDIA_INGEST_URL") or "ws://127.0.0.1:{}/ingest".format(media_ingest_port() or 8766)
-    if source_id:
-        base = "{}{}source_id={}".format(base, "&" if "?" in base else "?", source_id)
+    if camera_id:
+        base = "{}{}camera_id={}".format(base, "&" if "?" in base else "?", camera_id)
     return _with_token(base, edge_token())
 
 

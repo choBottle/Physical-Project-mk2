@@ -8,6 +8,9 @@
 | 근거 | Phase 1(얇은 파이프라인 관통) 구현·검증 결과, `contracts/common/message.schema.json` · (§8) Phase 4 미디어 경로 구현·검증 + HW 브랜치 0914 대조 + `media-header.schema.json` |
 | 대상 질문 | `docs/BACKEND_AGENDA.md`(HW 브랜치) **§1 스키마 필드 확정**, **§2 토픽 도메인 체계**, **§10-3 traceparent**(§7), **§8 · §10-4~§10-7 · #14~#18**(§8) |
 
+> 📌 **[2026-10-13 통합데이터규약 v2 — BE-13]** 데이터 이름·형식은 **통합데이터규약 최신 판(데이터 규약 v2, `schema_version: "2.0"`)이 기준이다. 이 문서의 해당 절은 이력으로 남긴다.**
+> 해당 절: **§1**(공통 헤더 — v2 에서 `timestamp` 는 **데이터 시각**이고 보낸 순간은 선택 칸 `sent_at`) · **§8**(미디어 헤더 `frame_ref{source_id, capture_timestamp, sequence_id}` · 「엣지가 한 번 부여」(원칙 10) — v2 는 평평한 프레임 헤더 `camera_id` · `sequence_id` · `timestamp`(규약 §3-5), 입구 쿼리 `/ingest?camera_id=…`, 번호·시각은 **프레임을 처음 손에 넣은 기기**가 붙인다). 서버는 과도기 동안 옛 헤더·옛 쿼리 이름도 받는다(BE-07) — HW 엣지는 EDGEHW-01 에서 바꾼다.
+
 이 문서는 두 안건에 대한 **회신**이다. §1은 HW 코드 변경 4줄을 요청하고, §2는 대부분 정보성
 (HW는 MQTT만 발행하므로 코드 변경 없음)이다.
 

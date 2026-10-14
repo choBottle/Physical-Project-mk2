@@ -46,7 +46,7 @@
     },
     "frame_ref": {
       "$ref": "frame-reference.schema.json",
-      "description": "이 객체의 근거가 된 원본 관측 프레임 참조. 프레임 참조와 객체 식별자는 서로 다른 것이다 — frame_ref는 낱장 관측(그 순간 무엇을 찍었나)이고 object_id는 시간에 걸쳐 지속되는 대상이다. frame_ref는 엣지가 한 번 부여하고 전파할 뿐 백엔드·AI가 재생성하지 않는다(BE-C-03)."
+      "description": "이 객체의 근거가 된 원본 관측 프레임 참조. 프레임 참조와 객체 식별자는 서로 다른 것이다 — frame_ref는 낱장 관측(그 순간 무엇을 찍었나)이고 object_id는 시간에 걸쳐 지속되는 대상이다. frame_ref 의 세 칸(camera_id · sequence_id · timestamp)은 프레임을 처음 손에 넣은 기기가 한 번 붙인 값을 그대로 옮긴 것이고, 그 뒤 거치는 곳(엣지 · DS · 서버 · AI)은 다시 만들지 않는다(BE-C-03 · 원칙 10 — 2026-10-13 통합데이터규약 BE-10)."
     },
     "handoff": {
       "type": ["object", "null"],

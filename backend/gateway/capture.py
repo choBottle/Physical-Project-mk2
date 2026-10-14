@@ -35,8 +35,9 @@ rename 한다. **경로 순회 방어의 대상도 URL 이 아니라 매니페�
 
 - `frame_ref_base` 를 채우지 않는다 — 오프라인 촬영본은 엣지를 거치지 않아 발급 주체가 없다(원칙 10).
   프레임 시각은 매니페스트의 `t0_unix + (n-1) × interval_s` 그대로다.
-- 시간대를 추측하지 않는다 — `started_at` 이 오프셋 없는 naive 문자열이면 `NULL` 로 두고 원본은
-  `manifest` JSON 에 보존한다. `frames.t0_unix`(epoch) 가 있으면 그것으로 채운다.
+- 시간대를 추측하지 않는다 — `started_at` 이 오프셋 있는 ISO(통합데이터규약 v2 `iso_ms`, `+09:00`)면 그것을
+  쓰고, 오프셋 없는 naive 문자열이면 옛 매니페스트의 `frames.t0_unix`(epoch) 로 채운다. 둘 다 없으면 `NULL`
+  로 두고 원본은 `manifest` JSON 에 보존한다(2026-10-13 통합데이터규약 BE-12 — 전에는 `t0_unix` 가 먼저였다).
 - 실제 삭제를 하지 않는다 — 보존 상한 초과분은 `--retention-dry-run` 으로 **선정만** 한다(Phase 4).
   행은 어떤 경우에도 지우지 않는다(`mk2_app` 에 DELETE 권한이 없다) — 아카이브만 지우고 `purged_at` 을
   남기는 갱신 경로는 있으나 이번 Phase 의 CLI 는 켜지 않는다.
@@ -194,16 +195,17 @@ def manifest_row(man: Dict[str, Any], validated: Dict[str, Any],
                  archive_path: Path, archive_bytes: int) -> Dict[str, Any]:
     """매니페스트 → `media_capture` 한 행. **채울 수 없는 칸은 NULL** — 없는 정보를 만들지 않는다.
 
-    - `started_at`: `frames.t0_unix`(epoch, 모호하지 않다) 우선. 없으면 `started_at` 문자열을 읽되
-      **오프셋이 없으면 `None`** (`parse_iso` 가 그렇게 한다 — 서버가 시간대를 추측하지 않는다).
+    - `started_at`: 매니페스트 `started_at` 문자열(ISO 밀리초 +09:00 — 통합데이터규약 BE-12 · N13 · R10) 우선.
+      **오프셋이 없으면 읽지 않는다**(`parse_iso` 가 `None` — 서버가 시간대를 추측하지 않는다). 그때는 옛
+      매니페스트의 `frames.t0_unix`(epoch) 로 채운다. 둘 다 못 읽으면 `None`.
     - `frames_count`·`frames_bytes`: `capture_session` 은 `frames.count/bytes`, 스캔 세션은 `shots[]` 에서.
     - `duration_s`: 매니페스트 값 그대로(없으면 NULL — HW 가 fps·frames 둘 다 있을 때만 채운다).
     - `correlation_id`: HW 에 추가 요청한 선택 칸. 없으면 NULL.
     """
     frames = man.get("frames") if isinstance(man.get("frames"), dict) else {}
-    started_at = _epoch_to_naive_utc(frames.get("t0_unix"))
+    started_at = to_mysql_utc(parse_iso(man.get("started_at")))       # v2: iso_ms(+09:00) — 모호하지 않다
     if started_at is None:
-        started_at = to_mysql_utc(parse_iso(man.get("started_at")))
+        started_at = _epoch_to_naive_utc(frames.get("t0_unix"))         # 옛 매니페스트(naive started_at + t0_unix)
     if isinstance(frames.get("count"), int) and not isinstance(frames.get("count"), bool):
         frames_count: Optional[int] = frames["count"]
         frames_bytes: Optional[int] = frames.get("bytes") if isinstance(frames.get("bytes"), int) else None
@@ -544,6 +546,23 @@ def purge_sessions(storage: CaptureStorage, store: CaptureStore, max_bytes: int,
 # ── HTTP ──────────────────────────────────────────────────────────────────────
 
 
+def presented_token(path: str, headers: Any) -> Optional[str]:
+    """요청이 내민 토큰. 순서: 쿼리 `?token=` → `Authorization: Bearer <토큰>` → `X-MK2-Token`.
+
+    `Authorization: Bearer` 는 2026-10-13 통합데이터규약 BE-12(R10 · 묶음 K — GO1-08 이 이것으로 바꾼다)에서 더했다.
+    옛 두 방식(쿼리·`X-MK2-Token`)도 계속 받는다. `Bearer` 는 대소문자를 가리지 않는다(RFC 6750 관례).
+    """
+    query_token = parse_qs(urlsplit(path).query).get("token", [None])[0]
+    if query_token:
+        return query_token
+    auth = (headers.get("Authorization") or "").strip()
+    if auth[:7].lower() == "bearer ":
+        bearer = auth[7:].strip()
+        if bearer:
+            return bearer
+    return headers.get("X-MK2-Token")
+
+
 class CaptureHandler(BaseHTTPRequestHandler):
     server_version = "mk2-capture/0.1"
     protocol_version = "HTTP/1.0"          # 응답 뒤 연결을 닫는다 — 거부한 대용량 PUT 의 본문을 읽지 않아도 된다
@@ -567,7 +586,7 @@ class CaptureHandler(BaseHTTPRequestHandler):
 
     def _check_token(self) -> None:
         expected = self.server.token   # type: ignore[attr-defined]
-        presented = parse_qs(urlsplit(self.path).query).get("token", [None])[0] or self.headers.get("X-MK2-Token")
+        presented = presented_token(self.path, self.headers)
         if not token_matches(expected, presented):
             raise CaptureError(401, "unauthorized")
 

@@ -19,7 +19,8 @@
    기동 시 한 줄 로그로 활성/비활성을 남긴다.
 2. **라벨 가드 — 금지 라벨은 `ValueError`.** `session_id`·`internal_seq`·`sequence_id`·`timestamp`·
    `ts`·`frame_id`·`capture_timestamp`(Phase 3) + `frame_ref`·`correlation_id`·`command_id`·`mission_id`·
-   `node_ref`·`client_request_id`·`plan_id`·`event_key`(Phase 4)는 값이 계속 달라져 시계열을 폭증시킨다.
+   `node_ref`·`client_request_id`·`plan_id`·`event_key`(Phase 4) + `utterance_text` + `sent_at`·`received_at`·
+   `emitted_at`(2026-10-13 통합데이터규약 BE-09 — v2 의 새 시각 칸)는 값이 계속 달라져 시계열을 폭증시킨다.
    **조용히 버리지 않는다** — 버리면 나중에 누가 넣어도 아무도 모른다. 이 예외는 어댑터가 활성이든
    no-op 이든 똑같이 난다(코드 결함은 관측 스택 유무와 무관하게 드러나야 한다). 음성 대조 N1의 대상.
    `node_id`(물리 노드)는 허용이다.
@@ -82,6 +83,9 @@ FORBIDDEN_LABELS = frozenset(
         # ⚠ VZ 는 **오늘 기준 이것을 라벨로 내보내지 않는다** — 자체 관측은 숫자 여섯뿐이고 라벨이 0개다.
         #    그래도 미리 막아 둔다: 나중에 평탄화할 때 실수해도 여기서 걸린다(VZ 가 그렇게 요청했다).
         "utterance_text",
+        # 2026-10-13 통합데이터규약 BE-09 — v2 에서 새로 생긴 「메시지마다 값이 바뀌는 시각」 셋.
+        # 옛 이름(timestamp·ts·capture_timestamp·frame_ref)은 지우지 않는다 — 옛 메시지가 계속 들어올 수 있다.
+        "sent_at", "received_at", "emitted_at",
     }
 )
 # A층 계기 이름 접두사. 여기에는 장치 식별 라벨을 붙이지 않는다.

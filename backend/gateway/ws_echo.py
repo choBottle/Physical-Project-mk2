@@ -10,13 +10,15 @@
        구독 메시지를 읽어야만 만들 수 있다 — 변환은 `vz_wire.py`, 구독표는 `state_session`.
    **재접속 캐시(VZ-I-02)·`hello`·명령 번역은 여전히 Phase 5/7** 이다. 지금 형식 가지를 지우면 정식이 된다.
    루트 경로 `/`는 `/state`로 취급한다(Phase 1 호환).
-2. **`/media?source_id=…`(8765)** — 뷰어 영상. 붙는 것이 켜기, 끊는 것이 끄기(결정 4-b — 제어 메시지 없음).
+2. **`/media?camera_id=…`(8765)** — 뷰어 영상. 붙는 것이 켜기, 끊는 것이 끄기(결정 4-b — 제어 메시지 없음).
    소켓 하나당 소스 하나. 뷰어 소켓마다 **송신 큐 + 전용 writer 태스크**를 둔다 — 중계 코어(`media.py`)는
    `send`를 부르지 않고 큐에 넣을지 버릴지만 판단하고, writer 가 `await send()`로 한 장씩 비운다. 느린
    뷰어 하나가 이벤트 루프도 다른 뷰어도 막지 않는다(§1-5-2 head-of-line, 음성 대조 M7).
-3. **`/ingest?source_id=…`(8766, 별도 서버·같은 프로세스)** — 엣지가 클라이언트로 붙어 방식 B 를 올린다.
-   헤더만 검증(필수·타입)하고 그 `source_id`를 구독 중인 `/media` 소켓에 분기한다. **엣지 입구에서는
-   버리지 않는다.** 같은 `source_id`로 둘이 붙으면 나중 것을 close 4409 로 거부한다.
+3. **`/ingest?camera_id=…`(8766, 별도 서버·같은 프로세스)** — 엣지가 클라이언트로 붙어 방식 B 를 올린다.
+   헤더만 검증(필수·타입)하고 그 `camera_id`를 구독 중인 `/media` 소켓에 분기한다. **엣지 입구에서는
+   버리지 않는다.** 같은 `camera_id`로 둘이 붙으면 나중 것을 close 4409 로 거부한다.
+   **과도기(2026-10-13 통합데이터규약 BE-07)** — 쿼리는 `camera_id`, 옛 이름 `source_id` 도 받는다. 헤더는 v2(평평한 모양)와
+   v1(`frame_ref` 묶음) 둘 다 받는다(`media.decode_frame` 이 `frame_ref` 유무로 검증기를 고른다). 둘 다 단계 5 에서 지운다.
    `MK2_MEDIA_INGEST_PORT=0`이면 열지 않는다(단계 8 되돌림이 이 한 줄).
 
 **인증** — URL 쿼리 토큰(`MK2_WS_TOKEN` / `MK2_EDGE_TOKEN`), `hmac.compare_digest`. 불일치·부재는 close **4401**.
@@ -36,7 +38,7 @@ loopback 바인딩이면 토큰 없이 열고(로그 한 줄), loopback 이 아�
 두면 최대 4MB 가 회계 밖에 쌓여 링크가 멈춰도 drop-old 가 발동하지 않는다(사용자 결정 A, 2026-09-19).
 지연 바운드 = **`T_drop + write_limit + sndbuf`**.
 
-A층 계측(전부 `be.gateway.*`, 라벨에 `source_id`·`frame_ref`·시각 없음): `push{channel}` · `clients{endpoint}` ·
+A층 계측(전부 `be.gateway.*`, 라벨에 `source_id`·`camera_id`·`frame_ref`·시각 없음): `push{channel}` · `clients{endpoint}` ·
 `media_ingress` · `media_rejected{stage}` · `media_frames{outcome}` · `media_gop_cut` · `media_coldstart`(히스토그램).
 라벨 이름을 `channel`로 쓰지 않는다 — `be.gateway.push`의 `channel`은 업무 채널 뜻이다.
 
@@ -106,7 +108,7 @@ def _request_path(websocket: Any, path_arg: Optional[str]) -> str:
 
 
 def split_route(path: str):
-    """`/media?source_id=x&token=y` → (`/media`, {"source_id": "x", "token": "y"}). 값은 첫 항목만."""
+    """`/media?camera_id=x&token=y` → (`/media`, {"camera_id": "x", "token": "y"}). 값은 첫 항목만."""
     parts = urlsplit(path)
     query = {k: v[0] for k, v in parse_qs(parts.query, keep_blank_values=True).items()}
     route = parts.path or "/"
@@ -254,6 +256,8 @@ class Gateway:
         # 헤더 검증기(+$ref 레지스트리)는 기동 시 미리 만든다 — 첫 프레임에서 만들면 그 100ms 남짓 동안
         # 프레임이 소켓에 쌓였다가 한꺼번에 처리되어 뷰어 회계가 「비울 기회 없이」 찬 것으로 보인다(2026-09-19 실측).
         self.header_validator = media.header_validator()
+        # v1(옛 frame_ref) 헤더 검증기 — 과도기(BE-07). decode_frame 에 같이 넘기지 않으면 옛 헤더가 v2 검증기로 검사돼 전부 거부된다.
+        self.header_validator_v1 = media.header_validator(v1=True)
 
     # ── 공통 ────────────────────────────────────────────────────────────────
 
@@ -299,16 +303,16 @@ class Gateway:
         if not token_matches(query.get("token"), self.ws_token):
             await self._reject(websocket, CLOSE_UNAUTHORIZED, "token", endpoint="media", stage="auth")
             return
-        source_id = (query.get("source_id") or "").strip()
-        if not source_id:
-            await self._reject(websocket, CLOSE_BAD_REQUEST, "source_id required", endpoint="media", stage="auth")
+        camera_id = (query.get("camera_id") or query.get("source_id") or "").strip()   # source_id = 옛 쿼리 이름(과도기, 단계 5 에서 지운다)
+        if not camera_id:
+            await self._reject(websocket, CLOSE_BAD_REQUEST, "camera_id required", endpoint="media", stage="auth")
             return
-        slot = self.relay.subscribe(source_id)      # 붙는 것이 켜기. WAIT_IDR 로 시작 — 첫 전송은 반드시 keyframe
+        slot = self.relay.subscribe(camera_id)      # 붙는 것이 켜기. WAIT_IDR 로 시작 — 첫 전송은 반드시 keyframe
         conn = _ViewerConn(websocket, slot)
         self.viewers[slot] = conn
         conn.task = asyncio.create_task(conn.writer())
         obs.updown("be.gateway.clients", +1, component=COMPONENT, endpoint="media")
-        LOG.info("/media 접속 source_id=%s (이 소스 뷰어 %s명)", source_id, self.relay.viewer_count(source_id))
+        LOG.info("/media 접속 camera_id=%s (이 소스 뷰어 %s명)", camera_id, self.relay.viewer_count(camera_id))
         try:
             async for _ in websocket:      # 뷰어가 보내는 것은 없다(제어 메시지 없음)
                 pass
@@ -322,7 +326,7 @@ class Gateway:
                 with contextlib.suppress(asyncio.CancelledError, Exception):
                     await conn.task
             obs.updown("be.gateway.clients", -1, component=COMPONENT, endpoint="media")
-            LOG.info("/media 종료 source_id=%s %s", source_id, slot.summary())
+            LOG.info("/media 종료 camera_id=%s %s", camera_id, slot.summary())
 
     # ── /ingest ─────────────────────────────────────────────────────────────
 
@@ -330,41 +334,41 @@ class Gateway:
         if not token_matches(query.get("token"), self.edge_token):
             await self._reject(websocket, CLOSE_UNAUTHORIZED, "token", endpoint="ingest", stage="auth")
             return
-        source_id = (query.get("source_id") or "").strip()
-        if not source_id:
-            await self._reject(websocket, CLOSE_BAD_REQUEST, "source_id required", endpoint="ingest", stage="auth")
+        camera_id = (query.get("camera_id") or query.get("source_id") or "").strip()   # source_id = 옛 쿼리 이름(과도기, 단계 5 에서 지운다)
+        if not camera_id:
+            await self._reject(websocket, CLOSE_BAD_REQUEST, "camera_id required", endpoint="ingest", stage="auth")
             return
-        if not self.relay.claim_ingest(source_id, websocket):
-            await self._reject(websocket, CLOSE_CONFLICT, "source_id already ingesting", endpoint="ingest", stage="auth")
+        if not self.relay.claim_ingest(camera_id, websocket):
+            await self._reject(websocket, CLOSE_CONFLICT, "camera_id already ingesting", endpoint="ingest", stage="auth")
             return
         obs.updown("be.gateway.clients", +1, component=COMPONENT, endpoint="ingest")
-        LOG.info("/ingest 접속 source_id=%s", source_id)
+        LOG.info("/ingest 접속 camera_id=%s", camera_id)
         received = 0
         try:
             async for blob in websocket:
                 received += 1
                 if isinstance(blob, str):
                     obs.count("be.gateway.media_rejected", component=COMPONENT, stage="header")
-                    LOG.info("/ingest source_id=%s 텍스트 프레임 거부(기록만)", source_id)
+                    LOG.info("/ingest camera_id=%s 텍스트 프레임 거부(기록만)", camera_id)
                     continue
                 if len(blob) > self.max_frame_bytes:
                     # 연결을 끊지 않는다 — 프레임만 버리고 기록(순번 불연속과 같은 취급, M9)
                     obs.count("be.gateway.media_rejected", component=COMPONENT, stage="header")
-                    LOG.info("/ingest source_id=%s 과대 프레임 %s바이트 > %s 버림(연결 유지)", source_id, len(blob), self.max_frame_bytes)
+                    LOG.info("/ingest camera_id=%s 과대 프레임 %s바이트 > %s 버림(연결 유지)", camera_id, len(blob), self.max_frame_bytes)
                     continue
                 try:
-                    frame = media.decode_frame(blob, validator=self.header_validator)
-                    self.relay.check_source(source_id, frame)
+                    frame = media.decode_frame(blob, validator=self.header_validator, validator_v1=self.header_validator_v1)
+                    self.relay.check_source(camera_id, frame)
                 except media.FrameRejected as exc:
                     obs.count("be.gateway.media_rejected", component=COMPONENT, stage=exc.stage)
-                    LOG.info("/ingest source_id=%s 헤더 거부(stage=%s): %s", source_id, exc.stage, exc.reason)
+                    LOG.info("/ingest camera_id=%s 헤더 거부(stage=%s): %s", camera_id, exc.stage, exc.reason)
                     continue
                 obs.count("be.gateway.media_ingress", component=COMPONENT)
-                note = self.relay.note_sequence(source_id, frame)
+                note = self.relay.note_sequence(camera_id, frame)
                 if note:
-                    LOG.info("/ingest source_id=%s %s", source_id, note)
+                    LOG.info("/ingest camera_id=%s %s", camera_id, note)
                 # 뷰어마다 독립 판정. 뷰어가 없으면 fan_out 이 빈 목록 = 버린다.
-                for slot, decision, gop_cut in self.relay.fan_out(source_id, frame, time.monotonic()):
+                for slot, decision, gop_cut in self.relay.fan_out(camera_id, frame, time.monotonic()):
                     if decision is media.Decision.SEND:
                         conn = self.viewers.get(slot)
                         if conn is not None:
@@ -379,9 +383,9 @@ class Gateway:
         except Exception as exc:
             LOG.info("/ingest 연결 종료(사유: %s)", exc)
         finally:
-            self.relay.release_ingest(source_id, websocket)
+            self.relay.release_ingest(camera_id, websocket)
             obs.updown("be.gateway.clients", -1, component=COMPONENT, endpoint="ingest")
-            LOG.info("/ingest 종료 source_id=%s 수신 %s장", source_id, received)
+            LOG.info("/ingest 종료 camera_id=%s 수신 %s장", camera_id, received)
 
     # ── 라우팅 ──────────────────────────────────────────────────────────────
 

@@ -1,9 +1,17 @@
-"""미디어 중계 코어 — 방식 B 프레이밍 · drop-old 상태 기계 · source_id 라우팅. **소켓을 모른다.**
+"""미디어 중계 코어 — 방식 B 프레이밍 · drop-old 상태 기계 · camera_id 라우팅. **소켓을 모른다.**
 
 미디어 경로(02-media-path §1-3-3·§1-5)의 서버 몫은 "형식을 주고 중계한다"다. 엣지가 8766 `/ingest`로
-올린 방식 B 메시지를 **헤더만 읽고** 그 `source_id`를 구독 중인 뷰어(8765 `/media`)에 분기한다.
+올린 방식 B 메시지를 **헤더만 읽고** 그 카메라(`camera_id`)를 구독 중인 뷰어(8765 `/media`)에 분기한다.
 페이로드는 열지 않는다 — 디코드·재인코딩·트랜스코딩이 없다는 것이 방식 B 중계의 성립 근거다(제약 9).
-`frame_ref`는 엣지가 한 번 부여한 것을 **바이트 그대로** 전파한다(원칙 10 — 서버는 재생성하지 않는다).
+프레임의 번호·시각은 프레임을 처음 손에 넣은 기기가 붙인 것을 **바이트 그대로** 전파한다(원칙 10 — 서버는 재생성하지 않는다).
+
+## 헤더 두 판 (2026-10-13 통합데이터규약 BE-07 — 과도기)
+
+- **v2(평평한 프레임 헤더)** — 공통 머리 + `camera_id` · `sequence_id` · `timestamp` 가 맨 위(`media-header.schema.json`).
+- **v1(옛 헤더)** — `frame_ref{source_id, capture_timestamp, sequence_id}` 묶음(`media-header.v1.schema.json`).
+- 가르는 기준은 **헤더에 `frame_ref` 가 있느냐**다 — v2 프레임 헤더에는 `frame_ref` 가 없다. 엣지(HW 홉2 송신기)가
+  v2 로 바뀌기 전에도 끊기지 않게 둘 다 받는다. 단계 5(모든 생산자 배포 뒤)에 v1 갈래 · `validator_v1` ·
+  `MEDIA_HEADER_SCHEMA_V1` 을 지운다.
 
 이 모듈이 소켓을 모르는 이유: 프레이밍·상태 기계·라우팅이 **패킷 배열만으로** 단위 검증돼야 한다
 (HW `edge/media_gateway.py`가 같은 구조다). `websockets`·asyncio 큐·writer 태스크는 `ws_echo.py`가 감싼다.
@@ -15,8 +23,8 @@
 한 메시지 = 한 프레임(H.264면 한 액세스 유닛). 헤더는 `contracts/common/media-header.schema.json`으로
 **필수·타입만** 검증한다(값 어휘를 보지 않는다 — `encoding: "av1"`도 통과). 거부 사유는 셋뿐이다 —
 헤더 길이 상한 초과·JSON 아님(`stage=header`), 규격 위반(`stage=schema`), 그리고 헤더의
-`frame_ref.source_id`가 입구 쿼리의 `source_id`와 다름(`stage=schema`로 센다 — 둘 중 하나를 믿고 나머지를
-무시하면 조용히 엉뚱한 뷰어로 간다). **순번 역전·불연속은 기록만 한다** — 재접속 시 `sequence_id`가
+`camera_id`(v1 은 `frame_ref.source_id`)가 입구 쿼리의 `camera_id`와 다름(`stage=schema`로 센다 — 둘 중 하나를 믿고
+나머지를 무시하면 조용히 엉뚱한 뷰어로 간다). **순번 역전·불연속은 기록만 한다** — 재접속 시 `sequence_id`가
 리셋되는 것이 규격이다.
 
 ## drop-old 상태 기계 (§2-3) — 뷰어 소켓마다 독립
@@ -30,7 +38,8 @@
                 keyframe=true  && buffered >  T_hard  → 버린다 (계속 WAIT_IDR)
 
 - **초기 상태는 WAIT_IDR** — 새 뷰어의 첫 전송은 반드시 keyframe 이다. JPEG 는 모든 프레임이
-  `keyframe=true`라 즉시 풀린다. **코드는 한 벌이다**(encoding 값으로 분기하지 않는다).
+  키프레임이라 즉시 풀린다(v2 헤더는 JPEG 에 `keyframe` 을 싣지 않는다 — `Frame.keyframe` 이 `encoding == "jpeg"` 를
+  기본값으로 쓴다). **상태 기계 코드는 한 벌이다**(encoding 값으로 분기하지 않는다).
 - **`buffered`는 우리가 든다** — 파이썬 `websockets`에는 브라우저의 `bufferedAmount`가 없다. 뷰어 소켓마다
   송신 큐(`ViewerSlot.pending`)를 두고 **큐에 쌓인 바이트 + 지금 writer 가 보내는 중인 바이트**를 `buffered`로
   센다. 중계 코어는 `send`를 부르지 않고 큐에 넣을지 버릴지만 판단한다. writer 가 `await send()`를 마치면
@@ -49,7 +58,7 @@
   버려진다). 느린 소비자의 프레임률이 GOP 경계로 불균일해지는 것은 알려진 성질이며 이번에 고치지 않는다.
 - **엣지 입구에서는 버리지 않는다.** 받아서 분기만 한다. **뷰어가 없으면 버린다.**
 
-implements: BE-T-07 (미디어 뷰어 중계 — drop-old·채널 분리·frame_ref 관통), BE-C-03 (헤더의 frame_ref 무개정 전파)
+implements: BE-T-07 (미디어 뷰어 중계 — drop-old·채널 분리·프레임 헤더 관통), BE-C-03 (헤더의 번호·시각 무개정 전파)
 tests: tests/test_media_frame.py (프레이밍 왕복·헤더 검증 양성/음성·길이 상한·순번 기록) ·
        tests/test_media_dropold.py (전이표 전수·T_drop/T_hard·JPEG 동일 코드·배출률 회계) ·
        tests/test_media_relay.py (실제 소켓 관통 — ws_echo 가 감싼 것)
@@ -72,6 +81,7 @@ HEADER_LEN_BYTES = 4
 HEADER_LEN_STRUCT = struct.Struct(">I")          # 4바이트 빅엔디언 무부호
 DEFAULT_MAX_HEADER_BYTES = 64 * 1024              # 헤더 길이 상한(§2-2) — 악의적·손상 입력에 메모리를 내주지 않는다
 MEDIA_HEADER_SCHEMA = "media-header.schema.json"
+MEDIA_HEADER_SCHEMA_V1 = "media-header.v1.schema.json"   # 과도기 — 단계 5 에서 지운다(옛 frame_ref 헤더)
 
 # drop-old 창 크기(§2-3 "기본값이고 media.py 상수로 둔다")
 AU_WINDOW = 60          # 최근 AU 평균·P프레임 유무 판정 창(프레임)
@@ -100,16 +110,26 @@ class Frame:
     raw: bytes
 
     @property
-    def keyframe(self) -> bool:
-        return bool(self.header["keyframe"])
+    def is_v1(self) -> bool:
+        """옛 헤더(frame_ref 묶음)인가 — 과도기 갈래. v2 프레임 헤더에는 frame_ref 가 없다."""
+        return "frame_ref" in self.header
 
     @property
-    def source_id(self) -> str:
-        return self.header["frame_ref"]["source_id"]
+    def keyframe(self) -> bool:
+        """독립 디코드 가능한가. v2 JPEG 는 keyframe 을 싣지 않는다 — 없으면 `encoding == "jpeg"` 로 본다."""
+        h = self.header
+        return bool(h.get("keyframe", h.get("encoding") == "jpeg"))
+
+    @property
+    def camera_id(self) -> str:
+        """카메라 — 라우팅 키(옛 이름 source_id). v1 은 frame_ref.source_id, v2 는 맨 위 camera_id."""
+        h = self.header
+        return h["frame_ref"]["source_id"] if "frame_ref" in h else h["camera_id"]
 
     @property
     def sequence_id(self) -> int:
-        return int(self.header["frame_ref"]["sequence_id"])
+        h = self.header
+        return int(h["frame_ref"]["sequence_id"] if "frame_ref" in h else h["sequence_id"])
 
     @property
     def size(self) -> int:
@@ -122,24 +142,29 @@ def encode_frame(header: Dict[str, Any], payload: bytes) -> bytes:
     return HEADER_LEN_STRUCT.pack(len(header_bytes)) + header_bytes + payload
 
 
-def header_validator():
-    """미디어 헤더 검증기(+$ref 레지스트리) — envelope.py 의 캐시를 쓴다(이름별 1회 생성). 게이트웨이는 기동 시 미리 만든다."""
+def header_validator(v1: bool = False):
+    """미디어 헤더 검증기(+$ref 레지스트리) — envelope.py 의 캐시를 쓴다(이름별 1회 생성). 게이트웨이는 기동 시 미리 만든다.
+
+    `v1=True` 면 과도기 옛 헤더(frame_ref 묶음) 검증기 — 단계 5 에서 지운다.
+    """
     # 지역 import — 이 모듈은 jsonschema 를 직접 알 필요가 없다.
     from backend.ingest import envelope
 
-    return envelope.contract_validator(MEDIA_HEADER_SCHEMA)
+    return envelope.contract_validator(MEDIA_HEADER_SCHEMA_V1 if v1 else MEDIA_HEADER_SCHEMA)
 
 
 _default_validator = header_validator
 
 
 def decode_frame(blob: bytes, *, max_header_bytes: int = DEFAULT_MAX_HEADER_BYTES,
-                 validator: Any = None) -> Frame:
+                 validator: Any = None, validator_v1: Any = None) -> Frame:
     """방식 B 디코드 + 헤더 검증(필수·타입만). 실패는 `FrameRejected(stage, reason)`.
 
     - `stage="header"`: 4바이트 미만 · 헤더 길이 상한 초과 · 헤더 길이가 본문보다 큼 · UTF-8/JSON 아님 · 객체 아님
-    - `stage="schema"`: `media-header.schema.json` 위반(필수 누락·타입 오류·`frame_ref.capture_timestamp` 포맷 등)
+    - `stage="schema"`: 프레임 헤더 규격 위반(필수 누락·타입 오류·`timestamp` 포맷 등)
 
+    헤더에 `frame_ref` 가 있으면 옛 헤더(v1 — `media-header.v1.schema.json`, `validator_v1`)로, 없으면 v2
+    (`media-header.schema.json`, `validator`)로 검증한다(과도기 — 단계 5 에서 v1 갈래를 지운다).
     페이로드는 슬라이스만 하고 열지 않는다. 검증기는 한 번 만들어 재사용한다(프레임마다 새로 만들지 않는다).
     """
     if not isinstance(blob, (bytes, bytearray, memoryview)):
@@ -160,7 +185,10 @@ def decode_frame(blob: bytes, *, max_header_bytes: int = DEFAULT_MAX_HEADER_BYTE
         raise FrameRejected("header", "헤더가 JSON 이 아니다: {}".format(exc)) from exc
     if not isinstance(header, dict):
         raise FrameRejected("header", "헤더가 JSON 객체가 아니다: {}".format(type(header).__name__))
-    checker = validator if validator is not None else _default_validator()
+    if "frame_ref" in header:          # v1 옛 헤더 (과도기)
+        checker = validator_v1 if validator_v1 is not None else header_validator(v1=True)
+    else:                              # v2 프레임 헤더
+        checker = validator if validator is not None else _default_validator()
     errors = sorted(checker.iter_errors(header), key=lambda e: list(e.absolute_path))
     if errors:
         raise FrameRejected("schema", " | ".join(
@@ -408,7 +436,11 @@ class ViewerSlot:
 
 
 class Relay:
-    """`source_id → 뷰어 슬롯 집합` 라우팅 테이블 + 소스별 순번 기록. 소켓·스레드·시계를 모른다."""
+    """`source_id → 뷰어 슬롯 집합` 라우팅 테이블 + 소스별 순번 기록. 소켓·스레드·시계를 모른다.
+
+    여기의 `source_id` 인자·`ViewerSlot.source_id` 는 **라우팅 키 이름일 뿐이고 값은 카메라 키(`camera_id`)다** —
+    입구 쿼리 `camera_id` 를 그대로 받는다(BE-07). 안쪽 이름은 시험이 많이 쓰고 밖으로 나가지 않아 그대로 둔다.
+    """
 
     def __init__(self, config: Optional[DropOldConfig] = None, clock: Callable[[], float] = time.monotonic) -> None:
         self.config = config or DropOldConfig()
@@ -433,13 +465,13 @@ class Relay:
             del self._ingest_owner[source_id]
             self._sequences.pop(source_id, None)   # 재접속 시 순번이 리셋되는 것이 정상 — 이전 값을 들고 있지 않는다
 
-    def check_source(self, expected_source_id: str, frame: Frame) -> None:
-        """헤더의 `frame_ref.source_id`가 입구 쿼리의 `source_id`와 다르면 거부(`stage=schema`)."""
-        if frame.source_id != expected_source_id:
+    def check_source(self, expected_camera_id: str, frame: Frame) -> None:
+        """헤더의 `camera_id`(v1 은 `frame_ref.source_id`)가 입구 쿼리의 `camera_id`와 다르면 거부(`stage=schema`)."""
+        if frame.camera_id != expected_camera_id:
             raise FrameRejected(
                 "schema",
-                "헤더 frame_ref.source_id={!r} 가 입구 source_id={!r} 와 다르다 — 어느 쪽도 믿지 않고 거부한다".format(
-                    frame.source_id, expected_source_id),
+                "헤더 camera_id={!r} 가 입구 camera_id={!r} 와 다르다 — 어느 쪽도 믿지 않고 거부한다".format(
+                    frame.camera_id, expected_camera_id),
             )
 
     def note_sequence(self, source_id: str, frame: Frame) -> Optional[str]:
@@ -449,7 +481,7 @@ class Relay:
     # 뷰어 --------------------------------------------------------------------
 
     def subscribe(self, source_id: str) -> ViewerSlot:
-        """뷰어가 `/media?source_id=…`에 붙었다 = 켜기. 슬롯은 WAIT_IDR 로 시작한다."""
+        """뷰어가 `/media?camera_id=…`에 붙었다 = 켜기. 슬롯은 WAIT_IDR 로 시작한다."""
         slot = ViewerSlot(source_id=source_id, policy=DropOldPolicy(self.config), created_at=self.clock())
         self._viewers.setdefault(source_id, set()).add(slot)
         return slot

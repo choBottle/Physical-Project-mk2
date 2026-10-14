@@ -63,9 +63,10 @@ python -m pytest -q tests/test_contract_media.py tests/test_media_frame.py tests
 python -m pytest -q tests/test_capture_upload.py   # 4b — 프로세스 안에 수신단을 띄운다. MySQL 이 닿으면 실제 media_capture, 아니면 가짜 저장소(컴퓨터)
 
 # ── 미디어 송신 fixture (Phase 4 — 홉2 방식 B 참조 구현. 엣지 실물이 없을 때 그 자리) ──
-python tests/media_publisher.py --source-id go1-001_front --encoding h264 --fps 30 --loop   # → MK2_MEDIA_INGEST_URL (기본 ws://127.0.0.1:8766/ingest)
+python tests/media_publisher.py --camera-id go1-001_front --encoding h264 --fps 30 --loop   # → MK2_MEDIA_INGEST_URL (기본 ws://127.0.0.1:8766/ingest)
 python tests/media_publisher.py --encoding jpeg --fps 15 --count 45
-#   뷰어 확인: backend/gateway/console.html 을 브라우저로 열고 ws://<서버>:8765 + 토큰 + source_id (H.264 는 WebCodecs)
+#   (v2 프레임 헤더 · 입구 쿼리 camera_id — 2026-10-13 통합데이터규약. 옛 인자 --source-id 도 받는다)
+#   뷰어 확인: backend/gateway/console.html 을 브라우저로 열고 ws://<서버>:8765 + 토큰 + camera_id (H.264 는 WebCodecs)
 ```
 
 - 설치는 필요 없다 — 저장소 루트에서 `python -m ...`으로 실행하면 임포트가 잡힌다. 새 환경을
@@ -225,8 +226,11 @@ tests/             pytest + 가짜 발행자(publisher.py MQTT · media_publishe
 9. **파트가 나뉘는 지점의 기준은 JSON Schema다.** `contracts/common/`이 기준이며 파이썬 타입을
    다른 파트에 노출·강제하지 않는다. 공통 헤더 필수 5항목(`schema_version`·`source_id`·
    `node_id`·`zone_id`·`timestamp`)을 지킨다.
-10. **frame_ref는 엣지에서 한 번 부여하고 전파한다.** 백엔드·AI는 새 번호를 재생성하지 않는다.
-    영상과 탐지가 뷰어에서 F==F로 합류해야 오버레이가 정합한다.
+10. **프레임을 처음 손에 넣은 기기(pi7 · pi3 · 360 노트북 · HW 엣지)가 번호(`sequence_id`)와 시각
+    (`timestamp`)을 한 번 붙인다.** 그 뒤 거치는 곳(엣지 · DS · 서버 · AI)은 다시 만들지 않고, 받은 시각
+    (`received_at`)만 더한다. 번호는 **손에 넣는 순간** 매긴다 — 보내는 순간에 매기면 버린 장이 불연속으로
+    보이지 않는다. 결과·상태는 그 프레임을 `frame_ref{camera_id, sequence_id, timestamp}`로 가리키고, 영상과
+    탐지가 뷰어에서 F==F(세 칸 모두 같음)로 합류해야 오버레이가 정합한다(2026-10-13 통합데이터규약 BE-10).
 11. **Kafka는 장기 저장소가 아니다.** 다중 소비자 독립 읽기·단기 버퍼·단기 replay 용도다. 재난
     데이터 장기 보존은 TSDB 보존 사안이지 Kafka retention이 아니다. "재학습 위해 Kafka"라고
     표현하지 않는다.
@@ -285,15 +289,16 @@ tests/             pytest + 가짜 발행자(publisher.py MQTT · media_publishe
   어댑터 뒤에 둔다(원칙 1). 호출부는 `setup`·`count`·`updown`·`gauge`·`observe`·`log_handler`·
   `shutdown` 목적 인터페이스만 쓴다. 관측 저장소가 죽어도 업무 경로가 멈추면 안 된다.
 - **관측 라벨에 값이 계속 달라지는 것을 넣지 않는다** — `session_id`·`internal_seq`·`sequence_id`·
-  시각(`timestamp`·`ts`·`capture_timestamp`)·프레임 식별자(`frame_id`·`frame_ref`)·상관키
+  시각(`timestamp`·`ts`·`capture_timestamp`·`sent_at`·`received_at`·`emitted_at`)·프레임 식별자(`frame_id`·`frame_ref`)·상관키
   (`correlation_id`·`command_id`·`mission_id`·`node_ref`·`client_request_id`·`plan_id`·`event_key` —
   Phase 4 확장, `node_id`는 물리 노드라 허용). 어댑터가 `ValueError`로 막는다(조용히 버리지 않는다).
   **A층(백엔드 자기 관측)에는 `source_id`·`zone_id`·`entity_type`도 넣지 않는다** — 장치 수만큼
-  시계열이 곱해진다. C층(업무 값)에서만 쓴다. 미디어 지표는 전부 `be.gateway.*`(A층)이며 `source_id`별
+  시계열이 곱해진다. C층(업무 값)에서만 쓴다. 미디어 지표는 전부 `be.gateway.*`(A층)이며 카메라(`camera_id`)별
   회계는 연결 종료 로그 한 줄로 Loki에 남긴다.
 - **미디어 헤더의 값 어휘를 `enum`으로 잠그지 않는다** — `encoding`·`codec`·`alignment`는 string +
-  `$comment`. 서버는 필수·타입만 검증한다(제약 10). `frame_ref`는 엣지가 붙인 것을 바이트 그대로
-  전파하고 서버·AI가 재생성하지 않는다(원칙 10).
+  `$comment`. 서버는 필수·타입만 검증한다(제약 10). 프레임 헤더의 번호·시각은 처음 손에 넣은 기기가
+  붙인 것을 바이트 그대로 전파하고 서버·AI가 재생성하지 않는다(원칙 10). 과도기에는 v1 헤더(`frame_ref`
+  묶음)도 받는다 — `frame_ref` 유무로 가른다(BE-07, 단계 5 에서 지운다).
 
 ---
 

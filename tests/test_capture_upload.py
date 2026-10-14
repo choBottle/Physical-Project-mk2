@@ -232,10 +232,28 @@ def test_manifest_row_started_at_rules() -> None:
     # 오프셋이 있으면 UTC 로 바꿔 담는다.
     row = capture.manifest_row({"started_at": "2026-09-10T13:48:18.500+09:00"}, validated, Path("/x"), 1)
     assert row["started_at"] == datetime(2026, 9, 10, 4, 48, 18, 500000)
+    # v2(통합데이터규약 BE-12): 오프셋 있는 started_at 이 t0_unix 보다 먼저다 — 둘이 달라도 started_at 을 쓴다.
+    row = capture.manifest_row({"frames": {"t0_unix": t0, "count": 3}, "started_at": "2026-09-10T13:48:18.500+09:00"},
+                               validated, Path("/x"), 1)
+    assert row["started_at"] == datetime(2026, 9, 10, 4, 48, 18, 500000)
+    # 옛 매니페스트 — started_at 이 아예 없고 t0_unix 만 있으면 t0_unix.
+    row = capture.manifest_row({"frames": {"t0_unix": t0, "count": 3}}, validated, Path("/x"), 1)
+    assert row["started_at"] == datetime.fromtimestamp(t0, tz=timezone.utc).replace(tzinfo=None)
     # 스캔 세션 — shots[] 에서 센다. correlation_id 는 문자열일 때만.
     row = capture.manifest_row({"shots": [{"bytes": 10}, {"bytes": 5}], "correlation_id": "cmd-1"}, validated, Path("/x"), 1)
     assert row["frames_count"] == 2 and row["frames_bytes"] == 15 and row["correlation_id"] == "cmd-1"
     assert json.loads(row["manifest"])["shots"][1]["bytes"] == 5
+
+
+def test_presented_token_query_bearer_header() -> None:
+    """토큰을 내미는 세 방식(통합데이터규약 BE-12). 쿼리 → `Authorization: Bearer` → `X-MK2-Token` 순."""
+    assert capture.presented_token("/capture/a.tar.gz?token=q", {"Authorization": "Bearer b", "X-MK2-Token": "x"}) == "q"
+    assert capture.presented_token("/capture/a.tar.gz", {"Authorization": "Bearer b", "X-MK2-Token": "x"}) == "b"
+    assert capture.presented_token("/capture/a.tar.gz", {"Authorization": "bearer   b2 "}) == "b2"
+    assert capture.presented_token("/capture/a.tar.gz", {"X-MK2-Token": "x"}) == "x"
+    assert capture.presented_token("/capture/a.tar.gz", {"Authorization": "Basic Zm9vOmJhcg==", "X-MK2-Token": "x"}) == "x"
+    assert capture.presented_token("/capture/a.tar.gz", {"Authorization": "Bearer "}) is None
+    assert capture.presented_token("/capture/a.tar.gz", {}) is None
 
 
 def test_c5_select_for_purge_oldest_first() -> None:
@@ -316,6 +334,36 @@ def test_c1_token_mismatch_or_missing_nothing_written(capture_server, tmp_path: 
         assert row_of(capture_server["store"], manifest["session_id"]) is None
         assert not _final(capture_server["root"], entity, session_dir.name).exists()
     assert _files_under(capture_server["root"]) == before                          # 파일도 행도 생기지 않는다
+
+
+def test_c1b_bearer_token_accepted(capture_server, tmp_path: Path) -> None:
+    """`Authorization: Bearer <토큰>` 으로도 받는다(BE-12 · GO1-08 이 이것으로 바꾼다). 틀린 Bearer 는 401.
+
+    매니페스트 → 아카이브 두 PUT 을 다 Bearer 로 보내 끝까지 적재한다 — 매니페스트만 두면 `.incoming` 에 남아
+    같은 모듈 서버를 쓰는 뒤 시험(`.incoming` 이 비어 있어야 한다)을 깬다.
+    """
+    import urllib.error
+    import urllib.request
+    session_dir, manifest, entity = new_session(tmp_path)
+    archive = up.pack(session_dir, tmp_path / "staged")
+
+    def put(filename: str, data: bytes, content_type: str, bearer: str) -> int:
+        req = urllib.request.Request(up.join_url(capture_server["base_url_no_token"], filename), data=data, method="PUT")
+        req.add_header("Content-Type", content_type)
+        req.add_header("Authorization", "Bearer " + bearer)
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return r.status
+        except urllib.error.HTTPError as exc:
+            return exc.code
+
+    raw = json.dumps(manifest, ensure_ascii=False).encode("utf-8")
+    assert put(session_dir.name + ".manifest.json", raw, "application/json", "wrong" + uuid.uuid4().hex[:6]) == 401
+    assert put(session_dir.name + ".manifest.json", raw, "application/json", TOKEN) == 200
+    assert put(session_dir.name + ".tar.gz", archive.read_bytes(), "application/gzip", TOKEN) == 201
+    assert _final(capture_server["root"], entity, session_dir.name).read_bytes() == archive.read_bytes()
+    assert count_rows(capture_server["store"], manifest["session_id"]) == 1
+    assert not list(capture_server["storage"].incoming.iterdir())
 
 
 def test_c2_missing_field_and_archive_without_manifest(capture_server, tmp_path: Path) -> None:

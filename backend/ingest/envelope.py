@@ -161,8 +161,8 @@ def contract_validator(filename: str) -> Draft202012Validator:
     """`contracts/common/<filename>` 의 검증기 — 이름별로 한 번만 만들어 재사용한다.
 
     미디어 헤더(`media-header.schema.json`)처럼 **프레임마다** 검증하는 규격의 진입점이다.
-    같은 포맷 검사기·같은 레지스트리를 쓰므로 `frame_ref.capture_timestamp`의 `+0900`이
-    공통 헤더와 똑같이 거부된다. 파일이 없으면 `FileNotFoundError` — 조용히 통과시키지 않는다.
+    같은 포맷 검사기·같은 레지스트리를 쓰므로 프레임 헤더 `timestamp`(v1 은 `frame_ref.capture_timestamp`)의
+    `+0900`이 공통 헤더와 똑같이 거부된다. v1 헤더(과도기)는 `media-header.v1.schema.json` 으로 따로 만든다. 파일이 없으면 `FileNotFoundError` — 조용히 통과시키지 않는다.
     """
     built = _contract_validators.get(filename)
     if built is not None:

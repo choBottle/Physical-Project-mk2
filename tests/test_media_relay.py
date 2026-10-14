@@ -13,18 +13,20 @@ fixture 가 이 파일만 skip 한다. **게이트웨이를 pytest 안에서 띄
 - M3 드롭은 GOP 경계에서만 — 느린 뷰어에서 드롭 뒤 첫 전송이 keyframe
 - M4 `/media`를 끊어도 `/state`가 Kafka 메시지를 계속 받는다
 - M5 모르는 `encoding`(`av1`)이 통과한다
-- M6 서버가 frame_ref 를 재생성하지 않는다 — 송신 원본과 도착분 **바이트 동일**
+- M6 서버가 프레임 헤더(번호·시각)를 재생성하지 않는다 — 송신 원본과 도착분 **바이트 동일**
 - M7 영상이 상태를 밀지 않는다 — 느린 뷰어 드롭 중에도 `/state` 도착 지연이 늘지 않는다
 - M8 JPEG 에서도 지연 바운드가 같은 기준 — 게이트웨이 종료 로그(Loki)의 `max_buffered` 가 `T_drop`+한 장 이내이고
   `t_hard == t_drop`(GOP 없음)이다. 클라이언트는 TCP 버퍼 너머의 서버 큐를 볼 수 없어 관측 평면으로 판정한다
   (느린 뷰어 fixture: 수신 버퍼 32KB + `max_queue=1` + 「한 장 뒤 정지 → 소진」. 서버는 `/media` 소켓 `SO_SNDBUF` 를
   128KB 로 못 박아 커널이 정지분을 삼키지 못하게 한다 — 사용자 결정 A, 2026-09-19)
 - M9 과대 프레임이 연결을 끊지 않는다 — 프레임만 버려지고 그 뒤 프레임이 온다
-- 27-c 헤더 `frame_ref.source_id` ≠ 쿼리 `source_id` → 거부 · 같은 `source_id` 중복 ingest → 4409
+- 27-c 헤더 `camera_id` ≠ 쿼리 `camera_id` → 거부 · 같은 `camera_id` 중복 ingest → 4409
+- 과도기(2026-10-13 통합데이터규약 BE-07): 옛 쿼리 이름 `source_id` 와 v1 헤더(`frame_ref` 묶음)도 그대로 중계된다
+  — 단계 5 에서 v1 갈래를 지울 때 이 시험(`test_v1_header_and_old_query_name_still_relayed`)도 지운다
 - DoD 4-3 관측 평면으로 판정 — `be_gateway_media_frames{outcome="sent"}`·`media_ingress` 차분 증가, 멈추면 더 안 는다
 
-implements: BE-T-07 (미디어 뷰어 중계), BE-C-03 (frame_ref 관통), BE-T-03 (경로 분리·토큰)
-tests: 위 M1~M9 + 27-c + 4-3
+implements: BE-T-07 (미디어 뷰어 중계), BE-C-03 (프레임 헤더 관통), BE-T-03 (경로 분리·토큰)
+tests: 위 M1~M9 + 27-c + 4-3 + v1 과도기
 """
 
 from __future__ import annotations
@@ -61,12 +63,12 @@ def _sid(prefix: str = "mrt") -> str:
     return "{}-{}".format(prefix, uuid.uuid4().hex[:8])
 
 
-def _media_url(source_id: str) -> str:
-    return settings.ws_media_url(source_id)
+def _media_url(camera_id: str) -> str:
+    return settings.ws_media_url(camera_id)
 
 
-def _ingest(source_id: str) -> str:
-    return settings.media_ingest_url(source_id)
+def _ingest(camera_id: str) -> str:
+    return settings.media_ingest_url(camera_id)
 
 
 SLOW_RCVBUF = 32 * 1024   # 느린 뷰어의 커널 수신 버퍼 — loopback 이 수 MB 를 삼켜 드롭을 가리는 것을 막는다
@@ -140,7 +142,7 @@ def test_fast_viewer_receives_every_au_bytes_identical() -> None:
     async def run():
         viewer = asyncio.create_task(_viewer(sid, count=40, opened=opened))
         await asyncio.wait_for(opened.wait(), 10)
-        sent = await mp.publish(_ingest(sid), mp.iter_frames("h264", source_id=sid, width=464, height=400, loop=False), fps=60, count=40)
+        sent = await mp.publish(_ingest(sid), mp.iter_frames("h264", camera_id=sid, width=464, height=400, loop=False), fps=60, count=40)
         got = await asyncio.wait_for(viewer, 20)
         return sent, got
 
@@ -150,7 +152,7 @@ def test_fast_viewer_receives_every_au_bytes_identical() -> None:
     assert media.decode_frame(got[0]).keyframe is True, "새 뷰어의 첫 전송이 keyframe 이 아니다"
     assert got == [s.blob for s in sent], "도착분이 송신 원본과 바이트 단위로 다르다 — 서버가 재직렬화·재생성했다"
     for s, g in zip(sent, got):
-        assert media.decode_frame(g).header["frame_ref"] == s.header["frame_ref"]
+        assert media.decode_frame(g).header == s.header                      # 번호·시각·카메라 그대로(v2 프레임 헤더)
 
 
 # ── M1: 토큰 ────────────────────────────────────────────────────────────────
@@ -171,9 +173,9 @@ def test_no_token_viewer_closed_4401_no_frames() -> None:
     if not settings.ws_token():
         pytest.skip("MK2_WS_TOKEN 이 비어 있다 — loopback 무토큰 모드에서는 M1 을 판정할 수 없다")
     sid = _sid()
-    code = asyncio.run(_expect_close("ws://127.0.0.1:{}/media?source_id={}".format(settings.ws_port(), sid)))
+    code = asyncio.run(_expect_close("ws://127.0.0.1:{}/media?camera_id={}".format(settings.ws_port(), sid)))
     assert code == 4401, code
-    code = asyncio.run(_expect_close("ws://127.0.0.1:{}/media?source_id={}&token=wrong".format(settings.ws_port(), sid)))
+    code = asyncio.run(_expect_close("ws://127.0.0.1:{}/media?camera_id={}&token=wrong".format(settings.ws_port(), sid)))
     assert code == 4401, code
     code = asyncio.run(_expect_close("ws://127.0.0.1:{}/state".format(settings.ws_port())))
     assert code == 4401, code
@@ -214,8 +216,8 @@ def test_bad_headers_not_forwarded_and_unknown_encoding_passes() -> None:
         async with ws_connect(_ingest(sid), open_timeout=10, max_size=None, compression=None) as edge:
             await edge.send(media.encode_frame(_raw_header(sid, 0, encoding=None), au))             # M2 필수 누락
             await edge.send(media.encode_frame(_raw_header(sid, 1, keyframe="true"), au))           # M2 타입 오류
-            other = _raw_header(sid, 2); other["frame_ref"]["source_id"] = "someone-else"
-            await edge.send(media.encode_frame(other, au))                                          # 27-c source_id 불일치
+            other = _raw_header(sid, 2, camera_id="someone-else")
+            await edge.send(media.encode_frame(other, au))                                          # 27-c camera_id 불일치
             await edge.send(media.encode_frame(_raw_header(sid, 3), au))                            # 정상
             await edge.send(media.encode_frame(_raw_header(sid, 4, encoding="av1", codec=None), au)) # M5 모르는 encoding
             await asyncio.sleep(0.3)
@@ -225,6 +227,63 @@ def test_bad_headers_not_forwarded_and_unknown_encoding_passes() -> None:
     got = _frames_of(asyncio.run(run()))
     assert [f.sequence_id for f in got] == [3, 4], [f.sequence_id for f in got]
     assert got[1].header["encoding"] == "av1"
+
+
+def _old_query(url: str) -> str:
+    """새 쿼리 이름 `camera_id=` 를 옛 이름 `source_id=` 로 바꾼 주소(과도기 확인용)."""
+    assert "camera_id=" in url, url
+    return url.replace("camera_id=", "source_id=", 1)
+
+
+def _v1_header(sid: str, seq: int) -> Dict[str, Any]:
+    """옛(v1) 프레임 헤더 — HW 엣지가 EDGEHW-01 전까지 보내는 모양."""
+    return {"frame_ref": {"source_id": sid, "capture_timestamp": mp.iso_ms(), "sequence_id": seq},
+            "encoding": "h264", "keyframe": True, "width": 464, "height": 400, "codec": "avc1.42E01E",
+            "correlation_id": None}
+
+
+def test_v1_header_and_old_query_name_still_relayed() -> None:
+    """과도기(BE-07): 옛 쿼리 `source_id=` 로 붙은 엣지·뷰어, 옛 v1 헤더가 그대로 중계된다(바이트 동일).
+
+    한 엣지 연결에 v1 → v2 → v1 을 섞어 보내도 다 지나간다 — 엣지(EDGEHW-01)·VZ(VZ-02)가 각자 날짜에 바꿔도 된다.
+    v1 헤더의 frame_ref.source_id 가 쿼리 값과 다르면 v2 와 똑같이 거부된다.
+    """
+    sid = _sid("v1q")
+    opened = asyncio.Event()
+    au = mp.load_access_units()[0].data
+    blobs = [media.encode_frame(_v1_header(sid, 0), au),
+             media.encode_frame(_raw_header(sid, 1), au),
+             media.encode_frame(_v1_header(sid, 2), au)]
+    wrong = _v1_header(sid, 3)
+    wrong["frame_ref"]["source_id"] = "someone-else"
+
+    async def run():
+        async def old_viewer():
+            got: List[bytes] = []
+            async with ws_connect(_old_query(_media_url(sid)), open_timeout=10, max_size=None, compression=None) as ws:
+                await asyncio.sleep(0.2)
+                opened.set()
+                while len(got) < 3:
+                    msg = await asyncio.wait_for(ws.recv(), 15)
+                    if isinstance(msg, bytes):
+                        got.append(msg)
+            return got
+
+        viewer = asyncio.create_task(old_viewer())
+        await asyncio.wait_for(opened.wait(), 10)
+        async with ws_connect(_old_query(_ingest(sid)), open_timeout=10, max_size=None, compression=None) as edge:
+            await edge.send(blobs[0])
+            await edge.send(media.encode_frame(wrong, au))                     # v1 인데 카메라가 다르다 → 거부
+            await edge.send(blobs[1])
+            await edge.send(blobs[2])
+            got = await asyncio.wait_for(viewer, 20)
+        return got
+
+    got = asyncio.run(run())
+    assert got == blobs, "옛 쿼리·v1 헤더 프레임이 그대로 중계되지 않았다"
+    frames = _frames_of(got)
+    assert [f.is_v1 for f in frames] == [True, False, True]
+    assert [f.sequence_id for f in frames] == [0, 1, 2] and {f.camera_id for f in frames} == {sid}
 
 
 def test_oversize_frame_dropped_but_connection_alive() -> None:
@@ -270,7 +329,7 @@ def _stream_with_stall(sid: str, encoding: str, fps: float, seconds: float, stal
         viewer = asyncio.create_task(_viewer(sid, duration_s=seconds + stall_s + 5, stall_after=1, stall_s=stall_s,
                                              slow=True, opened=opened, stop=stop))
         await asyncio.wait_for(opened.wait(), 10)
-        frames = mp.iter_frames(encoding, source_id=sid, width=464, height=400, loop=True)
+        frames = mp.iter_frames(encoding, camera_id=sid, width=464, height=400, loop=True)
         pub_stop = asyncio.Event()
         pub = asyncio.create_task(mp.publish(_ingest(sid), frames, fps=fps, stop=pub_stop))
         await asyncio.sleep(seconds)
@@ -293,7 +352,7 @@ def _check_gaps_resume_on_keyframe(sent, got) -> List[int]:
     assert frames[0].keyframe, "첫 전송이 keyframe 이 아니다"
     after_gap = [frames[i + 1] for i, (a, b) in enumerate(zip(seqs, seqs[1:])) if b != a + 1]
     assert all(f.keyframe for f in after_gap), "드롭 뒤 첫 전송이 P프레임이다(GOP 경계가 아닌 곳에서 재개): {}".format(seqs)
-    sent_by_seq = {s.header["frame_ref"]["sequence_id"]: s.blob for s in sent}
+    sent_by_seq = {s.header["sequence_id"]: s.blob for s in sent}
     assert all(sent_by_seq.get(q) == g for q, g in zip(seqs, got)), "도착분이 송신 원본 바이트와 다르다"
     return seqs
 
@@ -307,12 +366,14 @@ def test_slow_viewer_drops_and_resumes_on_keyframe() -> None:
 
 
 def _loki_media_close_line(loki_url: str, sid: str, timeout_s: float) -> Optional[str]:
-    """게이트웨이의 `/media 종료 source_id=<sid> …` 로그 한 줄을 Loki 에서 찾는다(start·end 필수 — 제약 31)."""
+    """게이트웨이의 `/media 종료 camera_id=<sid> …` 로그 한 줄을 Loki 에서 찾는다(start·end 필수 — 제약 31).
+
+    2026-10-13 BE-07 로 로그 문장이 `source_id=` → `camera_id=` 로 바뀌었다(값은 같은 카메라 키)."""
     from obs_query import http_get_json
 
     def query() -> Optional[str]:
         now_ns = time.time_ns()
-        params = {"query": '{service_name="be-gateway"} |= "/media 종료 source_id=' + sid + '"',
+        params = {"query": '{service_name="be-gateway"} |= "/media 종료 camera_id=' + sid + '"',
                   "start": str(now_ns - 10 * 60 * 10**9), "end": str(now_ns), "limit": "5"}
         data = http_get_json(loki_url + "/loki/api/v1/query_range?" + urllib.parse.urlencode(params))
         for stream in data.get("data", {}).get("result", []):
@@ -337,7 +398,7 @@ def test_jpeg_slow_viewer_queue_bounded_by_t_drop(loki_url, observe_timeout_s) -
     assert len(sent) > 80
     _check_gaps_resume_on_keyframe(sent, got)          # JPEG 는 모든 프레임이 keyframe — 재개가 즉시다
     line = _loki_media_close_line(loki_url, sid, observe_timeout_s)
-    assert line, "게이트웨이 /media 종료 로그를 Loki 에서 찾지 못했다(source_id={})".format(sid)
+    assert line, "게이트웨이 /media 종료 로그를 Loki 에서 찾지 못했다(camera_id={})".format(sid)
     m = {k: v for k, v in re.findall(r"(\w+)=([^\s]+)", line)}
     max_buffered, t_drop, t_hard, max_frame = int(m["max_buffered"]), float(m["t_drop_at_max"]), float(m["t_hard_at_max"]), int(m["max_frame"])
     assert m["gop_seen"] == "False", line
@@ -391,7 +452,7 @@ def test_state_latency_not_inflated_by_slow_media(broker, timeout_s) -> None:
         viewer = asyncio.create_task(_viewer(sid, duration_s=20, per_message_delay=0.3, slow=True, opened=opened, stop=stop))
         await asyncio.wait_for(opened.wait(), 10)
         pub_stop = asyncio.Event()
-        pub = asyncio.create_task(mp.publish(_ingest(sid), mp.iter_frames("h264", source_id=sid, width=464, height=400, loop=True), fps=30, stop=pub_stop))
+        pub = asyncio.create_task(mp.publish(_ingest(sid), mp.iter_frames("h264", camera_id=sid, width=464, height=400, loop=True), fps=30, stop=pub_stop))
         await asyncio.sleep(2.0)                                  # 드롭이 시작될 시간
         during = [await _state_roundtrip(broker, timeout_s) for _ in range(3)]
         pub_stop.set()
@@ -419,7 +480,7 @@ def test_media_metrics_increase_then_stop(prometheus_url, observe_timeout_s) -> 
     async def run():
         viewer = asyncio.create_task(_viewer(sid, count=60, opened=opened))
         await asyncio.wait_for(opened.wait(), 10)
-        await mp.publish(_ingest(sid), mp.iter_frames("h264", source_id=sid, width=464, height=400, loop=False), fps=60, count=60)
+        await mp.publish(_ingest(sid), mp.iter_frames("h264", camera_id=sid, width=464, height=400, loop=False), fps=60, count=60)
         return await asyncio.wait_for(viewer, 20)
 
     got = asyncio.run(run())

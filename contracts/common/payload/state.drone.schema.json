@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/khw18033/Physical-Project-mk2/contracts/common/payload/state.drone.schema.json",
   "title": "채널 본문 — state / drone",
-  "description": "드론 노드가 `{zone}/drone/{eid}/state` 로 발행하는 본문. **1Hz(QoS 1, retained 아님) + 사건 즉시**. 실물 근거: 가시화 파트가 2026-09-23 에 전달한 드론 연결 계약 문서 `CONTRACT_x500.md` **§13**(백엔드 규격용으로 따로 쓴 절) — 값이 전부 코드(`pi/drone/drone_link.py`·`drone_node.py`·`pi/common/schema.py`)와 **2026-09-21 21:06 브로커 캡처**에서 확인된 것이고 추정값이 없다. ⚠ 그 캡처는 **비행 제어기(FC)가 분리된 상태**라 `battery`·`flight`·`gps`·`attitude`·`altitude` 다섯이 전부 `null` 이었다 — **그것이 정상 동작이고, 그래서 이 다섯은 `null` 을 반드시 허용한다.**",
+  "description": "드론 노드가 `{zone}/drone/{eid}/state` 로 발행하는 본문. **프레임마다(실측 약 8 Hz, `reason: frame` — 2026-10-02 실측 state 2,478건 전부) + 사건 즉시**(QoS 1, retained 아님). 2026-10-13 통합데이터규약(데이터 규약 v2, `schema_version` '2.0') 반영: `reason: frame` state 는 짝인 프레임을 `frame_ref` 로 가리키고 머리 `timestamp` 는 그 프레임 시각과 같은 값이다(옛 본문 `ts` 를 대신한다) · `flight.system_status` 를 지웠다(arm 판정에 쓰지 말라는 칸이고 실측 늘 0) · 선택 `rtk` 를 더했다. 실물 근거: 가시화 파트가 2026-09-23 에 전달한 드론 연결 계약 문서 `CONTRACT_x500.md` **§13**(백엔드 규격용으로 따로 쓴 절) — 값이 전부 코드(`pi/drone/drone_link.py`·`drone_node.py`·`pi/common/schema.py`)와 **2026-09-21 21:06 브로커 캡처**에서 확인된 것이고 추정값이 없다. ⚠ 그 캡처는 **비행 제어기(FC)가 분리된 상태**라 `battery`·`flight`·`gps`·`attitude`·`altitude` 다섯이 전부 `null` 이었다 — **그것이 정상 동작이고, 그래서 이 다섯은 `null` 을 반드시 허용한다.**",
   "type": "object",
   "required": [
     "reason",
@@ -23,8 +23,9 @@
       "type": "string",
       "minLength": 1,
       "description": "이 메시지를 발행한 사유.",
-      "$comment": "관측된 어휘는 periodic · fc_link_lost · fc_link_up · armed_changed · mode_changed · battery_low **여섯**(§13-4). Go1 의 셋(periodic·mode_changed·battery_low)을 포함하고 드론 고유 셋이 더 있다. enum 으로 고정하지 않는다 — 어휘가 늘 때 전량 격리되는 사고를 만들지 않는다. 형제 규격의 reason·device_status·actuator_state·status.event 도 같은 이유로 enum 이 없다. ⚠ 첫 관측에서는 전환 이벤트를 쏘지 않고, FC 링크가 끊기면 arm·모드 기억을 버린다(§13-4).",
+      "$comment": "관측된 어휘는 frame · periodic · fc_link_lost · fc_link_up · armed_changed · mode_changed · battery_low **일곱** — frame(프레임마다, 짝인 프레임을 frame_ref 로 가리킨다)은 2026-10-02 실측에서 확인했고 계약 §13-4 에는 아직 없다(통합데이터규약 BE-05 · DRONE-06). Go1 의 셋(periodic·mode_changed·battery_low)을 포함하고 드론 고유 셋이 더 있다. enum 으로 고정하지 않는다 — 어휘가 늘 때 전량 격리되는 사고를 만들지 않는다. 형제 규격의 reason·device_status·actuator_state·status.event 도 같은 이유로 enum 이 없다. ⚠ 첫 관측에서는 전환 이벤트를 쏘지 않고, FC 링크가 끊기면 arm·모드 기억을 버린다(§13-4).",
       "examples": [
+        "frame",
         "periodic",
         "fc_link_lost",
         "fc_link_up",
@@ -32,6 +33,10 @@
         "mode_changed",
         "battery_low"
       ]
+    },
+    "frame_ref": {
+      "$ref": "../frame-reference.schema.json",
+      "description": "선택. `reason: frame` 인 state 가 짝인 프레임을 가리킨다 — {camera_id, sequence_id, timestamp}(통합데이터규약 §3-3 · D13). 이때 머리의 timestamp 는 frame_ref.timestamp 와 같은 값이다(R12 예외 — 두 값은 반드시 같다). 그 밖의 사유(사건·주기)에는 싣지 않는다. 옛 생산자는 대신 본문 `ts`(epoch 초)를 보낸다 — 모르는 칸이라 통과한다."
     },
     "device_status": {
       "type": "string",
@@ -167,10 +172,10 @@
         "mode",
         "custom_mode",
         "base_mode",
-        "system_status",
         "landed_state",
         "age_s"
       ],
+      "$comment": "system_status 를 2026-10-13 통합데이터규약(BE-05 · P3)으로 properties 와 required 에서 뺐다 — 계약이 'arm 판정에 쓰지 말 것'이라 적었고 실측에서 늘 0(UNINIT)이었다. additionalProperties 를 막지 않으므로 아직 그 칸을 보내는 옛 드론 노드도 그대로 통과한다.",
       "properties": {
         "armed": {
           "type": [
@@ -200,13 +205,6 @@
           ],
           "description": "원본 정수."
         },
-        "system_status": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "description": "원본 정수. 🔴 **arm 판정에 쓰지 말 것** — 실측에서 0(UNINIT)으로 온다. arm 은 `armed` 를 본다."
-        },
         "landed_state": {
           "type": [
             "string",
@@ -229,7 +227,6 @@
           "mode": "AUTO.LOITER",
           "custom_mode": 0,
           "base_mode": 81,
-          "system_status": 0,
           "landed_state": "ON_GROUND",
           "age_s": 0.1
         }
@@ -311,6 +308,68 @@
           "lon": null,
           "eph_m": null,
           "age_s": 0.3
+        }
+      ]
+    },
+    "rtk": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "선택. RTK 보정 주입 상태(GPS_RTCM_DATA — 지상국이 FC 로 주입하는 보정). 계약 CONTRACT_x500 §7-1 · §13-3(2026-10-02 추가). corrections 는 '보정이 흐른다', fix 는 'FC 가 그걸 써서 RTK 해를 냈다' — 따로 본다. **FC 링크가 없으면 통째로 `null`.** 이 칸을 보내지 않는 옛 드론 노드도 통과하도록 본문 required 에는 넣지 않았다.",
+      "required": [
+        "corrections",
+        "rtcm_age_s",
+        "rtcm_msgs_per_s",
+        "rtcm_bytes_per_s",
+        "rtcm_source",
+        "fix"
+      ],
+      "properties": {
+        "corrections": {
+          "type": "boolean",
+          "description": "true = 최근 3초 안에 RTCM 수신."
+        },
+        "rtcm_age_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "마지막 RTCM 이후 초. `null` = 한 번도 못 받음."
+        },
+        "rtcm_msgs_per_s": {
+          "type": "number",
+          "description": "최근 5초 평균 RTCM 메시지 수(실측 약 7.5개/s)."
+        },
+        "rtcm_bytes_per_s": {
+          "type": "number",
+          "description": "최근 5초 평균 바이트(실측 약 820 B/s)."
+        },
+        "rtcm_source": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "보낸 쪽 \"sysid/compid\" — 예 \"255/190\"(GCS). `null` = 못 받음."
+        },
+        "fix": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "RTK_FIXED · RTK_FLOAT · NONE. `null` = GPS_RAW_INT 미수신.",
+          "$comment": "값 어휘를 enum 으로 고정하지 않는다."
+        }
+      },
+      "examples": [
+        null,
+        {
+          "corrections": true,
+          "rtcm_age_s": 0.4,
+          "rtcm_msgs_per_s": 7.5,
+          "rtcm_bytes_per_s": 820.0,
+          "rtcm_source": "255/190",
+          "fix": "RTK_FIXED"
         }
       ]
     },

@@ -2,18 +2,20 @@
 
 **규격이 코드보다 먼저다.** 여기서 못 박는 것:
 
-- `media-header.schema.json` 양성 2 · 음성 4 — 필수 누락·타입 오류·`frame_ref.capture_timestamp` `+0900`은
-  거부되고, **모르는 `encoding`(`av1`)은 통과한다**(enum 이 아님을 못 박는 반대 축 — 음성 대조 M5의 규격판).
-- `frame_ref` 안쪽 추가 필드는 거부된다 — 참조 규격의 `additionalProperties: false` 예외(README).
-- `detections.schema.json` 초안 — `alignment` 없는 메시지도 통과(선택 + 기본 의미 unaligned), `origin.tier` 에
-  `server` 가 `$comment` 에 있고, 어휘 필드에 `enum` 이 없다(제약 10).
-- `frame-reference.schema.json` **구조 무개정** — 필드 5·필수 3·`additionalProperties:false` 그대로, description 만 바뀜.
+- `media-header.schema.json`(v2 프레임 헤더, 통합데이터규약 §3-5) 양성 3 · 음성 3 — 필수 누락·타입 오류·`timestamp`
+  `+0900`은 거부되고, **모르는 `encoding`(`av1`)은 통과한다**(enum 이 아님을 못 박는 반대 축 — 음성 대조 M5의 규격판).
+  H.264 면 `keyframe`·`codec` 필수(if/then), JPEG 는 둘 다 없어도 된다. 공통 머리 칸은 `message.schema.json` 을 칸마다 `$ref`.
+- 과도기 v1 헤더(`media-header.v1.schema.json`)는 옛 모양 그대로 — `frame_ref` 안쪽 추가 필드는 거부된다
+  (참조 규격의 `additionalProperties: false` 예외, README). 단계 5 에서 v1 파일 둘과 함께 지운다.
+- `detections.schema.json` 초안(§3-6) — `alignment` 없는 메시지도 통과(선택 + 기본 의미 unaligned), `producer.tier` 에
+  `server` 가 `$comment` 에 있고, 어휘 필드에 `enum` 이 없다(제약 10). 검출은 `bbox [x1,y1,x2,y2]` 픽셀 + `label`.
+- `frame-reference.schema.json` v2 — 필드 3·필수 3(`camera_id`·`sequence_id`·`timestamp`)·`additionalProperties:false`.
 - 파일 간 `$ref` 가 **레지스트리로** 해석되고(결정 12), 레지스트리에 없으면 네트워크로 가지 않고 실패한다.
   `object-reference.schema.json` 도 같은 경로로 해석된다 — Phase 7 이 그대로 쓴다.
 - `contracts.observation_hints()` 27 → 22 검산이 그대로다(새 규격 둘은 `payload/` 밖이라 C층 대상이 아니다).
 
 implements: BE-C-03 (frame_ref 규격 확정·$ref 레지스트리), BE-T-07 (미디어 헤더 규격)
-tests: 미디어 헤더 양성/음성 · 모르는 encoding 통과 · frame_ref 닫힘 · 탐지 초안 · 구조 무개정 · 레지스트리 해석
+tests: 미디어 헤더 양성/음성 · 모르는 encoding 통과 · v1 헤더(과도기) · frame_ref 닫힘 · 탐지 초안 · frame_ref v2 구조 · 레지스트리 해석
 """
 
 from __future__ import annotations
@@ -43,6 +45,11 @@ def media_validator():
 
 
 @pytest.fixture(scope="module")
+def media_validator_v1():
+    return envelope.contract_validator("media-header.v1.schema.json")
+
+
+@pytest.fixture(scope="module")
 def detections_validator():
     return envelope.contract_validator("detections.schema.json")
 
@@ -50,8 +57,21 @@ def detections_validator():
 # ── 미디어 헤더: 양성 ────────────────────────────────────────────────────────
 
 
-def test_media_header_valid(media_validator) -> None:
-    assert _errors(media_validator, _load("media-header-valid.json")) == []
+@pytest.mark.parametrize("fixture", ["media-header-valid.json", "media-header-valid-jpeg.json"])
+def test_media_header_valid(media_validator, fixture: str) -> None:
+    assert _errors(media_validator, _load(fixture)) == []
+
+
+def test_media_header_jpeg_without_keyframe_and_h264_requires_both(media_validator) -> None:
+    """JPEG 는 keyframe·codec 이 없어도 통과, H.264 는 둘 다 필수(if/then)."""
+    jpeg = _load("media-header-valid-jpeg.json")
+    assert "keyframe" not in jpeg and "codec" not in jpeg
+    h264 = _load("media-header-valid.json")
+    for field in ("keyframe", "codec"):
+        broken = {k: v for k, v in h264.items() if k != field}
+        assert any(f"'{field}' is a required property" in e for e in _errors(media_validator, broken)), field
+    as_jpeg = dict({k: v for k, v in h264.items() if k not in ("keyframe", "codec")}, encoding="jpeg")
+    assert _errors(media_validator, as_jpeg) == []
 
 
 def test_media_header_unknown_encoding_passes(media_validator) -> None:
@@ -69,15 +89,14 @@ def test_media_header_unknown_encoding_passes(media_validator) -> None:
     [
         ("media-header-invalid-missing-encoding.json", "'encoding' is a required property"),
         ("media-header-invalid-keyframe-type.json", "keyframe: 'true' is not of type 'boolean'"),
-        ("media-header-invalid-timestamp-offset.json", "frame_ref/capture_timestamp: '2026-09-18T12:00:00+0900' is not a 'date-time'"),
-        ("media-header-invalid-frame-ref-extra.json", "frame_ref: Additional properties are not allowed ('rotation_deg' was unexpected)"),
+        ("media-header-invalid-timestamp-offset.json", "timestamp: '2026-09-18T12:00:00+0900' is not a 'date-time'"),
     ],
 )
 def test_media_header_invalid_rejected(media_validator, fixture: str, expect_in_error: str) -> None:
-    """필수 누락 · 타입 오류 · `+0900` · frame_ref 안쪽 추가 필드 — 넷 다 실제로 거부되고 사유가 정확하다.
+    """필수 누락 · 타입 오류 · `+0900` — 셋 다 실제로 거부되고 사유가 정확하다.
 
-    `+0900` 거부는 `$ref` 로 끌어온 `frame-reference.schema.json` 의 `format: date-time` 이 포맷 검사기·
-    레지스트리와 함께 실제로 동작한다는 뜻이다 — 이것이 무력하면 공통 헤더 검증도 무력한 것이다.
+    `+0900` 거부는 `$ref` 로 끌어온 `message.schema.json#/properties/timestamp` 의 `format: date-time` 이
+    포맷 검사기·레지스트리와 함께 실제로 동작한다는 뜻이다 — 이것이 무력하면 공통 헤더 검증도 무력한 것이다.
     """
     errors = _errors(media_validator, _load(fixture))
     assert errors, f"{fixture} 가 거부되지 않았다"
@@ -85,15 +104,47 @@ def test_media_header_invalid_rejected(media_validator, fixture: str, expect_in_
 
 
 def test_media_header_required_set_and_no_enum() -> None:
-    """필수 5(`frame_ref`·`encoding`·`keyframe`·`width`·`height`) · `frame_ref` 는 `$ref`(평면 아님) · 어휘 필드에 enum 없음."""
+    """필수 = 공통 머리 7 + `camera_id`·`encoding`·`width`·`height` · `frame_ref` 없음 · 공통 머리는 칸마다 `$ref` · enum 없음."""
     schema = json.loads((settings.contracts_dir() / "media-header.schema.json").read_text(encoding="utf-8"))
-    assert set(schema["required"]) == {"frame_ref", "encoding", "keyframe", "width", "height"}
-    assert schema["properties"]["frame_ref"]["$ref"] == "frame-reference.schema.json"
+    assert set(schema["required"]) == {"schema_version", "source_id", "node_id", "zone_id", "timestamp", "sequence_id",
+                                       "session_id", "camera_id", "encoding", "width", "height"}
+    assert "frame_ref" not in schema["properties"], "v2 프레임 헤더에는 frame_ref 가 없다(그 유무로 v1/v2 를 가른다)"
+    for field in ("schema_version", "source_id", "node_id", "zone_id", "timestamp", "sequence_id", "session_id", "sent_at"):
+        assert schema["properties"][field]["$ref"] == "message.schema.json#/properties/" + field, field
+    assert schema["then"]["required"] == ["keyframe", "codec"]
     for field in ("encoding", "codec"):
         assert "enum" not in schema["properties"][field], field
         assert "$comment" in schema["properties"][field], field
     assert schema.get("additionalProperties") is not False
     assert "페이로드는 열지 않는다" in schema["$comment"]
+
+
+# ── 미디어 헤더 v1 (과도기 — 단계 5 에서 지운다) ─────────────────────────────
+
+
+def test_media_header_v1_valid_and_frame_ref_closed(media_validator_v1, media_validator) -> None:
+    """옛 헤더는 v1 규격으로 통과하고, frame_ref 안쪽 추가 필드·`+0900` 은 그대로 거부된다. v2 규격으로는 통과하지 않는다."""
+    v1 = _load("media-header-v1-valid.json")
+    assert "frame_ref" in v1
+    assert _errors(media_validator_v1, v1) == []
+    assert _errors(media_validator, v1), "v1 헤더가 v2 규격을 통과하면 안 된다(camera_id 등 필수 칸이 없다)"
+    errors = _errors(media_validator_v1, _load("media-header-v1-invalid-frame-ref-extra.json"))
+    assert any("frame_ref: Additional properties are not allowed ('rotation_deg' was unexpected)" in e for e in errors), errors
+    bad = json.loads(json.dumps(v1))
+    bad["frame_ref"]["capture_timestamp"] = "2026-09-18T12:00:00+0900"
+    assert any("frame_ref/capture_timestamp: '2026-09-18T12:00:00+0900' is not a 'date-time'" in e
+               for e in _errors(media_validator_v1, bad))
+
+
+def test_v1_schema_files_have_own_ids() -> None:
+    """v1 사본 둘은 `$id` 끝이 `.v1.schema.json` — 레지스트리에서 v2 와 겹치지 않는다. v1 헤더는 v1 참조를 가리킨다."""
+    base = settings.contracts_dir()
+    mh1 = json.loads((base / "media-header.v1.schema.json").read_text(encoding="utf-8"))
+    fr1 = json.loads((base / "frame-reference.v1.schema.json").read_text(encoding="utf-8"))
+    assert mh1["$id"].endswith("/media-header.v1.schema.json") and fr1["$id"].endswith("/frame-reference.v1.schema.json")
+    assert mh1["properties"]["frame_ref"]["$ref"] == "frame-reference.v1.schema.json"
+    assert set(mh1["required"]) == {"frame_ref", "encoding", "keyframe", "width", "height"}
+    assert fr1["required"] == ["source_id", "capture_timestamp", "sequence_id"] and fr1["additionalProperties"] is False
 
 
 # ── 탐지 초안 ────────────────────────────────────────────────────────────────
@@ -111,76 +162,89 @@ def test_detections_draft_without_alignment_passes(detections_validator) -> None
 
 
 def test_detections_draft_shape_and_vocab_not_enum() -> None:
-    """메시지 단위 `alignment`·`origin{tier,kind}`·`bbox_space` 가 있고, `tier` 에 `server` 가 적혀 있으며, 어휘는 enum 이 아니다.
+    """§3-6 결과 머리 — 필수(공통 머리 5 · `emitted_at` · `model` · `width` · `height` · `detections`), 메시지 단위
+    `alignment`·`producer{tier,kind}`, `tier` 에 `server` 가 적혀 있고, 어휘는 enum 이 아니다.
 
-    ⚠ 좌표 선언의 이름은 **소비자(VZ)의 것**이다 — 2026-09-21 VZ 회신으로 `coord{normalized,ref_*}` 를
-    `bbox_space{format,reference{width,height}}` 로 바꿨다(초안이라 비용 0). `format` 기본값은 **normalized** 이고
-    생산자(AI) 회신으로 확정한다.
+    ⚠ 2026-10-13 통합데이터규약(BE-04)으로 `bbox_space{…}`+`boxes[{x,y,w,h}]` → 결과 `width`·`height` + 검출
+    `bbox [x1,y1,x2,y2]` 픽셀, `origin` → `producer`(N5) 로 바꿨다. 옛 이름이 남으면 둘이 갈린다.
     """
     schema = json.loads((settings.contracts_dir() / "detections.schema.json").read_text(encoding="utf-8"))
     props = schema["properties"]
+    assert set(schema["required"]) == {"schema_version", "source_id", "node_id", "zone_id", "timestamp",
+                                       "emitted_at", "model", "width", "height", "detections"}
     assert "alignment" in props and "alignment" not in schema["required"]
-    assert set(props["origin"]["required"]) == {"tier", "kind"}
-    assert "server" in props["origin"]["properties"]["tier"]["$comment"]
-    assert "origin_kind" in props["origin"]["properties"]["kind"]["$comment"], "공통 헤더 origin_kind 와 다른 축임을 적어야 한다"
-    assert "coord" not in props, "2026-09-21 VZ 회신으로 bbox_space 로 옮겼다 — 옛 이름이 남으면 둘이 갈린다"
-    assert set(props["bbox_space"]["required"]) == {"format", "origin", "reference"}
-    assert set(props["bbox_space"]["properties"]["reference"]["required"]) == {"width", "height"}
-    assert "top-left" in props["bbox_space"]["properties"]["origin"]["$comment"]
-    assert "normalized" in props["bbox_space"]["properties"]["format"]["$comment"]
-    for spec in (props["alignment"], props["origin"]["properties"]["tier"], props["origin"]["properties"]["kind"],
-                 props["bbox_space"]["properties"]["format"], props["bbox_space"]["properties"]["origin"]):
+    assert "frame_ref" not in schema["required"] and props["frame_ref"]["$ref"] == "frame-reference.schema.json"
+    assert set(props["producer"]["required"]) == {"tier", "kind"}
+    assert "server" in props["producer"]["properties"]["tier"]["$comment"]
+    for gone in ("origin", "bbox_space", "boxes", "coord"):
+        assert gone not in props, gone + " 은 v2 에서 없앤 이름이다"
+    for spec in (props["alignment"], props["producer"]["properties"]["tier"], props["producer"]["properties"]["kind"]):
         assert "enum" not in spec
-    box = props["boxes"]["items"]
-    assert "source" not in box["properties"], "박스 단위 source 는 버렸다 — 출처는 메시지 단위 origin"
+    item = props["detections"]["items"]
+    assert set(item["required"]) == {"bbox", "label"}
+    assert item["properties"]["bbox"]["minItems"] == 4 and item["properties"]["bbox"]["maxItems"] == 4
+    assert "source" not in item["properties"], "검출 단위 source 는 버렸다 — 출처는 메시지 단위 producer"
     assert "초안" in schema["$comment"]
 
 
-def test_detections_draft_rejects_bad_box(detections_validator) -> None:
-    """초안이라도 검증기는 돈다 — 박스에 `label` 이 없거나 메시지에 `bbox_space` 가 없으면 거부.
+def test_detections_draft_rejects_bad_detection(detections_validator) -> None:
+    """초안이라도 검증기는 돈다 — 검출에 `label` 이 없거나, `bbox` 가 넷이 아니거나, 결과에 `width` 가 없으면 거부.
 
-    ⚠ 2026-09-21 VZ 회신으로 `coord` → `bbox_space` 로 옮겼을 때 **예시 파일도 같이 바뀐다** —
-    여기서 옛 이름을 지우려 들면 시험이 `KeyError` 로 깨진다(실제로 한 번 깨졌다, 실측 작업로그 참고).
-    이름을 또 바꾸면 규격·예시·이 시험 **셋을 같이** 고쳐야 한다.
+    이름을 또 바꾸면 규격·예시·이 시험 **셋을 같이** 고쳐야 한다(2026-09-21 에 예시만 바뀌어 한 번 깨졌다).
     """
     message = _load("detections-draft-valid.json")
-    del message["boxes"][0]["label"]
+    del message["detections"][0]["label"]
     assert any("label" in e for e in _errors(detections_validator, message))
     message = _load("detections-draft-valid.json")
-    del message["bbox_space"]
-    assert any("'bbox_space' is a required property" in e for e in _errors(detections_validator, message))
+    message["detections"][0]["bbox"] = [1, 2, 3]
+    assert any("detections/0/bbox" in e for e in _errors(detections_validator, message))
+    message = _load("detections-draft-valid.json")
+    del message["width"]
+    assert any("'width' is a required property" in e for e in _errors(detections_validator, message))
+    message = _load("detections-draft-valid.json")
+    message["frame_ref"]["source_id"] = message["frame_ref"].pop("camera_id")       # 옛 frame_ref 모양
+    assert any("frame_ref" in e for e in _errors(detections_validator, message))
 
 
-# ── frame-reference: 구조 무개정 ─────────────────────────────────────────────
+# ── frame-reference: v2 구조 (통합데이터규약 §3-3 · BE-02) ────────────────────
 
 
-def test_frame_reference_structure_unchanged_description_updated() -> None:
-    """결정 2 — 구조(필드·필수·additionalProperties)는 그대로, description 만 `capture_timestamp` 뜻으로 바뀌었다."""
+def test_frame_reference_v2_structure() -> None:
+    """세 칸(`camera_id`·`sequence_id`·`timestamp`)만, 셋 다 필수, `additionalProperties:false` — F==F 비교의 전제.
+
+    `$id` 는 그대로다(규격을 $ref 하는 쪽이 바꿀 것이 없다). 옛 다섯 칸 모양은 `frame-reference.v1.schema.json`.
+    """
     schema = json.loads((settings.contracts_dir() / "frame-reference.schema.json").read_text(encoding="utf-8"))
-    assert set(schema["properties"]) == {"source_id", "capture_timestamp", "sequence_id", "frame_id", "time_sync_state"}
-    assert schema["required"] == ["source_id", "capture_timestamp", "sequence_id"]
+    assert schema["$id"].endswith("/frame-reference.schema.json")
+    assert set(schema["properties"]) == {"camera_id", "sequence_id", "timestamp"}
+    assert schema["required"] == ["camera_id", "sequence_id", "timestamp"]
     assert schema["additionalProperties"] is False
-    assert schema["properties"]["capture_timestamp"]["type"] == "string"
-    assert schema["properties"]["capture_timestamp"]["format"] == "date-time"
-    assert "촬영 시각이 아니다" in schema["properties"]["capture_timestamp"]["description"]
-    assert "액세스 유닛 재조립" in schema["description"]
-    assert "디코드 시점에 단 한 번" not in schema["description"]
+    assert schema["properties"]["timestamp"]["type"] == "string"
+    assert schema["properties"]["timestamp"]["format"] == "date-time"
+    assert "처음 손에 넣은 기기" in schema["description"], "원칙 10 의 v2 문장(BE-10)"
+    assert "엣지에서 한 번 부여" not in schema["description"]
 
 
 # ── $ref 레지스트리 ──────────────────────────────────────────────────────────
 
 
 def test_registry_resolves_object_reference_like_media_header() -> None:
-    """`object-reference.schema.json` 도 같은 레지스트리로 `frame_ref` 를 해석한다 — Phase 7 이 이 경로를 그대로 쓴다."""
+    """`object-reference.schema.json` 도 같은 레지스트리로 `frame_ref` 를 해석한다 — Phase 7 이 이 경로를 그대로 쓴다.
+
+    `frame_ref` 는 v2 모양(§3-3)이다 — object-reference 는 `$ref` 만 하므로 frame-reference 가 바뀌면 같이 바뀐다.
+    """
     validator = envelope.contract_validator("object-reference.schema.json")
     good = {
         "object_id": "obj-1", "zone_local_track_id": "zoneA-track-1", "zone_id": "zoneA",
         "first_seen": "2026-09-18T12:00:00+09:00", "last_seen": "2026-09-18T12:00:01+09:00",
-        "frame_ref": {"source_id": "go1-001_front", "capture_timestamp": "2026-09-18T12:00:00.123+09:00", "sequence_id": 1},
+        "frame_ref": {"camera_id": "go1-001_front", "sequence_id": 1, "timestamp": "2026-09-18T12:00:00.123+09:00"},
     }
     assert _errors(validator, good) == []
-    bad = dict(good, frame_ref={"source_id": "go1-001_front", "capture_timestamp": "2026-09-18T12:00:00+0900", "sequence_id": 1})
-    assert any("frame_ref/capture_timestamp" in e for e in _errors(validator, bad))
+    bad = dict(good, frame_ref={"camera_id": "go1-001_front", "sequence_id": 1, "timestamp": "2026-09-18T12:00:00+0900"})
+    assert any("frame_ref/timestamp" in e for e in _errors(validator, bad))
+    old = dict(good, frame_ref={"source_id": "go1-001_front", "capture_timestamp": "2026-09-18T12:00:00.123+09:00",
+                                "sequence_id": 1})
+    assert _errors(validator, old), "옛 frame_ref 모양은 v2 참조 규격으로 통과하지 않는다"
 
 
 def test_registry_has_every_schema_by_id() -> None:
@@ -191,7 +255,7 @@ def test_registry_has_every_schema_by_id() -> None:
 
 
 def test_unregistered_ref_fails_without_network(tmp_path: Path, monkeypatch) -> None:
-    """레지스트리에 `frame-reference` 가 없으면 `$id` URL 로 가져오려 하지 않고 검증 시점에 실패한다(결정 12)."""
+    """레지스트리에 `$ref` 대상(v2 는 `message.schema.json`)이 없으면 `$id` URL 로 가져오려 하지 않고 검증 시점에 실패한다(결정 12)."""
     contracts_dir = tmp_path / "common"
     contracts_dir.mkdir()
     src = settings.contracts_dir() / "media-header.schema.json"
@@ -218,7 +282,7 @@ def test_contract_validator_is_cached() -> None:
 
 
 def test_new_schemas_do_not_disturb_c_layer_hints() -> None:
-    """DoD 1-1b — 새 규격 둘은 `payload/` 밖이라 타입 판별·힌트 검산(22)에 영향이 없다."""
+    """DoD 1-1b — 새 규격 둘(과 v1 사본 둘)은 `payload/` 밖이라 타입 판별·힌트 검산(22)에 영향이 없다."""
     assert "media-header" not in contracts.known_entity_types()
     grouped = contracts.hint_items_by_kind()
     assert sum(len(v) for v in grouped.values()) == 22

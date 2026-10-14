@@ -87,6 +87,18 @@ def test_phase4_labels_are_in_forbidden_set() -> None:
     assert "node_id" not in obs.FORBIDDEN_LABELS
 
 
+# 2026-10-13 통합데이터규약 BE-09 — v2 의 새 시각 칸 셋(보낸 순간·받은 순간·결과가 나온 순간). 옛 이름도 그대로 막혀 있다.
+V2_TIME_FORBIDDEN = ("sent_at", "received_at", "emitted_at")
+
+
+def test_v2_시각_칸이_라벨로_막힌다() -> None:
+    assert set(V2_TIME_FORBIDDEN) <= obs.FORBIDDEN_LABELS
+    assert {"timestamp", "ts", "capture_timestamp", "frame_ref"} <= obs.FORBIDDEN_LABELS   # 옛 이름은 지우지 않는다
+    for bad in V2_TIME_FORBIDDEN:
+        with pytest.raises(ValueError):
+            obs.count("be.ingest.received", component="ingest", channel="state", **{bad: "2026-10-13T10:00:00.000+09:00"})
+
+
 def test_발화_원문_라벨이_이름으로_막힌다() -> None:
     """9번째. VZ 가 2026-09-21 회신에서 이름을 확정했다 — 그전까지는 이름이 없어 넣을 수 없었다.
 

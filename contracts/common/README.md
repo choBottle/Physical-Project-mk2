@@ -24,21 +24,26 @@ AI 파트도 이 소유권을 전제한다 — AI-C-01: "AI가 생산·소비하
 | 파일 | 무엇 | 근거 |
 |---|---|---|
 | `message.schema.json` | 모든 메시지의 공통 헤더(머리) | BE-C-01·BE-C-02·BE-C-07 |
-| `frame-reference.schema.json` | 원본 관측 프레임 역추적 참조(frame_ref) | BE-C-03 |
+| `frame-reference.schema.json` | 원본 관측 프레임 역추적 참조(frame_ref) — **v2(2026-10-13 통합데이터규약 §3-3)**: `camera_id` · `sequence_id` · `timestamp` 세 칸, 셋 다 필수, 안쪽 추가 칸 금지. 가리키는 프레임 헤더의 같은 이름 세 칸을 그대로 옮긴다 | BE-C-03 |
+| `frame-reference.v1.schema.json` | **과도기 사본** — 옛 frame_ref(`source_id` · `capture_timestamp` · `sequence_id` + 선택 `frame_id` · `time_sync_state`). `$id` 끝이 `.v1` 이라 레지스트리에서 겹치지 않는다. v1 미디어 헤더만 이것을 `$ref` 한다. **단계 5 에서 지운다** | BE-C-03 |
 | `object-reference.schema.json` | 구역을 넘어 유지되는 지속 객체 참조(object_id) | DT-06·AI-S-06 |
-| `media-header.schema.json` | **미디어 경로(방식 B) 메시지의 JSON 헤더** — `frame_ref`(`$ref`)·`encoding`·`keyframe`·`width`·`height` (+선택 `codec`·`correlation_id`). 서버는 필수·타입만 검증하고 값 어휘를 보지 않으며 페이로드를 열지 않는다. **루트에 둔다** — `payload/`는 MQTT 토픽으로 고르는 채널 본문 자리다(**Phase 4 신설**) | BE-T-07·BE-C-03 |
-| `detections.schema.json` | **탐지 결과 초안** — 생산자 AI, 소비자 가시화. 메시지 단위 `alignment`·`origin{tier,kind}`·`bbox_space{format,origin,reference}`·`boxes[]`. ⚠ **초안이다**(생산자 AI 회신 뒤 확정). **좌표 선언 이름은 2026-09-21 VZ 회신으로 VZ 것(`bbox_space`)을 따랐다** — `format` 기본값은 `normalized`. 채널·토픽은 신설하지 않았으므로 역시 **루트**(**Phase 4 신설**) | BE-C-03·VZ-I-07 |
+| `media-header.schema.json` | **프레임 헤더**(방식 B 메시지의 JSON 헤더 — GO1 Frame-Meta · 드론 /api/frame meta · 360 업로드 meta 와 같은 내용, 통합데이터규약 §3-5) — **v2(2026-10-13)**: 공통 머리 7칸(칸마다 `message.schema.json` 을 `$ref`) + `camera_id` · `encoding` · `width` · `height` 필수, H.264 면 `keyframe` · `codec` 필수(if/then), JPEG 는 둘 다 싣지 않는다. 선택 `sent_at` · `sha1` · `bytes`. `frame_ref` 묶음은 없다(그 유무로 v1/v2 를 가른다). 서버는 필수·타입만 검증하고 값 어휘를 보지 않으며 페이로드를 열지 않는다. **루트에 둔다** — `payload/`는 MQTT 토픽으로 고르는 채널 본문 자리다(**Phase 4 신설**) | BE-T-07·BE-C-03 |
+| `media-header.v1.schema.json` | **과도기 사본** — 옛 헤더(`frame_ref`(`$ref` v1)·`encoding`·`keyframe`·`width`·`height` + 선택 `codec`·`correlation_id`). HW 엣지(EDGEHW-01)가 v2 로 바뀔 때까지 서버가 이것으로도 받는다(`backend/gateway/media.py` — 헤더에 `frame_ref` 가 있으면 v1). **단계 5 에서 지운다** | BE-T-07 |
+| `detections.schema.json` | **비전 결과 초안**(통합데이터규약 §3-6) — 생산자 DS · 360 · AI, 소비자 가시화. **v2(2026-10-13)**: 필수 = 공통 머리 5 · `emitted_at` · `model` · `width` · `height` · `detections[{bbox, label, …}]`(`bbox` = `[x1, y1, x2, y2]` 픽셀, 기준은 결과의 `width`·`height`). 원본 프레임이 있으면 `frame_ref`(규약상 필수, 규격으로는 선택). 메시지 단위 `alignment` · `producer{tier, kind, label?, optional?}`(옛 `origin` — N5). 옛 `bbox_space` · `boxes` 는 없앴다. ⚠ **초안이다**. 채널·토픽은 신설하지 않았으므로 역시 **루트**(**Phase 4 신설**) | BE-C-03·VZ-I-07 |
 | `payload/state.{sensor,robot,actuator,analysis,drone}.schema.json` | `state` 채널 본문 — **개체 타입마다 다르다**. 🔄 **2026-09-29 `drone` 신설** — 근거는 가시화 파트가 전달한 드론 연결 계약 §13. 어휘가 **넷 → 다섯**이 됐고 `backend/contracts.py::known_entity_types()` 가 디렉터리에서 유도하므로 **파이썬 변경은 0**이다(시험·문서는 같이 고쳤다) | BE-C-01 |
 | `payload/status.schema.json` | `status` 채널 본문(등록·요약·종료·급사). 타입 공통 | BE-C-01·BE-T-04 |
 | `payload/heartbeat.schema.json` | `heartbeat` 채널 — 본문 없음 | BE-C-01 |
 | `examples/envelope-valid.json` | 공통 헤더를 통과하는 정상 메시지 예제 | 위 스키마 |
 | `examples/envelope-valid-session.json` | 위와 같되 `session_id`가 실린 형태(규격 1.1) | 위 스키마 |
 | `examples/payload-*.json` | 채널 본문 예제(양성·음성). **공통 헤더 + 본문이 합쳐진 완전한 메시지**다 — 검증이 메시지 단위로 이뤄지므로 본문만 담으면 돌릴 수 없다 | 위 스키마 |
-| `examples/media-header-*.json` | 미디어 헤더 예제 — 양성 2(정상 · **모르는 `encoding`이 통과한다**) · 음성 4(`encoding` 누락 · `keyframe` 타입 · `frame_ref.capture_timestamp` `+0900` · `frame_ref` 안쪽 추가 필드). `tests/test_contract_media.py`가 돌린다 | `media-header.schema.json` |
-| `examples/detections-draft-*.json` | 탐지 초안 예제 — `alignment` 있음/없음 둘 다 통과 | `detections.schema.json` |
+| `examples/media-header-*.json` | 프레임 헤더 v2 예제 — 양성 3(H.264 · JPEG(`keyframe`·`codec` 없음) · **모르는 `encoding`이 통과한다**) · 음성 3(`encoding` 누락 · `keyframe` 타입 · `timestamp` `+0900`). `tests/test_contract_media.py`가 돌린다 | `media-header.schema.json` |
+| `examples/media-header-v1-*.json` | **과도기** v1 헤더 예제 — 양성 1 · 음성 1(`frame_ref` 안쪽 추가 필드). 단계 5 에서 v1 규격과 함께 지운다 | `media-header.v1.schema.json` |
+| `examples/detections-draft-*.json` | 비전 결과 예제 — DS 드론 depth 결과(`alignment: frame` + `frame_ref`) · 360 anchor 결과(`frame_ref`·`alignment` 없음) 둘 다 통과 | `detections.schema.json` |
+| `examples/payload-state-drone-v2-frame-valid.json` | 드론 v2 프레임 동기 state(`reason: frame` + `frame_ref`, `rtk`, `system_status` 없음). 옛 실측 캡처 `payload-state-drone-valid.json` 도 그대로 통과한다 | `payload/state.drone.schema.json` |
 
-**파일 간 `$ref`는 레지스트리로 해석한다(Phase 4 결정 12).** `media-header`·`object-reference`·`detections`가
-`frame-reference.schema.json`을 `$ref`한다. 검증기(`backend/ingest/envelope.py`)는 이 디렉터리의 규격 전부를
+**파일 간 `$ref`는 레지스트리로 해석한다(Phase 4 결정 12).** `object-reference`·`detections`·`payload/state.drone`이
+`frame-reference.schema.json`을, v2 `media-header`가 `message.schema.json#/properties/<칸>`(공통 머리 칸마다)을,
+v1 `media-header`가 `frame-reference.v1.schema.json`을 `$ref`한다. 검증기(`backend/ingest/envelope.py`)는 이 디렉터리의 규격 전부를
 `$id → 파일 내용`으로 `referencing.Registry`에 등록해 넘기며, **`$id`가 URL이어도 네트워크로 가져오지 않는다** —
 등록에 없는 참조는 즉시 실패한다. Phase 7의 `object-reference` 검증 경로도 같은 레지스트리를 쓴다.
 
@@ -57,14 +62,18 @@ AI 파트도 이 소유권을 전제한다 — AI-C-01: "AI가 생산·소비하
   (DT-06 핸드오프). 구역마다 track 번호 체계가 독립이므로, 구역을 가로지르는 하나의 궤적
   (가시화 VZ-I-09)은 전역 ID 없이는 이어지지 않는다.
 
-`frame_ref`는 엣지가 **프레임 경계를 확정하는 시점(액세스 유닛 재조립 또는 디코드)**에 한 번 부여해
-전파할 뿐 백엔드·AI가 재생성하지 않는다는 규칙(BE-C-03)이 여기서도 그대로 유지된다. 말단(온디바이스)은
-부여하지 않는다.
+**원칙 10(2026-10-13 통합데이터규약 BE-10):** **프레임을 처음 손에 넣은 기기**(pi7 · pi3 · 360 노트북 · HW 엣지)가
+번호(`sequence_id`)와 시각(`timestamp`)을 프레임 헤더에 한 번 붙인다. 그 뒤 거치는 곳(엣지 · DS · 서버 · AI)은 다시
+만들지 않고, 받은 시각(`received_at`)만 더한다. 번호는 **손에 넣는 순간** 매긴다 — 보내는 순간에 매기면 버린 장이
+불연속으로 보이지 않는다(HW 실측: 전송 시점 번호로 64장을 버렸는데 서버가 불연속 0회로 봤다). 결과·상태는 그 프레임을
+`frame_ref{camera_id, sequence_id, timestamp}`로 가리키고, 세 값은 프레임 헤더의 같은 이름 세 칸을 그대로 옮긴 것이다
+(BE-C-03). 이 참조를 싣는 메시지는 머리의 `timestamp`도 `frame_ref.timestamp`와 같은 값이다(R12 예외).
 
-- **`capture_timestamp`의 뜻(2026-09-18 확정):** 엣지가 프레임 경계를 확정한 시각(도착)이며 **촬영 시각이
-  아니다.** 말단 내부 지연이 포함되고 보정되지 않았다(크기 근거로만 HW 실측 1회 ≈0.3초 — 상수가 아니며
-  규격값이 아니다). 형식은 **ISO date-time 문자열**이지 epoch ms 정수가 아니다(결정 2). 상관키
-  (`correlation_id`)는 `frame_ref` 밖 — 공통 헤더·미디어 헤더에 둔다.
+- **`timestamp`의 뜻(v2):** 데이터 시각 — 그 그림을 손에 넣은 순간이다. 메시지를 보낸 순간이 아니다(그것은 선택
+  칸 `sent_at`). 형식은 **ISO date-time 문자열**(밀리초 3자리 · `+09:00`, R5)이지 epoch ms 정수가 아니다(결정 2).
+  상관키(`correlation_id`)는 `frame_ref` 밖이다 — 프레임 헤더에서는 지웠다(명령 사슬용이라 프레임에 쓸 일이 없다).
+- **옛 이름(v1, 이력):** `frame_ref.source_id`(카메라 키) → `camera_id`, `capture_timestamp`(엣지가 프레임 경계를
+  확정한 시각 — 2026-09-18 정의, 촬영 시각이 아니었다) → `timestamp`. `frame_id`·`time_sync_state`는 없앴다.
 - **`additionalProperties: false` 예외:** 「payload에는 쓰지 않는다」(아래 「느슨한 2단」)는 **채널 본문
   규격**에 대한 규칙이다. `frame-reference`·`object-reference` 같은 **참조 규격**은 필드 집합이 닫혀 있어야
   정합(F==F 비교)이 성립하므로 예외다. 그래서 `media-header`·`detections`는 바깥에 필드를 더할 수 있지만
@@ -74,9 +83,10 @@ AI 파트도 이 소유권을 전제한다 — AI-C-01: "AI가 생산·소비하
 
 `message.schema.json`은 **공통 헤더만** 정의한다 — 모든 메시지에 공통인 머리
 (`schema_version` · `source_id` · `entity_id` · `node_id` · `zone_id` · `timestamp` ·
-`sequence_id` · `session_id` · `correlation_id` · `origin_kind`).
+`sequence_id` · `session_id` · `sent_at` · `correlation_id` · `origin_kind`). `timestamp`는 **데이터 시각**이다
+(v2 — 2026-10-13 통합데이터규약 BE-01). 보낸 순간은 선택 칸 `sent_at`.
 
-채널별 본문(계측값 `water_level_m`, 탐지 `boxes`, 위험 `risk_state` 등)은 이 공통 헤더 위에
+채널별 본문(계측값 `water_level_m`, 비전 결과 `detections`, 위험 `risk_state` 등)은 이 공통 헤더 위에
 얹히며, 각 채널 payload 스키마에서 따로 정의한다. `examples/envelope-valid.json`이 공통 헤더 위에
 채널 본문(`channel: "state"` + 계측 필드)이 얹힌 실제 모양을 보여준다.
 
@@ -207,6 +217,7 @@ log/event 10 = 22**. `tests/test_c_layer_extract.py`가 이 숫자를 못 박는
 > |---|---|---|
 > | 기존 7종(Phase 3) | `session_id` · `internal_seq` · `sequence_id` · 시각(`timestamp`·`ts`·`capture_timestamp`) · `frame_id` | 값이 계속 달라진다. 특히 `session_id`는 **재기동마다 새 값**이라 노드를 껐다 켤 때마다 시계열이 하나씩 영구히 는다 |
 > | **Phase 4 확장 8종(확정)** | `frame_ref` · `correlation_id` · `command_id` · `mission_id` · `node_ref` · `client_request_id` · `plan_id` · `event_key` | 프레임·명령·임무·판마다 다르다. 앞의 셋은 VZ 통지(`docs/be/vz-observability-namespace.md` §2)가 "막는다"고 적었는데 코드에 없던 것을 맞췄고, 뒤의 다섯은 VZ 회신(2026-09-17)이 제안한 VZ 식별자다. `command_id`·`correlation_id`는 trace 속성으로는 되지만 metric 라벨로는 안 된다 |
+> | **v2 시각 3종(2026-10-13 통합데이터규약 BE-09)** | `sent_at` · `received_at` · `emitted_at` | v2 에서 새로 생긴 「메시지마다 값이 바뀌는 시각」 — 보낸 순간 · 받은 순간 · 결과가 나온 순간. 옛 이름(`timestamp`·`ts`·`capture_timestamp`·`frame_ref`)은 지우지 않는다 — 옛 메시지가 계속 들어올 수 있다 |
 > | **9번째 — 확정(2026-09-21)** | `utterance_text` | 발화 원문. VZ 회신(2026-09-21)이 이름을 확정했다 — 임무 계약 `contracts/mission.schema.json` 의 `utterance.text` 이고, **라벨로 평탄화하면 `utterance_text`** 로 내보내겠다고 했다. ⚠ **VZ 는 오늘 기준 이것을 라벨로 내보내지 않는다**(자체 관측은 숫자 여섯뿐이고 라벨이 0개다). 그래도 미리 막아 둔다 — *"그 이름으로 넣어 두면 우리가 실수해도 막힌다"*(VZ 요청) |
 >
 > ⚠ **`node_id`는 넣지 않는다.** VZ의 `node_id`는 DAG 노드 뜻이지만 우리 공통 헤더 `node_id`는 물리 노드
@@ -231,12 +242,13 @@ log/event 10 = 22**. `tests/test_c_layer_extract.py`가 이 숫자를 못 박는
 
 ## 버전 정책
 
-**현재 규격 버전: `1.1`** (2026-09-10). 이력:
+**현재 규격 버전: `2.0`** (2026-10-13 통합데이터규약 — 데이터 규약 v2). 이력:
 
 | 버전 | 변경 | 왜 이 자리인가 |
 |---|---|---|
 | `1.0` | 최초 공통 헤더 | — |
 | `1.1` | **선택 필드 `session_id` 추가** | 구버전 소비자가 깨지지 않는 추가라 MINOR. `sequence_id`가 재기동 시 리셋되므로 순번 열의 경계를 가를 값이 필요하다(BE-S-01) |
+| `2.0` | **`timestamp`의 뜻이 데이터 시각으로 바뀌고**(선택 `sent_at` 추가), 프레임·비전 칸 이름이 바뀌었다 — 프레임 헤더 평평하게(`camera_id`·`sequence_id`·`timestamp`), `frame_ref{camera_id, sequence_id, timestamp}`, 비전 결과 `bbox [x1,y1,x2,y2]` 픽셀 · `producer` | 기존 필드의 의미가 바뀌어 MAJOR(아래 규칙). 받는 쪽이 옛 기록(`1.x`)과 새 기록을 이 값 하나로 가른다(N1). 값을 검사해 거부하는 곳은 없다 — 정규식은 형식만 본다(R11). 과도기 동안 v1 프레임 헤더도 받는다(BE-07) |
 
 > **혼재 기간이 정상이다.** `schema_version` 정규식은 형식만 보므로 `"1.0"`을 보내는
 > 생산자도 계속 통과한다. 하드웨어는 아직 `session_id`를 보내지 않으며, 그동안 소비자는

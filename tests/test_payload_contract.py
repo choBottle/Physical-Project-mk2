@@ -64,11 +64,12 @@ def test_entity_type_of_mqtt_topic() -> None:
         ("payload-state-actuator-valid.json", "actuator"),
         ("payload-state-analysis-valid.json", "analysis"),
         ("payload-state-drone-valid.json", "drone"),
+        ("payload-state-drone-v2-frame-valid.json", "drone"),
     ],
-    ids=["robot", "sensor", "actuator", "analysis", "drone"],
+    ids=["robot", "sensor", "actuator", "analysis", "drone", "drone-v2-frame"],
 )
 def test_payload_valid(fixture: str, entity_type: str) -> None:
-    """5종 본문이 공통 헤더·본문 2단을 모두 통과한다."""
+    """5종 본문이 공통 헤더·본문 2단을 모두 통과한다. 드론은 옛 실측 캡처(v1)와 v2 프레임 동기 state 둘 다."""
     message = _example(fixture)
     validate_envelope(message)                       # 1단
     validate_payload("state", entity_type, message)  # 2단
@@ -130,6 +131,26 @@ def test_payload_drone_invalid_missing_fc_link() -> None:
     with pytest.raises(PayloadInvalid) as excinfo:
         validate_payload("state", "drone", message)
     assert "fc_link" in str(excinfo.value)
+
+
+def test_payload_drone_v2_frame_ref_shape() -> None:
+    """드론 v2 state(통합데이터규약 §3-4 · BE-05): `frame_ref` 는 v2 참조 모양만 통과한다. 옛 모양은 거부.
+
+    `system_status` 는 필수에서 빠졌다 — 없어도 통과하고, 옛 드론이 계속 실어 보내도 통과한다(P3 · 과도기).
+    """
+    message = _example("payload-state-drone-v2-frame-valid.json")
+    assert message["timestamp"] == message["frame_ref"]["timestamp"]        # R12 예외 — 두 값은 같다
+    assert "system_status" not in message["flight"]
+    validate_envelope(message)
+    validate_payload("state", "drone", message)
+    old = json.loads(json.dumps(message))
+    old["frame_ref"] = {"source_id": "x500-001_front", "capture_timestamp": message["timestamp"], "sequence_id": 2245}
+    with pytest.raises(PayloadInvalid) as excinfo:
+        validate_payload("state", "drone", old)
+    assert "frame_ref" in str(excinfo.value)
+    with_old_field = json.loads(json.dumps(message))
+    with_old_field["flight"]["system_status"] = "STANDBY"
+    validate_payload("state", "drone", with_old_field)
 
 
 def test_payload_invalid_wrong_type_rejected() -> None:

@@ -23,9 +23,12 @@ from backend.gateway import media
 from backend.gateway.media import Decision, DropOldConfig, DropOldPolicy, State
 
 
-def _frame(keyframe: bool, size: int, seq: int = 0, source_id: str = "cam", encoding: str = "h264") -> media.Frame:
+def _frame(keyframe: bool, size: int, seq: int = 0, camera_id: str = "cam", encoding: str = "h264") -> media.Frame:
+    # v2 프레임 헤더(통합데이터규약 §3-5) 모양. 상태 기계는 keyframe 만 보므로 JPEG 도 keyframe 을 명시해 둔다.
     header = {
-        "frame_ref": {"source_id": source_id, "capture_timestamp": "2026-09-18T12:00:00.000+09:00", "sequence_id": seq},
+        "schema_version": "2.0", "source_id": "cam", "node_id": "test", "zone_id": "zoneA",
+        "timestamp": "2026-09-18T12:00:00.000+09:00", "sequence_id": seq, "session_id": "a1b2c3d4e5f6",
+        "camera_id": camera_id,
         "encoding": encoding, "keyframe": keyframe, "width": 464, "height": 400,
     }
     header_bytes = json.dumps(header, separators=(",", ":")).encode()
