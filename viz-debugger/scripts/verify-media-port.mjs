@@ -94,8 +94,9 @@ const outside = SOURCES.filter((rel) => !rel.startsWith('src/media/') && !rel.st
   if (!ok.ok) failures.push(`정상 프레임을 못 뜯었다 — ${ok.reason}`);
   else {
     const f = ok.frame;
-    if (f.header.frameRef.sourceId !== 'cam-front') failures.push('source_id 를 못 읽었다');
+    if (f.header.frameRef.cameraId !== 'cam-front') failures.push('v1 frame_ref.source_id 를 못 읽었다');
     if (f.header.frameRef.sequenceId !== 4837) failures.push('sequence_id 를 못 읽었다');
+    if (f.header.legacy !== true) failures.push('frame_ref 로 온 헤더를 v1 로 표시하지 않는다');
     if (f.header.codec !== 'avc1.42C01E') failures.push('codec 을 못 읽었다 — 디코더 설정이 실패한다');
     if (f.header.width !== 464 || f.header.height !== 400) failures.push('해상도를 못 읽었다');
     if (f.payload.length !== payload.length) failures.push(`페이로드 길이가 ${f.payload.length} 다 — ${payload.length} 여야 한다`);
@@ -129,6 +130,46 @@ const outside = SOURCES.filter((rel) => !rel.startsWith('src/media/') && !rel.st
     const out = parseMediaFrame(build(partial, payload));
     if (out.ok || out.reason !== 'header_shape') failures.push(`필수 칸 ${missing} 이 없는데 통과했다 (${out.reason})`);
   }
+  // v1 은 JPEG 여도 keyframe 이 필수다 — 서버 v1 규격 그대로.
+  {
+    const { keyframe: _k, ...noKey } = header;
+    const out = parseMediaFrame(build({ ...noKey, encoding: 'jpeg' }, payload));
+    if (out.ok) failures.push('v1 헤더가 keyframe 없이 통과했다 — v1 규격은 keyframe 필수다');
+  }
+
+  // ── 3-1. 통합 데이터 규약 v2 — 평평한 프레임 헤더 (VZ-02 · 규약 §3-5) ──────────
+  const headerV2 = {
+    schema_version: '2.0', source_id: 'go1-001', node_id: 'pi7', zone_id: 'zoneA',
+    camera_id: 'cam-front', sequence_id: 4837, session_id: 'a1b2c3d4e5f6',
+    timestamp: '2026-10-12T14:10:31.049+09:00',
+    encoding: 'h264', keyframe: true, codec: 'avc1.42C01E', width: 464, height: 400,
+  };
+  const v1Out = parseMediaFrame(build(header, payload));
+  const v2Out = parseMediaFrame(build(headerV2, payload));
+  if (!v2Out.ok) failures.push(`v2 헤더를 못 뜯었다 — ${v2Out.reason}. 엣지가 바뀌는 날 영상이 빈다`);
+  else if (v1Out.ok) {
+    const a = v1Out.frame.header; const b = v2Out.frame.header;
+    if (a.frameRef.cameraId !== b.frameRef.cameraId || a.frameRef.sequenceId !== b.frameRef.sequenceId || a.keyframe !== b.keyframe) {
+      failures.push('같은 프레임을 v1·v2 헤더로 보냈는데 camera_id · sequence_id · keyframe 이 다르게 나온다');
+    }
+    if (b.legacy !== false || b.frameRef.sessionId !== 'a1b2c3d4e5f6' || b.frameRef.timestamp !== headerV2.timestamp) {
+      failures.push('v2 헤더의 session_id · timestamp 를 못 읽었다');
+    }
+  }
+  // JPEG 는 keyframe 을 싣지 않아도 키프레임이다. H.264 는 keyframe 이 없으면 모양이 틀린 것이다.
+  {
+    const { keyframe: _k, codec: _c, ...noKey } = headerV2;
+    const jpeg = parseMediaFrame(build({ ...noKey, encoding: 'jpeg' }, payload));
+    if (!jpeg.ok || jpeg.frame.header.keyframe !== true) failures.push('keyframe 없는 v2 JPEG 를 키프레임으로 안 읽는다 — 첫 프레임을 영영 기다린다');
+    const h264 = parseMediaFrame(build(noKey, payload));
+    if (h264.ok) failures.push('keyframe 없는 v2 H.264 가 통과했다 — 디코더에 넣을지 정할 수 없다');
+  }
+  for (const missing of ['camera_id', 'sequence_id', 'timestamp']) {
+    const partial = { ...headerV2 };
+    delete partial[missing];
+    const out = parseMediaFrame(build(partial, payload));
+    if (out.ok || out.reason !== 'header_shape') failures.push(`v2 필수 칸 ${missing} 이 없는데 통과했다 (${out.reason})`);
+  }
 
   // 던지지 않는다 — 어떤 쓰레기를 넣어도.
   for (const junk of [new ArrayBuffer(0), new ArrayBuffer(3), new Uint8Array([255, 255, 255, 255, 1]).buffer]) {
@@ -140,11 +181,15 @@ const outside = SOURCES.filter((rel) => !rel.startsWith('src/media/') && !rel.st
   }
 
   // ── 4. 세션 ────────────────────────────────────────────────────────────────
-  const ref = (sourceId, sequenceId) => ({ sourceId, captureTimestamp: 'x', sequenceId });
+  const ref = (cameraId, sequenceId, sessionId = null) => ({ cameraId, timestamp: 'x', sequenceId, sessionId });
   if (!isNewSession(null, ref('a', 1))) failures.push('첫 프레임이 새 세션이 아니다');
   if (!isNewSession(ref('a', 100), ref('a', 3))) failures.push('순번이 줄었는데 새 세션이 아니다 — 지연 계산이 음수가 된다');
-  if (!isNewSession(ref('a', 1), ref('b', 2))) failures.push('소스가 바뀌었는데 새 세션이 아니다');
+  if (!isNewSession(ref('a', 1), ref('b', 2))) failures.push('카메라가 바뀌었는데 새 세션이 아니다');
   if (isNewSession(ref('a', 1), ref('a', 2))) failures.push('순번이 늘었는데 새 세션이라고 한다 — 매 프레임 버퍼를 비운다');
+  // v2 — session_id 가 바뀌면 순번이 커져도 새 세션이다. 같은 세션이면 순번만 본다.
+  if (!isNewSession(ref('a', 1, 's1'), ref('a', 2, 's2'))) failures.push('session_id 가 바뀌었는데 새 세션이 아니다');
+  if (isNewSession(ref('a', 1, 's1'), ref('a', 2, 's1'))) failures.push('같은 session_id 인데 새 세션이라고 한다');
+  if (isNewSession(ref('a', 1, null), ref('a', 2, 's1'))) failures.push('v1 → v2 로 바뀐 것만으로 새 세션이라고 한다 — 세션을 모르는 쪽이 있으면 순번으로 본다');
 }
 
 // ── 5·6. 클라이언트 ──────────────────────────────────────────────────────────
@@ -256,9 +301,9 @@ if (failures.length) {
   process.exit(1);
 }
 console.log('✅ 경계 — 영상 경로·카메라 키·환경변수를 아는 면은 src/media/ 하나, 토큰은 코드에 0건');
-console.log('✅ 파서 — 정상 프레임을 뜯고, 모르는 코덱은 안 거르고, 어떤 쓰레기에도 안 던진다');
+console.log('✅ 파서 — 정상 프레임을 뜯고(v1 frame_ref · v2 평평한 헤더 둘 다, JPEG 는 keyframe 없이도), 모르는 코덱은 안 거르고, 어떤 쓰레기에도 안 던진다');
 console.log('✅ 사유 — 짧음·길이초과·JSON아님·필수칸없음이 각각 다른 사유로 갈린다');
-console.log('✅ 세션 — 순번 역전·소스 변경만 새 세션이고, 정상 증가는 아니다');
+console.log('✅ 세션 — 순번 역전·카메라 변경·session_id 변경만 새 세션이고, 정상 증가는 아니다');
 console.log('✅ 끊김 — 4400·4401·4404 는 재시도하지 않고, 평범한 끊김은 되붙는다');
 console.log('✅ 수신 — binaryType 이 arraybuffer 이고 문자열/바이너리가 갈리며, 전송 계층도 버린 수를 센다');
 console.log('✅ 자리 — 대상 상태 오버레이 안의 한 칸 · 마일스톤에는 상설로 없음 · 열면 붙는다(온디맨드)');

@@ -38,9 +38,9 @@ export type MediaState = {
   textMessages: number;
   /** 마지막으로 뜯은 헤더. 해상도·코덱·순번이 여기 있다. */
   lastHeader: MediaHeader | null;
-  /** 마지막 프레임이 **도착한** 시각(ms). staleness 는 `capture_timestamp` 가 아니라 이것으로 잰다. */
+  /** 마지막 프레임이 **도착한** 시각(ms). staleness 는 헤더 시각(`timestamp`)이 아니라 이것으로 잰다. */
   lastFrameAtMs: number;
-  /** 세션이 몇 번 새로 시작했는가 — 순번 역전으로 감지한 수. */
+  /** 세션이 몇 번 새로 시작했는가 — `session_id` 가 바뀌었거나 순번이 역전한 수. */
   sessions: number;
   /** 마지막 끊김 코드. 4401·4404·4400 은 다시 안 붙는다. */
   closeCode: number | null;

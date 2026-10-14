@@ -213,9 +213,10 @@ export function MediaSection({ deviceId }: { deviceId: string }) {
     {media.closeCode !== null && media.phase === 'failed' && <p className="media-section__error">{t('media.closed', { code: media.closeCode })}</p>}
 
     {header !== null && <dl className="media-section__facts">
-      <dt>source_id</dt><dd>{header.frameRef.sourceId}</dd>
+      <dt>camera_id</dt><dd>{header.frameRef.cameraId}{header.legacy ? ' · v1 frame_ref' : ''}</dd>
       <dt>sequence_id</dt><dd>{header.frameRef.sequenceId}</dd>
-      <dt>capture_timestamp</dt><dd>{header.frameRef.captureTimestamp}</dd>
+      <dt>timestamp</dt><dd>{header.frameRef.timestamp}</dd>
+      {header.frameRef.sessionId !== null && <><dt>session_id</dt><dd>{header.frameRef.sessionId}</dd></>}
       <dt>encoding</dt><dd>{header.encoding}{header.keyframe ? ' · keyframe' : ''}</dd>
       <dt>codec</dt><dd>{header.codec ?? '—'}</dd>
       <dt>size</dt><dd>{header.width}×{header.height}</dd>

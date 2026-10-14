@@ -69,6 +69,50 @@ const det = (ref, extra = {}) => ({
   if (normalizeDetection(det(1, { alignment: 'frame' })).alignment !== 'frame') failures.push('alignment 를 못 읽는다');
 }
 
+// ── 1-1. 통합 데이터 규약 v2 — 비전 결과 (VZ-03 · 규약 §3-6) ─────────────────────
+{
+  const v2Ref = toFrameRef({ camera_id: 'x500-001_front', sequence_id: 2246, timestamp: '2026-10-02T13:06:40.499+09:00' });
+  if (v2Ref?.sourceId !== 'x500-001_front' || v2Ref?.captureTimestamp !== '2026-10-02T13:06:40.499+09:00') {
+    failures.push('v2 frame_ref{camera_id, timestamp} 를 못 읽는다 — 다른 카메라의 같은 순번과 섞인다');
+  }
+  const v2 = {
+    schema_version: '2.0', source_id: 'ds-vision', node_id: 'sysai-server2', zone_id: 'zoneA',
+    timestamp: '2026-10-02T13:06:40.499+09:00',
+    frame_ref: { camera_id: 'x500-001_front', sequence_id: 2246, timestamp: '2026-10-02T13:06:40.499+09:00' },
+    emitted_at: '2026-10-02T13:06:41.018+09:00',
+    producer: { tier: 'server', kind: 'precise' },
+    model: 'moge2_aerial', infer_ms: 152.6, width: 1280, height: 720,
+    detections: [{ bbox: [253, 112, 376, 438], label: 'person', class_id: 0, confidence: 0.81 }],
+  };
+  const n = normalizeDetection(v2);
+  if (n === null) failures.push('v2 비전 결과를 버렸다 — 서버 비전이 화면에 안 뜬다');
+  else {
+    const [x, y, w, h] = n.detections[0].bbox;
+    if (x !== 253 || y !== 112 || w !== 123 || h !== 326) failures.push(`v2 xyxy 를 안쪽 [x,y,w,h] 로 못 바꿨다 — ${JSON.stringify(n.detections[0].bbox)}`);
+    if (n.bbox_space.format !== 'absolute' || n.bbox_space.reference.width !== 1280) failures.push('v2 결과의 width·height 를 박스 기준 해상도로 안 쓴다');
+    if (n.origin?.tier !== 'server' || n.origin.label !== 'server') failures.push('v2 producer 를 출처로 못 읽는다 — pushDetection 이 통째로 버린다');
+    if (n.detections[0].source_id !== 'x500-001_front') failures.push('검출 안 카메라가 없을 때 frame_ref 의 카메라로 안 본다');
+    if (n.detections[0].track_id !== null || n.detections[0].trail.length !== 0) failures.push('v2 검출에 없는 추적·궤적을 null·빈 배열로 안 둔다 — 그리다 던진다');
+    if (n.inference_delay_ms !== 519) failures.push(`v2 지연을 emitted_at − frame_ref.timestamp 로 안 낸다 (${n.inference_delay_ms})`);
+    if (n.association !== 'unavailable') failures.push('연계를 선언하지 않은 결과를 연계 있음으로 본다');
+    const buffer = new FrameBuffer();
+    buffer.pushDetection(n);
+    if (buffer.detectionOf('server') === null) failures.push('v2 결과가 출처별 보관에 안 들어간다');
+  }
+  // 검출 안 camera_id 가 있으면 그것 (N9).
+  const multi = normalizeDetection({ ...v2, detections: [{ ...v2.detections[0], camera_id: 'go1-001_front' }] });
+  if (multi?.detections[0].source_id !== 'go1-001_front') failures.push('검출 안 camera_id(N9)를 못 읽는다');
+  // 좌표계를 정할 근거가 없으면 던지지 말고 버린다 — 전에는 정합 계산이 bbox_space.format 에서 던졌다.
+  const { width: _w, height: _h, ...noSize } = v2;
+  if (normalizeDetection(noSize) !== null) failures.push('bbox_space 도 width·height 도 없는 결과를 통과시켰다 — 정합 계산이 던진다');
+  if (normalizeDetection({ ...det(1), bbox_space: { format: 'weird' } }) !== null) failures.push('모양이 틀린 bbox_space 를 v2 로 바꿔 읽었다 — 조용히 틀린 박스가 된다');
+  // 옛 모양은 그대로 — [x,y,w,h] 를 xyxy 로 바꾸면 목 게이트웨이 박스가 전부 틀어진다.
+  const old = normalizeDetection(det(1));
+  if (JSON.stringify(old?.detections[0].bbox) !== JSON.stringify([0.1, 0.2, 0.1, 0.2]) || old?.origin.label !== 'E') {
+    failures.push('옛 모양(bbox_space · [x,y,w,h] · origin)을 바꿔 버렸다');
+  }
+}
+
 // ── 2. 입구가 하나 ───────────────────────────────────────────────────────────
 {
   const src = code(readSource('src/tabs/data/vision.ts'));
@@ -191,7 +235,7 @@ if (failures.length) {
   console.error(`❌ verify:frame-ref\n- ${failures.join('\n- ')}`);
   process.exit(1);
 }
-console.log('✅ 두 모양 — 정수(옛 계약)와 객체(규격)를 둘 다 받고, 모르는 칸은 null 이고 쓰레기는 버린다');
+console.log('✅ 두 모양 — 정수(옛 계약)와 객체(규격)를 둘 다 받고, 모르는 칸은 null 이고 쓰레기는 버린다 · v2 결과(producer · xyxy 픽셀 + width·height · camera_id)를 안쪽 모양으로 옮기고 좌표계 근거가 없으면 버린다');
 console.log('✅ 입구 — 단언이 아니라 정규화를 지난다 (타입 검사가 못 잡는 어긋남을 막는다)');
 console.log('✅ 버퍼 — 소스를 둘 다 알 때만 대조하고, 옛 계약 프레임은 순번만으로 짚힌다');
 console.log('✅ 세션 — 순번이 줄거나 카메라가 바뀌면 버퍼를 비운다');

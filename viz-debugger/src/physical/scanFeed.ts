@@ -65,7 +65,8 @@ export function scanFeedChannel(topic: string): 'frame' | 'scan' | null {
 export function parseScanFeed(topic: string, body: Record<string, unknown>): ScanFeedMessage | null {
   const channel = scanFeedChannel(topic);
   if (channel === null) return null;
-  const deviceId = str(body.device_id) ?? topic.split('/').at(-2) ?? '';
+  // 통합 데이터 규약 v2 (VZ-05) — 공통 머리 `source_id` 먼저, 없으면 옛 `device_id`, 그것도 없으면 토픽.
+  const deviceId = str(body.source_id) ?? str(body.device_id) ?? topic.split('/').at(-2) ?? '';
   const missionId = str(body.mission_id);
   const timestamp = str(body.timestamp);
 
@@ -77,7 +78,8 @@ export function parseScanFeed(topic: string, body: Record<string, unknown>): Sca
       kind: 'frame',
       deviceId,
       missionId,
-      seq: num(body.seq),
+      // 임무 안 사진 번호 — v2 는 `shot_index`(N3). v2 의 `sequence_id` 는 브리지의 누적 순번이라 뜻이 달라 읽지 않는다.
+      seq: num(body.shot_index) ?? num(body.seq),
       rotationDeg,
       width: num(body.width),
       height: num(body.height),

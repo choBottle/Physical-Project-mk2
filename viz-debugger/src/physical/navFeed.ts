@@ -18,6 +18,12 @@
  * `schema` 가 `viz-nav/1` 이 아니면 버린다 — 모양이 바뀐 것을 옛 규칙으로 읽으면 조용히
  * 틀린 값이 된다. **없는 값은 null 이고 지어 채우지 않는다.** 배터리 `null` 은 0% 가 아니다.
  *
+ * ## 통합 데이터 규약 v2 (261012 VZ-06 · 묶음 H)
+ *
+ * v2 중계는 `schema` 대신 공통 머리를 싣는다 — `schema_version` · `source_id`(← `entity_id`) ·
+ * `timestamp`(ISO, ← `ts_ms`) · `sequence_id`(← `seq`). 중계(GO1-06)가 언제 바뀌어도 되게 **둘 다 받는다** —
+ * 새 이름을 먼저 읽고 없으면 옛 이름. `schema` 가 있는데 `viz-nav/1` 이 아니면 지금처럼 버린다.
+ *
  * 신선도는 **받은 시각(이 노트북 시계)** 으로 잰다. `ts_ms` 는 pi1 시계라 표시에만 쓴다 —
  * 두 시계가 어긋나면 멀쩡한 값이 낡아 보이거나 낡은 값이 살아 보인다.
  */
@@ -94,15 +100,35 @@ function entityOfTopic(topic: string): string {
   return topic.split('/')[2] ?? '';
 }
 
+/** 우리 모양인가 — 옛 `schema: viz-nav/1`, 또는 `schema` 없이 v2 공통 머리(`schema_version`). */
+function isNavBody(body: Record<string, unknown>): boolean {
+  if (body.schema !== undefined) return body.schema === NAV_SCHEMA;
+  return typeof body.schema_version === 'string';
+}
+
+/** pi1 시각(ms) — v2 `timestamp`(ISO) 먼저, 없으면 옛 `ts_ms`. 못 읽으면 null. */
+function tsMsOf(body: Record<string, unknown>): number | null {
+  if (typeof body.timestamp === 'string') {
+    const parsed = Date.parse(body.timestamp);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return num(body.ts_ms);
+}
+
+/** 장비 id — v2 `source_id` 먼저, 없으면 옛 `entity_id`, 그것도 없으면 토픽. */
+function entityOf(topic: string, body: Record<string, unknown>): string {
+  return str(body.source_id) ?? str(body.entity_id) ?? entityOfTopic(topic);
+}
+
 export function parseNavState(topic: string, body: Record<string, unknown>, receivedAtMs = Date.now()): NavTelemetry | null {
-  if (body.schema !== NAV_SCHEMA) return null;
+  if (!isNavBody(body)) return null;
   const yawSource = body.yaw_source === 'bridge_state' || body.yaw_source === 'go1_odometry' ? body.yaw_source : null;
   const battery = num(body.battery_pct);
   const yaw = num(body.yaw_deg);
   return {
     nodeId: str(body.node_id) ?? '',
-    entityId: str(body.entity_id) ?? entityOfTopic(topic),
-    tsMs: num(body.ts_ms),
+    entityId: entityOf(topic, body),
+    tsMs: tsMsOf(body),
     // 0~100 밖은 받은 값이 아니라 고장이다 — 모르는 것으로 둔다.
     batteryPct: battery !== null && battery >= 0 && battery <= 100 ? battery : null,
     // 방위가 있는데 출처가 없으면 부호를 모른다 — 값째 버린다.
@@ -117,14 +143,14 @@ export function parseNavState(topic: string, body: Record<string, unknown>, rece
 }
 
 export function parseNavEvent(topic: string, body: Record<string, unknown>, receivedAtMs = Date.now()): NavEvent | null {
-  if (body.schema !== NAV_SCHEMA) return null;
-  const seq = int(body.seq);
+  if (!isNavBody(body)) return null;
+  const seq = int(body.sequence_id) ?? int(body.seq);
   if (seq === null || typeof body.event !== 'string' || !EVENT_KINDS.has(body.event)) return null;
   return {
     nodeId: str(body.node_id) ?? '',
-    entityId: str(body.entity_id) ?? entityOfTopic(topic),
+    entityId: entityOf(topic, body),
     seq,
-    tsMs: num(body.ts_ms),
+    tsMs: tsMsOf(body),
     event: body.event as NavEventKind,
     pathId: int(body.path_id),
     pointCount: int(body.point_count),

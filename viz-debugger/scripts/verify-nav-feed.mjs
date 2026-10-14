@@ -88,6 +88,26 @@ const queueEvent = (kind, over, atMs, tsMs) => feed.receiveNavMessage(TOPIC_EVEN
   if (feed.parseNavEvent(TOPIC_EVENT, ev('teleport')) !== null) failures.push('계약에 없는 사건을 읽었다');
   if (feed.parseNavEvent(TOPIC_EVENT, ev('path_received', { seq: 'x' })) !== null) failures.push('seq 없는 사건을 읽었다');
 
+  // 통합 데이터 규약 v2 (VZ-06) — 공통 머리로 온 중계도 같은 값으로 읽는다. 옛 이름은 빠져 있다.
+  const v2 = (body) => {
+    const { schema: _s, entity_id: _e, ts_ms: tsMs, seq, ...rest } = body;
+    return {
+      ...rest, schema_version: '2.0', source_id: 'go1-001', zone_id: 'zoneA', session_id: 'a1b2c3d4e5f6',
+      timestamp: new Date(tsMs).toISOString().replace('Z', '+00:00'), ...(seq !== undefined ? { sequence_id: seq } : {}),
+    };
+  };
+  const v2State = feed.parseNavState('zoneA/robot/x/nav_state', v2(state()), 1000);
+  if (v2State?.entityId !== 'go1-001' || v2State?.tsMs !== 1_789_000_000_000 || v2State?.batteryPct !== 82) {
+    failures.push('v2 nav_state(schema_version · source_id · timestamp)를 못 읽는다');
+  }
+  const v1Event = ev('path_received', { path_id: 4 });
+  const v2Event = feed.parseNavEvent(TOPIC_EVENT, v2(v1Event));
+  if (v2Event?.seq !== v1Event.seq || v2Event?.tsMs !== v1Event.ts_ms || v2Event?.pathId !== 4) {
+    failures.push('v2 nav_event(sequence_id · timestamp)를 옛 모양과 같은 값으로 못 읽는다');
+  }
+  if (feed.parseNavState(TOPIC_STATE, { ...v2(state()), schema: 'viz-nav/2' }) !== null) failures.push('v2 머리가 있어도 schema 가 다르면 버려야 한다');
+  if (feed.parseNavState(TOPIC_STATE, { ...v2(state()), schema_version: undefined }) !== null) failures.push('schema 도 schema_version 도 없는 본문을 읽었다');
+
   if (feed.receiveNavMessage(TOPIC_STATE, state({ schema: 'nope' })) !== false || feed.navFeedState().rejected !== 1) {
     failures.push('못 읽은 건을 세지 않는다 — 연결 관리가 「오긴 오는데 못 읽는다」를 말할 재료다');
   }
@@ -504,7 +524,7 @@ if (failures.length) {
   console.error(`❌ verify:nav-feed\n- ${failures.join('\n- ')}`);
   process.exit(1);
 }
-console.log('✅ 뜯기 — schema 가 다르면 버리고 센다 · 배터리 null/범위 밖은 모름 · 출처 없는 yaw 는 버림 · QoS 1 중복 흡수');
+console.log('✅ 뜯기 — schema 가 다르면 버리고 센다 · 배터리 null/범위 밖은 모름 · 출처 없는 yaw 는 버림 · QoS 1 중복 흡수 · v2 공통 머리도 같은 값');
 console.log('✅ 한 판 — 배터리(평가) → yaw → 이동 1 → 취소·ACK → 재탐색 → 이동 2(derived) → 재탐색 2 → 이동 3 → 경로 끝');
 console.log('✅ 승인은 판을 걸기만 · 「임무 시작」이 연다 · 시작 전 중계는 안 칠함 · 승인 없이 시작 없음');
 console.log('✅ 받은 것으로 끝내는 넷 — 첫 경로=이동경로 탐색 · 장애물 JSON=장애물 탐지(바뀔 때만 줄) · 경로 끝=목적지 도착(평가) · 임무 종료 → 여덟 다 완료 · 종료 뒤 사건 무시');

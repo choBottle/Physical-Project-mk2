@@ -122,7 +122,12 @@ export function toFrameRef(raw: unknown): DetectionFrameRef | null {
   const seq = obj.sequence_id;
   if (typeof seq !== 'number' || !Number.isFinite(seq)) return null;
   const str = (v: unknown): string | null => (typeof v === 'string' && v !== '' ? v : null);
-  return { sourceId: str(obj.source_id), captureTimestamp: str(obj.capture_timestamp), sequenceId: seq };
+  // 통합 데이터 규약 v2 (VZ-03 · 규약 §3-3) — `{camera_id, sequence_id, timestamp}` 를 먼저, 없으면 옛 이름.
+  return {
+    sourceId: str(obj.camera_id) ?? str(obj.source_id),
+    captureTimestamp: str(obj.timestamp) ?? str(obj.capture_timestamp),
+    sequenceId: seq,
+  };
 }
 
 export type DetectionResult = {
@@ -273,17 +278,129 @@ export type AlignmentReport = {
  *
  * 가리키는 프레임을 모르면 `null` 을 돌려준다. 그 탐지는 **버린다** — 모르는 채로
  * 「정합했다」고 그리는 것보다 안 그리는 쪽이 낫다.
+ *
+ * ## 통합 데이터 규약 v2 (VZ-03 · 규약 §3-6) — 두 모양을 여기서 하나로
+ *
+ * v2 비전 결과는 출처가 `producer`(← `origin`), 박스가 **`[x1, y1, x2, y2]` 픽셀 + 결과의 `width`·`height`**
+ * (← `bbox_space` + `[x, y, w, h]`), 검출 안 카메라가 `camera_id`(← `source_id`)다. 안쪽 계산은 옛 모양
+ * (`origin` · `bbox_space` · `[x, y, w, h]`)으로 짜여 있으므로 **입구에서 옛 모양으로 옮긴다** — 그리는
+ * 쪽은 모양이 둘인 것을 모른다. 타입 이름 정리는 규약 단계 5(VZ 마무리)에서 한다.
+ *
+ * 박스 좌표계를 정할 근거(`bbox_space`, 또는 `width`·`height`)가 둘 다 없으면 **버린다.** 전에는 그대로
+ * 넘겨 정합 계산이 `bbox_space.format` 에서 던졌다.
  */
 export function normalizeDetection(raw: unknown): DetectionResult | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
   const obj = raw as Record<string, unknown>;
   const ref = toFrameRef(obj.frame_ref);
   if (ref === null) return null;
+
+  // v1 이 좌표계를 선언했으면 그것(모양이 틀렸으면 버린다 — v2 로 바꿔 읽으면 조용히 틀린 박스가 된다).
+  // 선언이 없으면 v2 — 결과 해상도(`width`·`height`) 기준 xyxy 픽셀. 그것도 없으면 무엇을 곱할지 모른다.
+  const xyxy = obj.bbox_space === undefined;
+  const width = finite(obj.width);
+  const height = finite(obj.height);
+  const space: BboxSpace | null = !xyxy
+    ? (isBboxSpace(obj.bbox_space) ? obj.bbox_space : null)
+    : (width !== null && height !== null && width > 0 && height > 0
+      ? { format: 'absolute', origin: 'top-left', reference: { width, height } }
+      : null);
+  if (space === null) return null;
+
+  const rawDetections = Array.isArray(obj.detections) ? obj.detections : [];
+  const detections: Detection[] = [];
+  for (const item of rawDetections) {
+    const d = toDetection(item, xyxy, ref.sourceId);
+    if (d !== null) detections.push(d);
+  }
+
   return {
     ...(obj as unknown as DetectionResult),
     frame_ref: ref,
     // 없으면 **옛 계약**이다. `null` 과 「모르는 값」을 가른다 — 뜻이 다르다.
     alignment: typeof obj.alignment === 'string' ? obj.alignment : null,
+    origin: toOrigin(obj.producer ?? obj.origin) as DetectionOrigin,
+    // 연계 **기능**을 선언하지 않은 결과(v2 DS 등)는 「없다」로 둔다 — 있다고 지어 말하지 않는다.
+    association: obj.association === 'enabled' ? 'enabled' : 'unavailable',
+    corridor: toBox(obj.corridor, xyxy),
+    bbox_space: space,
+    inference_delay_ms: inferenceDelayMs(obj, ref),
+    detections,
+  };
+}
+
+const finite = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+const text = (v: unknown): string | null => (typeof v === 'string' && v !== '' ? v : null);
+
+function isBboxSpace(v: unknown): v is BboxSpace {
+  if (typeof v !== 'object' || v === null) return false;
+  const s = v as Record<string, unknown>;
+  const ref = s.reference as Record<string, unknown> | undefined;
+  return (s.format === 'normalized' || s.format === 'absolute')
+    && typeof ref === 'object' && ref !== null && finite(ref.width) !== null && finite(ref.height) !== null;
+}
+
+/** 네 수 → 안쪽 `[x, y, w, h]`. v2 는 `[x1, y1, x2, y2]` 라 폭·높이로 바꾼다. 모양이 아니면 null. */
+function toBox(v: unknown, xyxy: boolean): [number, number, number, number] | null {
+  if (!Array.isArray(v) || v.length !== 4) return null;
+  const n = v.map(finite);
+  if (n.some((x) => x === null)) return null;
+  const [a, b, c, d] = n as number[];
+  return xyxy ? [a, b, c - a, d - b] : [a, b, c, d];
+}
+
+/**
+ * 출처 묶음. v2 `producer` 는 `label` · `optional` 이 선택 칸이다(규약 §3-6). 없으면 이름은 `tier` 를
+ * 그대로 보이고 선택 기능이 아닌 것으로 둔다. `tier` 가 없으면 그대로 넘겨 `pushDetection` 이 버린다.
+ */
+function toOrigin(v: unknown): Partial<DetectionOrigin> | undefined {
+  if (typeof v !== 'object' || v === null) return undefined;
+  const o = v as Record<string, unknown>;
+  const tier = text(o.tier) as DetectionOrigin['tier'] | null;
+  return {
+    ...(o as Partial<DetectionOrigin>),
+    ...(tier !== null ? { tier } : {}),
+    label: text(o.label) ?? tier ?? '',
+    optional: o.optional === true,
+  };
+}
+
+/**
+ * 화면의 「지연」 숫자. 옛 `inference_delay_ms` 가 있으면 그것. v2 는 이 칸이 없다 — 규약 R9 대로
+ * **결과가 나온 순간 − 원본 프레임 시각**(`emitted_at − frame_ref.timestamp`)을 계산하고, 그것도 못 하면
+ * 모델 계산 시간(`infer_ms`)을 쓴다. (옛 칸의 뜻은 규약 §9 질문 5로 AI 가 아직 답하지 않았다.)
+ */
+function inferenceDelayMs(obj: Record<string, unknown>, ref: DetectionFrameRef): number {
+  const legacy = finite(obj.inference_delay_ms);
+  if (legacy !== null) return legacy;
+  const emitted = typeof obj.emitted_at === 'string' ? Date.parse(obj.emitted_at) : NaN;
+  const framed = ref.captureTimestamp !== null ? Date.parse(ref.captureTimestamp) : NaN;
+  if (Number.isFinite(emitted) && Number.isFinite(framed)) return emitted - framed;
+  return finite(obj.infer_ms) ?? 0;
+}
+
+/**
+ * 검출 한 건. 박스가 모양이 아니면 그 건만 버린다. v2 DS 검출에는 추적·분류 신뢰도·궤적·연계가 없다 —
+ * 없음(null · 빈 배열)으로 둔다. 검출 신뢰도가 없으면 0 으로 둬 「불확실」로 그린다(확실하다고 지어 말하지 않는다).
+ * 카메라는 `camera_id`(v2) → `source_id`(v1) → 이 결과가 가리키는 프레임의 카메라 순.
+ */
+function toDetection(v: unknown, xyxy: boolean, frameCamera: string | null): Detection | null {
+  if (typeof v !== 'object' || v === null) return null;
+  const d = v as Record<string, unknown>;
+  const bbox = toBox(d.bbox, xyxy);
+  if (bbox === null) return null;
+  const approach = d.approach === 'closing' || d.approach === 'steady' || d.approach === 'receding' ? d.approach : null;
+  return {
+    ...(d as Partial<Detection>),
+    track_id: text(d.track_id),
+    label: text(d.label) ?? '',
+    confidence: finite(d.confidence) ?? 0,
+    class_confidence: finite(d.class_confidence),
+    bbox,
+    approach,
+    trail: Array.isArray(d.trail) ? (d.trail as Array<[number, number]>) : [],
+    source_id: text(d.camera_id) ?? text(d.source_id) ?? frameCamera ?? '',
+    link: (typeof d.link === 'object' && d.link !== null ? d.link : null) as DetectionLink | null,
   };
 }
 

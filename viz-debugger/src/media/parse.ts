@@ -18,19 +18,29 @@
  * 열지도 않는다). 모르는 값은 그대로 들고 가고, **디코드하지 않고 상태로 표시**하는 것은
  * 화면의 몫이다. 여기서 화이트리스트로 막으면 상대가 코덱을 하나 늘릴 때마다 조용히 빈다.
  *
- * ## `frame_ref` 는 객체다
+ * ## 헤더는 두 모양이다 (통합 데이터 규약 v2 — VZ-02 · 묶음 A)
  *
- * 정수 하나가 아니다(`frame-reference.schema.json`). 버퍼 키는 `(source_id, sequence_id)`
- * 쌍이고, 재접속하면 `sequence_id` 가 0부터 다시 시작한다 — 그 리셋은 순번 역전으로만
- * 감지할 수 있다(헤더에 세션 식별자가 없다).
+ * - **v1** — `frame_ref{source_id, capture_timestamp, sequence_id}` 객체 + `keyframe` 필수.
+ * - **v2** — 평평한 프레임 헤더(규약 §3-5). 맨 위 `camera_id` · `sequence_id` · `timestamp` ·
+ *   `session_id`. JPEG 는 늘 키프레임이라 `keyframe` 을 싣지 않는다.
+ *
+ * 가르는 기준은 서버(BE-07)와 같다 — **`frame_ref` 가 있으면 v1.** 엣지(EDGEHW-01)가 언제 바뀌어도
+ * 되게 둘 다 받는다. 버퍼 키는 `(camera_id, sequence_id)` 쌍이다. 재접속하면 `sequence_id` 가 다시
+ * 시작한다 — v1 은 그 리셋을 순번 역전으로만 알고, v2 는 `session_id` 가 바뀐 것으로도 안다.
  */
 
-/** 프레임 참조 — 엣지가 부여하고 서버는 바이트 그대로 전파한다. */
+/** 이 프레임을 가리키는 세 칸(규약 §3-3 `frame_ref`) + 세션. 처음 손에 넣은 기기가 붙이고 서버는 그대로 전파한다. */
 export type MediaFrameRef = {
-  sourceId: string;
-  /** **엣지가 프레임 경계를 확정한 시각.** 촬영 시각이 아니고 보정되지 않았다. */
-  captureTimestamp: string;
+  /** 카메라 — v2 `camera_id`, v1 `frame_ref.source_id`. */
+  cameraId: string;
+  /**
+   * 프레임 시각 — v2 `timestamp`(그림을 손에 넣은 순간), v1 `frame_ref.capture_timestamp`
+   * (엣지가 프레임 경계를 확정한 시각). 보정되지 않았다.
+   */
+  timestamp: string;
   sequenceId: number;
+  /** v2 `session_id` — 순번이 다시 시작되는 경계. v1 헤더에는 없어 null. */
+  sessionId: string | null;
 };
 
 export type MediaHeader = {
@@ -39,6 +49,8 @@ export type MediaHeader = {
   encoding: string;
   /** 이 프레임만으로 디코드를 시작할 수 있는가(IDR). JPEG 는 항상 true. */
   keyframe: boolean;
+  /** v1 헤더(`frame_ref` 객체)로 왔는가. 과도기 표시용 — 엣지가 다 바뀌면 지운다. */
+  legacy: boolean;
   width: number;
   height: number;
   /** RFC 6381 — WebCodecs `VideoDecoderConfig.codec`. **상수로 박지 않는다**(실물이 정한다). */
@@ -64,14 +76,24 @@ const num = (value: unknown): number | null =>
 const str = (value: unknown): string | null =>
   (typeof value === 'string' && value !== '' ? value : null);
 
-function frameRef(value: unknown): MediaFrameRef | null {
+/** v1 — `frame_ref` 객체. */
+function frameRefV1(value: unknown): MediaFrameRef | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
-  const sourceId = str(raw.source_id);
-  const captureTimestamp = str(raw.capture_timestamp);
+  const cameraId = str(raw.source_id);
+  const timestamp = str(raw.capture_timestamp);
   const sequenceId = num(raw.sequence_id);
-  if (sourceId === null || captureTimestamp === null || sequenceId === null) return null;
-  return { sourceId, captureTimestamp, sequenceId };
+  if (cameraId === null || timestamp === null || sequenceId === null) return null;
+  return { cameraId, timestamp, sequenceId, sessionId: null };
+}
+
+/** v2 — 평평한 헤더의 맨 위 칸. */
+function frameRefV2(raw: Record<string, unknown>): MediaFrameRef | null {
+  const cameraId = str(raw.camera_id);
+  const timestamp = str(raw.timestamp);
+  const sequenceId = num(raw.sequence_id);
+  if (cameraId === null || timestamp === null || sequenceId === null) return null;
+  return { cameraId, timestamp, sequenceId, sessionId: str(raw.session_id) };
 }
 
 /**
@@ -101,13 +123,17 @@ export function parseMediaFrame(buffer: ArrayBuffer): MediaParseResult {
   }
 
   const raw = parsed as Record<string, unknown>;
-  const ref = frameRef(raw.frame_ref);
+  const legacy = raw.frame_ref !== undefined;
+  const ref = legacy ? frameRefV1(raw.frame_ref) : frameRefV2(raw);
   const encoding = str(raw.encoding);
   const width = num(raw.width);
   const height = num(raw.height);
-  // `keyframe` 은 **필수**이고 불리언이다. 없는 것을 false 로 읽으면 첫 프레임을 디코더에
-  // 안 넣고 영영 기다리게 된다 — 그 화면은 「연결됨인데 영상 없음」과 구분이 안 된다.
-  if (ref === null || encoding === null || typeof raw.keyframe !== 'boolean'
+  // `keyframe` 은 불리언이다. 없는 것을 false 로 읽으면 첫 프레임을 디코더에 안 넣고 영영 기다리게
+  // 된다 — 그 화면은 「연결됨인데 영상 없음」과 구분이 안 된다. 그래서 없으면 **JPEG(v2)만** 키프레임으로
+  // 보고, 그 밖(v1 전부 · v2 H.264)은 모양이 틀린 것으로 돌려준다.
+  const keyframe = typeof raw.keyframe === 'boolean' ? raw.keyframe
+    : (!legacy && encoding === 'jpeg' ? true : null);
+  if (ref === null || encoding === null || keyframe === null
     || width === null || height === null) {
     return { ok: false, reason: 'header_shape' };
   }
@@ -118,7 +144,8 @@ export function parseMediaFrame(buffer: ArrayBuffer): MediaParseResult {
       header: {
         frameRef: ref,
         encoding,
-        keyframe: raw.keyframe,
+        keyframe,
+        legacy,
         width,
         height,
         codec: str(raw.codec),
@@ -131,14 +158,15 @@ export function parseMediaFrame(buffer: ArrayBuffer): MediaParseResult {
 }
 
 /**
- * **새 세션인가.** 엣지가 다시 붙으면 `sequence_id` 가 0부터 시작한다 — 헤더에 세션
- * 식별자가 없으므로 **순번이 줄어든 것**으로만 안다. 그때 버퍼를 비우지 않으면 지연 계산이
- * 음수·거대값이 된다.
+ * **새 세션인가.** 보내는 쪽이 다시 뜨면 `sequence_id` 가 처음부터 시작한다. 그때 버퍼를 비우지
+ * 않으면 지연 계산이 음수·거대값이 된다. v2 는 `session_id` 가 바뀐 것으로 바로 안다 — 재기동이
+ * 빨라 순번이 이전보다 커진 채 다시 시작해도 놓치지 않는다. v1(세션 없음)은 **순번이 줄어든 것**으로만 안다.
  *
- * 소스가 바뀐 것도 새 세션으로 본다 — 다른 카메라의 순번과 견줄 이유가 없다.
+ * 카메라가 바뀐 것도 새 세션으로 본다 — 다른 카메라의 순번과 견줄 이유가 없다.
  */
 export function isNewSession(prev: MediaFrameRef | null, next: MediaFrameRef): boolean {
   if (prev === null) return true;
-  if (prev.sourceId !== next.sourceId) return true;
+  if (prev.cameraId !== next.cameraId) return true;
+  if (prev.sessionId !== null && next.sessionId !== null && prev.sessionId !== next.sessionId) return true;
   return next.sequenceId < prev.sequenceId;
 }

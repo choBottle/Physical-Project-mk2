@@ -393,6 +393,14 @@ const COUNT = 8;
   });
   if (frame?.kind !== 'frame' || frame.rotationDeg !== 270 || frame.seq !== 6) failures.push(`프레임을 못 뜯었다 — ${JSON.stringify(frame)}`);
   if (frame !== null && 'image' in frame) failures.push('그림(base64)을 들고 다닌다 — 한 장 34KB 가 화면 메모리에 쌓인다');
+  // 통합 데이터 규약 v2 (VZ-05 · GO1-05) — 사진 번호는 `shot_index`, 장비는 `source_id`. `sequence_id`(누적 순번)는 사진 번호가 아니다.
+  const frameV2 = parseScanFeed('zoneA/robot/x/frame', {
+    schema_version: '2.0', source_id: 'go1-001', node_id: 'pi7', zone_id: 'zoneA', channel: 'frame',
+    timestamp: '2026-10-12T15:02:11.420+09:00', sequence_id: 17, shot_index: 3, camera_id: 'go1-001_front',
+    rotation_deg: 135.0, image: 'A'.repeat(400), width: 464, height: 400, bytes: 25012,
+  });
+  if (frameV2?.seq !== 3 || frameV2?.deviceId !== 'go1-001') failures.push(`v2 프레임의 shot_index · source_id 를 못 읽었다 — ${JSON.stringify(frameV2 && { seq: frameV2.seq, deviceId: frameV2.deviceId })}`);
+  if (parseScanFeed('zoneA/robot/go1-001/frame', { sequence_id: 17, rotation_deg: 0 })?.seq !== null) failures.push('누적 순번 sequence_id 를 사진 번호로 읽었다 — 뜻이 다르다(N3)');
   if (parseScanFeed('zoneA/robot/go1-001/frame', { seq: 1 }) !== null) failures.push('각도 없는 프레임을 받았다 — 탐지가 쓰는 짝이 아니다');
   if (parseScanFeed('zoneA/robot/go1-001/state', { position: {} }) !== null) failures.push('장비 상태를 스캔 흐름으로 뜯었다');
   const start = parseScanFeed('zoneA/robot/go1-001/scan', { channel: 'scan', event: 'scan_start', mission_id: 'scan-1', plan: { steps: 8, step_deg: 45, expected_frames: 8 } });
