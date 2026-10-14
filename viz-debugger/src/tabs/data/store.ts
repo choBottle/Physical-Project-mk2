@@ -13,7 +13,7 @@
  *  4. 레지스트리에만 있고 값이 한 번도 안 온 대상도 **레코드가 존재한다.** 미배포 카드의 근거.
  */
 
-import type { ActuatorState, AiFailure, CommandResult, ControlLock, Envelope, RiskState, StateLayers } from '../../transport/index.ts';
+import { envSeq, envSource, envTime, type ActuatorState, type AiFailure, type CommandResult, type ControlLock, type Envelope, type RiskState, type StateLayers } from '../../transport/index.ts';
 import { commandTracker } from '../../shared/commandCenter.ts';
 import type { Plan, PlanSegment } from './plans.ts';
 import { normalizeAggregation, type Aggregation } from './aggregation.ts';
@@ -95,8 +95,8 @@ function emptyRecord(id: string, registry: RegistryEntity | null): EntityRecord 
 function toSlot<T>(env: Envelope): ChannelSlot<T> {
   return {
     payload: env.payload as T,
-    ts: env.ts,
-    seq: env.seq,
+    ts: envTime(env),
+    seq: envSeq(env),
     quality: env.quality,
     // VZ-C-03 — 여기서 정규화해 두면 아래 코드가 축약형/객체형을 신경 쓰지 않는다.
     aggregation: normalizeAggregation(env.aggregation),
@@ -152,11 +152,12 @@ export class DataStore {
 
   /** 봉투 1건 반영. **매 수신마다 호출되며 하나도 버리지 않는다.** */
   apply(env: Envelope): void {
-    let rec = this.records.get(env.entity);
+    const entity = envSource(env);
+    let rec = this.records.get(entity);
     if (!rec) {
       // 레지스트리에 없는데 값이 오는 경우 — 구성 변경 통지를 놓쳤을 수 있다. 일단 받아 둔다.
-      rec = emptyRecord(env.entity, null);
-      this.records.set(env.entity, rec);
+      rec = emptyRecord(entity, null);
+      this.records.set(entity, rec);
     }
     rec.envelopeCount += 1;
 

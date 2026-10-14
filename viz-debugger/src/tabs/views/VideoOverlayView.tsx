@@ -202,7 +202,8 @@ export function VideoOverlayView() {
                       </span>
                       <strong>{o.origin.label}</strong>
                       <span className="muted">{o.origin.optional ? t('vov.13') : t('vov.14')}</span>
-                      <span className="muted">{t('vov.delayMs', { ms: o.inferenceDelayMs })}</span>
+                      {/* 규약 v2 결과는 지연 칸이 없다 — 없으면 숫자를 안 적는다(지어 채우지 않는다). */}
+                      {o.inferenceDelayMs !== null && <span className="muted">{t('vov.delayMs', { ms: o.inferenceDelayMs })}</span>}
                       <span className="muted">{t('vov.frames', { n: o.frameLag })}</span>
                     </li>
                   ))}
@@ -260,7 +261,7 @@ export function VideoOverlayView() {
                       })}
                     </>
                   )}
-                  {device !== null && (
+                  {device !== null && device.inferenceDelayMs !== null && (
                     <>
                       {' '}<Rich id="vov.deviceFasterNote" vars={{ ms: device.inferenceDelayMs }} />
                     </>
@@ -495,7 +496,7 @@ function drawScene(
         // 라벨. 온디바이스는 분류가 없으므로 **분류 신뢰도를 쓰지 않는다.**
         const label = isDevice
           ? t('vov.regionLabel', { approach: approachText(b.approach) })
-          : b.label + ' ' + b.confidence.toFixed(2) + (b.uncertain ? ' ?' : '') +
+          : b.label + ' ' + (b.confidence === null ? '—' : b.confidence.toFixed(2)) + (b.uncertain ? ' ?' : '') +
             (b.link === null ? ' · ' + b.sourceId : '') +
             (aligned ? '' : t('vov.framesBehind', { n: o.frameLag }));
         ctx.font = '600 13px "Malgun Gothic", sans-serif';

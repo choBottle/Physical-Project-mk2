@@ -49,6 +49,8 @@ const outside = SOURCES.filter((rel) => !rel.startsWith('src/media/') && !rel.st
   const MARKS = [
     { re: /['"`]\/media\?/, what: '영상 경로' },
     { re: /source_id=/, what: '카메라 키 쿼리' },
+    // 규약 v2(VZ-02) — BE-07 뒤 쿼리 이름이 camera_id 가 된다. 새 이름도 감시해야 이름만 바뀌었을 때 감시가 헛돌지 않는다.
+    { re: /camera_id=/, what: '카메라 키 쿼리(v2 이름)' },
     { re: /VITE_MEDIA_WS/, what: '영상 소켓 환경변수' },
   ];
   for (const rel of outside) {

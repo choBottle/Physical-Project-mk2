@@ -46,7 +46,7 @@ function sameSlot(a: BindSlot | null, b: BindSlot): boolean {
  * **숫자 칸 — 칸을 떠나거나 Enter 를 칠 때 정한다.** 칠 때마다 정하면 「0.」을 치는 순간 0 이 되어 하한으로
  * 붙어 버린다. 범위는 저장소가 묶고, 칸은 묶인 값으로 다시 그린다.
  */
-function NumberField({ value, min, max, step, onCommit }: {
+export function NumberField({ value, min, max, step, onCommit }: {
   value: number; min: number; max: number; step: number; onCommit(value: number): void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);

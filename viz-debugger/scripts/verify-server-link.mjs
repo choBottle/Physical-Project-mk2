@@ -47,8 +47,8 @@ controls.push('공통 헤더가 빠진 봉투');
   if (!cards.includes('x500-001')) failures.push('MQTT 로 붙은 장비가 카드에서 빠졌다');
   connected.resetConnectedDevices();
   const index = read('src', 'tabs', 'data', 'index.ts');
-  if (!/noteConnectedEntity\(envelope\.entity, selfIntroduced\(envelope\.payload\) \? 'server' : 'state'\)/.test(index)) failures.push('받는 쪽이 서버 봉투를 server 로 적지 않는다');
-  if (!/noteGatewayEnvelope\(envelope\.entity, envelope\.payload\)/.test(index)) failures.push('받는 쪽이 게이트웨이 수신을 적지 않는다 — 연결 확인이 셀 것이 없다');
+  if (!/noteConnectedEntity\(envSource\(envelope\), selfIntroduced\(envelope\.payload\) \? 'server' : 'state'\)/.test(index)) failures.push('받는 쪽이 서버 봉투를 server 로 적지 않는다');
+  if (!/noteGatewayEnvelope\(envSource\(envelope\), envelope\.payload\)/.test(index)) failures.push('받는 쪽이 게이트웨이 수신을 적지 않는다 — 연결 확인이 셀 것이 없다');
 }
 
 // ── 2-b. 화면이 다시 그려지는가 (261002 — 「드론이 붙었는데 카드에 안 뜬다 · 임무를 걸면 뜬다」) ──────────

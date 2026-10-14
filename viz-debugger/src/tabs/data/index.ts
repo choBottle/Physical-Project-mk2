@@ -14,7 +14,7 @@ import { noteConnectedEntity } from '../../shared/connectedDevices.ts';
 import { noteGatewayEnvelope, noteGatewaySocket, selfIntroduced } from '../../shared/gatewayFeed.ts';
 import { noteDeviceTelemetry } from '../../shared/deviceTelemetry.ts';
 import { stateRows } from '../../shared/stateRows.ts';
-import { getTransport } from '../../transport/index.ts';
+import { envSource, getTransport } from '../../transport/index.ts';
 import { DataStore } from './store.ts';
 import { fetchRegistry } from './registry.ts';
 import { observeEnvelope, startSelfObservability } from './selfObservability.ts';
@@ -99,8 +99,8 @@ export function startDataLayer(): () => void {
        * **서버가 준 실물 장비는 카드가 된다** (261001). 백엔드 `/state` 는 원래 메시지를 통째로 싣고 그 안에 공통 헤더가
        * 있다 — 그것으로 목 함대(헤더 없음)와 가른다. 목 함대는 전처럼 `state` 로 남아 카드가 안 된다(`registry.ts`).
        */
-      noteGatewayEnvelope(envelope.entity, envelope.payload);
-      noteConnectedEntity(envelope.entity, selfIntroduced(envelope.payload) ? 'server' : 'state');
+      noteGatewayEnvelope(envSource(envelope), envelope.payload);
+      noteConnectedEntity(envSource(envelope), selfIntroduced(envelope.payload) ? 'server' : 'state');
       /**
        * **값이 무엇이었는지도 밀어 넣는다** (260922). 위 한 줄은 「붙어 있다」만 말하고,
        * 그것만으로는 카드가 이름과 「n초 전」 밖에 못 적는다 — 드론이 그랬다.
@@ -113,7 +113,7 @@ export function startDataLayer(): () => void {
        * 뜯을 것이 없는 채널은 줄이 0개라 저장소가 알아서 안 담는다.
        */
       const body = envelope.payload;
-      noteDeviceTelemetry(envelope.entity, stateRows(body), {
+      noteDeviceTelemetry(envSource(envelope), stateRows(body), {
         timestamp: readString(body, 'timestamp'),
         reason: readString(body, 'reason'),
         body,

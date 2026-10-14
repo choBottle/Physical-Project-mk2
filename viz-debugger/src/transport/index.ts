@@ -49,6 +49,7 @@ export type {
   WireAggregation,
   WireMetricsQuery,
 } from './types.ts';
+export { envSeq, envSource, envTime } from './envelope.ts';
 
 /**
  * 접속 주소. **읽을 때마다 지금 값**이다 — 환경변수는 이제 기본값이고, 화면(`VZ-C-07`)이

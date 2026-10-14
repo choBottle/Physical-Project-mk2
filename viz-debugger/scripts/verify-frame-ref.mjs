@@ -93,12 +93,16 @@ const det = (ref, extra = {}) => ({
     if (n.origin?.tier !== 'server' || n.origin.label !== 'server') failures.push('v2 producer 를 출처로 못 읽는다 — pushDetection 이 통째로 버린다');
     if (n.detections[0].source_id !== 'x500-001_front') failures.push('검출 안 카메라가 없을 때 frame_ref 의 카메라로 안 본다');
     if (n.detections[0].track_id !== null || n.detections[0].trail.length !== 0) failures.push('v2 검출에 없는 추적·궤적을 null·빈 배열로 안 둔다 — 그리다 던진다');
-    if (n.inference_delay_ms !== 519) failures.push(`v2 지연을 emitted_at − frame_ref.timestamp 로 안 낸다 (${n.inference_delay_ms})`);
+    // v2 에는 지연 칸이 없다 — 계산하거나 지어 채우지 않는다 (규약 v3 VZ-03 예외).
+    if (n.inference_delay_ms !== null) failures.push(`v2 결과에 없는 지연을 지어 채웠다 (${n.inference_delay_ms})`);
     if (n.association !== 'unavailable') failures.push('연계를 선언하지 않은 결과를 연계 있음으로 본다');
     const buffer = new FrameBuffer();
     buffer.pushDetection(n);
     if (buffer.detectionOf('server') === null) failures.push('v2 결과가 출처별 보관에 안 들어간다');
   }
+  // 신뢰도는 v2 선택 칸 — 없으면 null 이고, 확실하다고 그리지 않는다.
+  const noConf = normalizeDetection({ ...v2, detections: [{ bbox: [0, 0, 10, 10], label: 'person' }] });
+  if (noConf?.detections[0].confidence !== null) failures.push(`없는 신뢰도를 지어 채웠다 (${noConf?.detections[0].confidence})`);
   // 검출 안 camera_id 가 있으면 그것 (N9).
   const multi = normalizeDetection({ ...v2, detections: [{ ...v2.detections[0], camera_id: 'go1-001_front' }] });
   if (multi?.detections[0].source_id !== 'go1-001_front') failures.push('검출 안 camera_id(N9)를 못 읽는다');

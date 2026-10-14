@@ -149,8 +149,10 @@ export function measureFold<T>(run: () => T): T {
 }
 
 /** 받은 봉투 하나. 통합 빌드의 임무 축 브리지가 부른다. */
-export function observeEnvelope(envelope: { ts?: string }): void {
-  const sent = envelope.ts === undefined ? Number.NaN : Date.parse(envelope.ts);
+export function observeEnvelope(envelope: { timestamp?: string; ts?: string }): void {
+  // 규약 v2 `timestamp` 먼저, 없으면 옛 `ts`(목 게이트웨이). 전송 계층 함수(envTime)와 같은 순서다.
+  const at = envelope.timestamp ?? envelope.ts;
+  const sent = at === undefined ? Number.NaN : Date.parse(at);
   if (!Number.isFinite(sent)) return;
   const delay = Math.max(0, Date.now() - sent);
   envelopeCount += 1;

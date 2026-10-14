@@ -303,7 +303,7 @@ function control(name, hit) {
 {
   // 받는 쪽이 실제로 밀어 넣는가 — 배선이 빠지면 카드가 영영 안 뜬다.
   const layer = readFileSync(join(root, 'src', 'tabs', 'data', 'index.ts'), 'utf8');
-  control('/state 받는 자리가 밀어 넣는다', /noteConnectedEntity\(\s*envelope\.entity/.test(layer));
+  control('/state 받는 자리가 밀어 넣는다', /noteConnectedEntity\(\s*envSource\(envelope\)/.test(layer));
   const mqtt = readFileSync(join(root, 'src', 'physical', 'deviceState.ts'), 'utf8');
   control('MQTT 받는 자리가 밀어 넣는다', /noteConnectedEntity\(/.test(mqtt));
 }

@@ -1226,6 +1226,70 @@ button.robot-resume{padding:6px 12px;border:1px solid #2f9e5f;border-radius:var(
 .manual-badge__dot{width:9px;height:9px;border-radius:50%;background:#1f9d4c}
 .manual-badge__row--blocked .manual-badge__dot{background:#e0a33a}
 .manual-badge__warn{margin:0;padding:6px 10px;border:1px solid #f0c27a;border-radius:var(--radius-sm);background:#fff8ec;color:#7a4600;font-size:12px;box-shadow:0 6px 18px #17202b22}
+/* 261014 — 드론 비행 제어 탭 (src/views/FlightControlTab.tsx · FlightRunBadge.tsx). 수동 제어 탭(.manual-*) 위에 얹는다 */
+.manual-tab__head>.flight-support{display:flex;flex:none;flex-direction:column;align-items:flex-end;gap:4px;min-width:0}
+.flight-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.flight-grid{grid-template-columns:1fr}}
+.flight-fields{display:grid;gap:12px;margin:0;padding:0;border:0;min-width:0}
+.flight-fields:disabled{opacity:.6}
+.flight-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.flight-row>span{min-width:84px;color:#4a5768;font-size:14px}
+.flight-advanced{border-top:1px dashed #d6dce5;padding-top:8px}
+.flight-advanced>summary{cursor:pointer;color:#4a5768;font-size:13px;font-weight:700}
+.flight-advanced>*:not(summary){margin-top:10px}
+.flight-problems{margin:10px 0 0;padding:8px 12px 8px 28px;border:1px solid #efb2b2;border-radius:var(--radius-sm);background:#fff0f0;color:#8f2b2b;font-size:13px}
+.flight-route{display:block;width:180px;height:180px;margin:0 auto}
+.flight-route__ring{fill:#f4f7fb;stroke:#dfe4ea}
+.flight-route__nose{fill:#1768c5}
+.flight-route__nose-label{fill:#1768c5;font-size:9px;text-anchor:middle}
+.flight-route__label{fill:#17202b;font-size:11px;font-weight:700;text-anchor:middle}
+.flight-route__dist{fill:#4a5768;font-size:9px;text-anchor:middle}
+.flight-route__path{fill:none;stroke:#c62f35;stroke-width:2.5;stroke-linecap:round}
+.flight-route__arrowhead{fill:#c62f35}
+.flight-sequence{margin:6px 0 10px;font-size:13px;text-align:center;color:#17202b}
+.flight-facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin:0}
+.flight-facts>div{padding:6px 9px;border:1px solid #e1e5eb;border-radius:var(--radius-sm);background:#fafbfc}
+.flight-facts dt{color:#6a7686;font-size:12px}
+.flight-facts dd{margin:2px 0 0;font-size:13px;font-weight:700;overflow-wrap:anywhere}
+.flight-facts__wide{grid-column:1/-1}
+.flight-facts__wide dd{font-family:ui-monospace,Consolas,monospace;font-weight:400}
+.flight-facts--ok{border-color:#bfe3ce!important;background:#e7f6ee!important}
+.flight-facts--warn{border-color:#f0c27a!important;background:#fff8ec!important}
+.flight-facts--bad{border-color:#f0c4c1!important;background:#fdeceb!important}
+.flight-argv{display:block;padding:8px 10px;border-radius:var(--radius-sm);background:#17202b;color:#e7edf5;font-family:ui-monospace,Consolas,monospace;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.flight-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.flight-actions__state{color:#4a5768;font-size:13px}
+.flight-actions--stop{margin-top:12px;padding-top:12px;border-top:1px dashed #d6dce5}
+.manual-switch:disabled{color:#98a2b0;border-color:#d6dce5;background:#f2f4f7;cursor:not-allowed}
+.manual-switch.flight-go:not(:disabled){color:#fff;border-color:#1768c5;background:#1768c5}
+.manual-switch.flight-danger:not(:disabled),.flight-badge .flight-danger:not(:disabled){color:#fff;border-color:#c62f35;background:#c62f35}
+button.flight-armed:not(:disabled){color:#fff!important;border-color:#8f1d22!important;background:#8f1d22!important;animation:flight-pulse .8s ease-in-out infinite alternate}
+@keyframes flight-pulse{from{box-shadow:0 0 0 0 #c62f3555}to{box-shadow:0 0 0 5px #c62f3500}}
+.flight-emergency{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto}
+.flight-confirm{display:grid;gap:10px;margin-top:12px;padding:12px 14px;border:2px solid #c62f35;border-radius:var(--radius-md);background:#fff8f7}
+.flight-confirm b{color:#8f1d22}
+.flight-confirm ul{margin:0;padding-left:20px;display:grid;gap:4px;font-size:13px;line-height:1.5}
+.flight-confirm__yes{display:flex;align-items:center;gap:10px;font-size:14px}
+.flight-confirm__yes input{width:110px;padding:6px 8px;border:1px solid #c62f35;border-radius:var(--radius-sm);font-family:ui-monospace,Consolas,monospace}
+.flight-steps{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.flight-steps span{flex:1;min-width:72px;padding:6px 4px;border-bottom:3px solid #cbd3dc;color:#8a95a3;font-size:12px;text-align:center;word-break:keep-all}
+.flight-steps .step-done{border-bottom-color:#35a36a;color:#17202b}
+.flight-steps .step-active{border-bottom-color:#4c8fe8;color:#17202b;font-weight:700}
+.flight-steps .step-failed{border-bottom-color:#d94b4b;color:#a83232;font-weight:700}
+.flight-log{max-height:300px;margin-top:10px;padding:8px 10px;overflow:auto;border-radius:var(--radius-sm);background:#141a22;color:#d5dde7;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5}
+.flight-log .manual-note{color:#8a95a3}
+.flight-log__line{white-space:pre-wrap;overflow-wrap:anywhere}
+.flight-log__line--bad{color:#ff8a8a;font-weight:700}
+.flight-log__line--warn{color:#f5c26b}
+.flight-log__line--ok{color:#7fd6a0}
+.flight-log__line--pass{color:#8cc4ff;font-weight:700}
+.flight-run-id{color:#6a7686;font-size:12px;font-family:ui-monospace,Consolas,monospace}
+.flight-subhead{margin:14px 0 0;font-size:13px}
+.flight-badge__buttons{display:flex;flex-direction:column;gap:4px}
+.flight-badge .manual-badge__row{border-color:#9fbfe6;background:#f1f7fe}
+.flight-badge .manual-badge__row--blocked{border-color:#f0c27a;background:#fff8ec}
+.flight-badge .flight-badge__row--emergency{border-color:#e9a3a6;background:#fff3f2}
+.flight-badge__dot--live{background:#1768c5;animation:flight-pulse .8s ease-in-out infinite alternate}
 
 /* 261007 — 실시간 화면 녹화 (src/record/RecordFrame.tsx · src/views/RecordingBadge.tsx) */
 .rec-host{position:relative;min-width:0}

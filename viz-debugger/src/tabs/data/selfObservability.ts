@@ -1,7 +1,7 @@
 // 이식: web-dashboard/src/data/selfObservability.ts @ 700ed91 — 무수정 (transport 경로만 조정)
 /** VZ-O-04 — 가시화가 자기 성능을 60초마다 관측 경로에 직접 발행한다. */
 
-import { GATEWAY, type Envelope } from '../../transport/index.ts';
+import { GATEWAY, envTime, type Envelope } from '../../transport/index.ts';
 
 const PERIOD_MS = 60_000;
 let received = 0;
@@ -10,7 +10,7 @@ let delayMax = 0;
 let started = false;
 
 export function observeEnvelope(env: Envelope): void {
-  const delay = Math.max(0, Date.now() - Date.parse(env.ts));
+  const delay = Math.max(0, Date.now() - Date.parse(envTime(env)));
   if (!Number.isFinite(delay)) return;
   received += 1;
   delayTotal += delay;

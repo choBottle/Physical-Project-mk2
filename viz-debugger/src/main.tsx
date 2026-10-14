@@ -51,6 +51,7 @@ import { startObstacleWatch } from './autodrive/watch.ts';
 import { startTaskRunner } from './physical/taskRunner.ts';
 import { startManualDispatch } from './physical/manualDispatch.ts';
 import { ManualControlBadge } from './views/ManualControlBadge.tsx';
+import { FlightRunBadge } from './views/FlightRunBadge.tsx';
 import { RecordingBadge } from './views/RecordingBadge.tsx';
 import { ServerCard } from './shell/ServerCard.tsx';
 import { connectedDevice } from './shared/connectedDevices.ts';
@@ -704,7 +705,7 @@ export function MissionDebugger({ navigation, planApproval }: { navigation?: Deb
 
   const firstFailed = graphTasks.find((task) => folded.tasks[task.id]?.status === 'failed') ?? null;
 
-  return <div className="mission-debugger"><div className="corner-alerts"><ManualControlBadge /><RecordingBadge /></div>{screen === 'milestones'
+  return <div className="mission-debugger"><div className="corner-alerts"><FlightRunBadge /><ManualControlBadge /><RecordingBadge /></div>{screen === 'milestones'
     ? <Milestones view={view} phase={display.phase} milestoneStatuses={milestoneStatuses} assignments={assignments} onAssign={(id, hardware) => {
       // 자리를 쓰는 마일스톤이면 자리에 앉힌다 (260927) — 한 번 앉히면 그 자리를 쓰는 마일스톤 전부가 같은 장비다.
       const slots = view.milestones.find((item) => item.id === id)?.slots;

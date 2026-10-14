@@ -112,3 +112,18 @@ export function droneStateEnvelope(over = {}) {
     ...over,
   };
 }
+
+/**
+ * **통합 데이터 규약 v2 의 봉투** (VZ-01 · BE-08 뒤) — 공통 머리 이름이 `zone_id` · `node_id` · `source_id` ·
+ * `timestamp` · `sequence_id` 다. 본문도 v2(`schema_version: '2.0'`, `flight.system_status` 없음 — P3).
+ * 옛 봉투(`droneStateEnvelope`)와 같은 장비 · 같은 값을 실어, 화면이 두 모양을 같게 받는지 견준다.
+ */
+export function droneStateEnvelopeV2(over = {}) {
+  return {
+    zone_id: DRONE.zoneId, node_id: DRONE.nodeId, source_id: DRONE.entityId, channel: 'state',
+    timestamp: '2026-09-21T21:06:50.795+09:00', sequence_id: 173,
+    payload: stateBody({ schema_version: '2.0' }),
+    quality: 'good', aggregation: 'raw', scope: 'all', coordinate_frame: null,
+    ...over,
+  };
+}

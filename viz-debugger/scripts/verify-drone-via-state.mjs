@@ -22,7 +22,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isScratchPath } from './lib/scratch.mjs';
 // 자리표에 줄바꿈이 들어간다 — **LF 로 정규화한 원본**에서 만든다 (`verify:crlf-safe`).
 import { readSource } from './lib/source.mjs';
-import { DRONE, droneStateEnvelope, liveStateBody, stateBody } from './lib/droneFixtures.mjs';
+import { DRONE, droneStateEnvelope, droneStateEnvelopeV2, liveStateBody, stateBody } from './lib/droneFixtures.mjs';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const load = (...p) => import(pathToFileURL(join(root, ...p)).href);
@@ -60,6 +60,24 @@ const controls = [];
     if (payload?.fc_link !== false) failures.push('원문의 fc_link 가 그대로 안 남았다');
     if (payload?.battery !== null) failures.push('FC 가 없을 때의 battery: null 이 그대로 안 남았다');
   }
+}
+
+// 통합 데이터 규약 v2 (VZ-01) — 새 이름 봉투도 **같은 장비 줄**로 들어간다. 옛 봉투(목 게이트웨이)와 섞여 와도 한 줄이다.
+{
+  const store = new DataStore();
+  store.setRegistry({ zones: [{ id: DRONE.zoneId, display_name: 'A' }], entities: [] }, null);
+  store.apply(droneStateEnvelopeV2());
+  store.apply(droneStateEnvelope({ channel: 'heartbeat', seq: 174, payload: { channel: 'heartbeat' } }));
+  await new Promise((resolve) => setTimeout(resolve, RENDER_MERGE_WINDOW_MS + 60));
+  const record = store.get(DRONE.entityId);
+  if (record === null) failures.push('v2 봉투(source_id)로 온 드론을 저장소가 못 찾는다 — BE-08 뒤 카드가 빈다');
+  else {
+    if (record.envelopeCount !== 2) failures.push(`v2 · 옛 봉투가 한 장비로 안 모인다 (${record.envelopeCount}건)`);
+    if (record.state?.ts !== '2026-09-21T21:06:50.795+09:00' || record.state?.seq !== 173) {
+      failures.push(`v2 봉투의 timestamp · sequence_id 를 칸에 못 옮긴다 (${record.state?.ts} · ${record.state?.seq})`);
+    }
+  }
+  if (store.get('') !== null) failures.push('v2 봉투를 이름 없는 장비로 받았다 — 옛 이름(entity)만 읽는다');
 }
 
 // 값이 찬 상태도 원문 그대로 지난다 — 우리가 단위를 바꾸거나 0 으로 채우지 않는다.
@@ -191,7 +209,7 @@ const controls = [];
 
   // ⑥ **다리가 실제로 놓였는가.** 위가 다 맞아도 배선이 없으면 화면은 그대로 비어 있다.
   const layer = readSource(join(root, 'src', 'tabs', 'data', 'index.ts'));
-  if (!/noteDeviceTelemetry\(\s*envelope\.entity/.test(layer)) {
+  if (!/noteDeviceTelemetry\(\s*envSource\(envelope\)/.test(layer)) {
     failures.push('받는 자리가 상태 줄을 안 밀어 넣는다 — 카드가 영영 이름만 적는다');
   }
   const facts = readSource(join(root, 'src', 'physical', 'DeviceFacts.tsx'));

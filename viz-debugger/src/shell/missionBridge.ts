@@ -36,7 +36,7 @@ import { axesOfMission } from '../scenarios/scriptScope.ts';
 import { observeConnection, observeEnvelope, updateClientHealth } from '../shared/observability.ts';
 import { enterScenarioRender } from '../shared/renderMode.ts';
 import { fanOutEnvelope } from '../shared/envelopeSink.ts';
-import { getTransport, type Envelope } from '../transport/index.ts';
+import { envSource, getTransport, type Envelope } from '../transport/index.ts';
 import { liveFrame } from '../viewpoint/source.ts';
 import { appendViewpoint } from '../viewpoint/store.ts';
 import { approvedByHuman, markApproved } from '../physical/robotSession.ts';
@@ -103,7 +103,7 @@ export function startMissionBridge(): () => void {
       // 진행이 없는 것이 맞다 — 없는 진행을 지어 보이는 편이 나쁘다.
       //
       // 계획(plan)은 그대로 받는다 — 승인 자체는 게이트웨이를 지나는 일이다.
-      if (robotScript(envelope.entity)
+      if (robotScript(envSource(envelope))
         && (envelope.channel === 'trace_event' || envelope.channel === 'robot_state' || envelope.channel === 'detection')) return;
       if (envelope.channel === 'trace_event') applyTrace(envelope);
       if (envelope.channel === 'robot_state' || envelope.channel === 'detection') applyViewpoint(envelope);
@@ -208,13 +208,13 @@ function applyViewpoint(envelope: Envelope): void {
   if (!payload) return;
   const frame = liveFrame({ channel: envelope.channel, payload });
   if (frame === null) return; // 형식에 안 맞으면 버린다 — 지어 채우지 않는다.
-  appendViewpoint(envelope.entity, typeof payload.at_sec === 'number' ? payload.at_sec : 0, frame);
+  appendViewpoint(envSource(envelope), typeof payload.at_sec === 'number' ? payload.at_sec : 0, frame);
 }
 
 function applyTrace(envelope: Envelope): void {
   const wire = envelope.payload as WireTrace | null;
   if (!wire) return;
-  receiveTrace(envelope.entity, {
+  receiveTrace(envSource(envelope), {
     seq: wire.seq ?? 0,
     atSec: wire.at_sec ?? 0,
     nodeId: wire.node_id ?? '',

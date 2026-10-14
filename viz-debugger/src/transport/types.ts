@@ -92,15 +92,31 @@ export type WireAggregation =
 
 export type Quality = 'good' | 'degraded' | 'unknown';
 
-/** 서버 → 클라이언트 메시지 봉투. */
+/**
+ * 서버 → 클라이언트 메시지 봉투.
+ *
+ * ## 공통 머리 이름이 둘이다 (통합 데이터 규약 v2 — VZ-01 · 묶음 B)
+ *
+ * 실제 서버는 BE-08 뒤로 `zone_id` · `node_id` · `source_id` · `timestamp` · `sequence_id` 를 보낸다.
+ * 목 게이트웨이는 규약 단계 5(V6)까지 옛 이름 `zone` · `node` · `entity` · `ts` · `seq` 를 보낸다.
+ * 화면은 **둘 다 받으므로 둘 다 선택 칸이다.** 직접 읽지 말고 `envSource` · `envTime` · `envSeq`
+ * (`./envelope.ts`)를 거친다 — 선택 칸을 그대로 읽으면 한쪽 송신기에서만 조용히 빈다.
+ */
 export type Envelope = {
-  zone: string | null;
-  node: string;
-  entity: string;
+  /** v2 이름. */
+  zone_id?: string | null;
+  node_id?: string;
+  source_id?: string;
+  /** **데이터 시각**(규약 D3) ISO-8601. */
+  timestamp?: string;
+  sequence_id?: number;
+  /** 옛 이름 — 목 게이트웨이 · BE-08 전 서버. 단계 5에서 지운다. */
+  zone?: string | null;
+  node?: string;
+  entity?: string;
+  ts?: string;
+  seq?: number;
   channel: Channel;
-  /** **서버 시각** ISO-8601. */
-  ts: string;
-  seq: number;
   payload: unknown;
   quality: Quality;
   aggregation: WireAggregation;

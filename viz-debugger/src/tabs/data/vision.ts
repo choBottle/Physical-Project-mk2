@@ -80,7 +80,8 @@ export type Detection = {
   /** 온디바이스는 프레임 단위 판단이라 null. */
   track_id: string | null;
   label: string;
-  confidence: number;
+  /** 검출 신뢰도. 규약 v2 에서는 선택 칸이라 없으면 null — 「불확실」로 그린다. */
+  confidence: number | null;
   /** 의미 분류 신뢰도. 온디바이스는 분류를 하지 않으므로 null. */
   class_confidence: number | null;
   bbox: [number, number, number, number];
@@ -144,7 +145,10 @@ export type DetectionResult = {
    */
   alignment: string | null;
   emitted_at: string;
-  inference_delay_ms: number;
+  /**
+   * 추론 지연. 규약 v2 결과에는 이 칸이 없다(뜻이 규약 §9 질문 5로 미정) — **없으면 null 이고 지어 채우지 않는다.**
+   */
+  inference_delay_ms: number | null;
   origin: DetectionOrigin;
   /** 이 배치에 연계 **기능**이 있는가. 개별 탐지의 link: null과 뜻이 다르다. */
   association: 'enabled' | 'unavailable';
@@ -184,7 +188,7 @@ export type ResolvedBox = {
   /** 온디바이스 결과는 추적 식별자가 없다. */
   trackId: string | null;
   label: string;
-  confidence: number;
+  confidence: number | null;
   classConfidence: number | null;
   approach: Detection['approach'];
   sourceId: string;
@@ -213,7 +217,8 @@ export type OriginReport = {
   detectionFrame: number;
   /** 표시 프레임과의 차이. 추론 지연 ÷ 프레임 간격. */
   frameLag: number;
-  inferenceDelayMs: number;
+  /** 발신자가 실어 보낸 추론 지연. 없으면 null (v2 결과). */
+  inferenceDelayMs: number | null;
   bboxFormat: BboxSpace['format'];
   /** 추론 해상도 → 표시 해상도 환산 배율. */
   scale: { x: number; y: number };
@@ -324,7 +329,7 @@ export function normalizeDetection(raw: unknown): DetectionResult | null {
     association: obj.association === 'enabled' ? 'enabled' : 'unavailable',
     corridor: toBox(obj.corridor, xyxy),
     bbox_space: space,
-    inference_delay_ms: inferenceDelayMs(obj, ref),
+    inference_delay_ms: finite(obj.inference_delay_ms),
     detections,
   };
 }
@@ -366,22 +371,8 @@ function toOrigin(v: unknown): Partial<DetectionOrigin> | undefined {
 }
 
 /**
- * 화면의 「지연」 숫자. 옛 `inference_delay_ms` 가 있으면 그것. v2 는 이 칸이 없다 — 규약 R9 대로
- * **결과가 나온 순간 − 원본 프레임 시각**(`emitted_at − frame_ref.timestamp`)을 계산하고, 그것도 못 하면
- * 모델 계산 시간(`infer_ms`)을 쓴다. (옛 칸의 뜻은 규약 §9 질문 5로 AI 가 아직 답하지 않았다.)
- */
-function inferenceDelayMs(obj: Record<string, unknown>, ref: DetectionFrameRef): number {
-  const legacy = finite(obj.inference_delay_ms);
-  if (legacy !== null) return legacy;
-  const emitted = typeof obj.emitted_at === 'string' ? Date.parse(obj.emitted_at) : NaN;
-  const framed = ref.captureTimestamp !== null ? Date.parse(ref.captureTimestamp) : NaN;
-  if (Number.isFinite(emitted) && Number.isFinite(framed)) return emitted - framed;
-  return finite(obj.infer_ms) ?? 0;
-}
-
-/**
  * 검출 한 건. 박스가 모양이 아니면 그 건만 버린다. v2 DS 검출에는 추적·분류 신뢰도·궤적·연계가 없다 —
- * 없음(null · 빈 배열)으로 둔다. 검출 신뢰도가 없으면 0 으로 둬 「불확실」로 그린다(확실하다고 지어 말하지 않는다).
+ * 없음(null · 빈 배열)으로 둔다. 검출 신뢰도도 v2 에서는 선택 칸이라 없으면 null(「불확실」로 그린다).
  * 카메라는 `camera_id`(v2) → `source_id`(v1) → 이 결과가 가리키는 프레임의 카메라 순.
  */
 function toDetection(v: unknown, xyxy: boolean, frameCamera: string | null): Detection | null {
@@ -394,7 +385,7 @@ function toDetection(v: unknown, xyxy: boolean, frameCamera: string | null): Det
     ...(d as Partial<Detection>),
     track_id: text(d.track_id),
     label: text(d.label) ?? '',
-    confidence: finite(d.confidence) ?? 0,
+    confidence: finite(d.confidence),
     class_confidence: finite(d.class_confidence),
     bbox,
     approach,
@@ -563,6 +554,7 @@ function resolveOrigin(
     // 분류를 하지 않는 결과에 분류 임계를 적용하면 전부 "불확실"이 된다.
     // 온디바이스는 검출 신뢰도로 판단한다.
     const judged = d.class_confidence ?? d.confidence;
+    // 신뢰도를 모르면(v2 선택 칸) 확실하다고 그리지 않는다.
 
     return {
       trackId: d.track_id,
@@ -577,7 +569,7 @@ function resolveOrigin(
       w,
       h,
       trail: d.trail.map(([tx, ty]) => [tx * scaleX, ty * scaleY] as [number, number]),
-      uncertain: judged < CONFIDENCE_THRESHOLD,
+      uncertain: judged === null || judged < CONFIDENCE_THRESHOLD,
       lagPx,
     };
   });
