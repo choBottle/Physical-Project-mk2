@@ -223,10 +223,18 @@ const controls = [];
 //
 // 그래서 보는 것이 바뀐다. 「넷 이상 있는가」가 아니라 **「골라야 하는 둘이 있고, 나머지는
 // 직접 입력으로 갔는가」**다. 수를 늘리는 쪽이 아니라 줄이는 쪽이 규칙이 됐다.
+//
+// ## 261014 — 가짜 장비 둘(`fake:go1` · `fake:drone`)은 세지 않는다
+//
+// 실물 없이 카드를 보려고 넣은 줄이다. 기계를 고르는 줄이 아니므로 위 규칙(기계는 테일넷 둘)과 별개다 —
+// 실물 줄은 여전히 셋이어야 하고, 가짜 줄은 주소가 `fake:` 로 시작해야 한다(브로커로 새 나가지 않게).
 {
-  if (BROKER_PRESETS.length !== 3) {
-    failures.push(`프리셋이 ${BROKER_PRESETS.length}개 — 테일넷 둘 + 직접 입력 셋이어야 한다`);
+  const real = BROKER_PRESETS.filter((p) => !p.url.startsWith('fake:'));
+  const fake = BROKER_PRESETS.filter((p) => p.url.startsWith('fake:'));
+  if (real.length !== 3) {
+    failures.push(`실물 프리셋이 ${real.length}개 — 테일넷 둘 + 직접 입력 셋이어야 한다`);
   }
+  if (fake.some((p) => !p.id.startsWith('fake-'))) failures.push('가짜 프리셋의 id 가 fake- 로 시작하지 않는다');
   for (const id of ['tailscale', 'drone-tailscale', 'manual']) {
     if (!BROKER_PRESETS.some((p) => p.id === id)) failures.push(`프리셋 ${id} 가 없다`);
   }

@@ -185,6 +185,12 @@ export const BROKER_PRESETS: readonly BrokerPreset[] = [
    * Go1 쪽은 `/mqtt` 로 돌고 있으므로 각자 확인된 모양을 그대로 둔다.
    */
   { id: 'drone-tailscale', labelKey: 'preset.broker.droneTailscale', url: 'ws://pi3.tailcb6bfb.ts.net:9001', whyKey: 'preset.broker.droneTailscale.why' },
+  /**
+   * **가짜 장비** (261014). 실물을 못 띄울 때 하드웨어 카드 · 상세창을 보려고 둔다 — 브로커 없이 화면 안에서 흉내 낸다
+   * (`fakeDevice.ts`). 카드에 「목」 배지가 뜨고 장비 id 가 실물과 다르다(`go1-fake` · `x500-fake`).
+   */
+  { id: 'fake-go1', labelKey: 'preset.broker.fakeGo1', url: 'fake:go1', whyKey: 'preset.broker.fakeGo1.why' },
+  { id: 'fake-drone', labelKey: 'preset.broker.fakeDrone', url: 'fake:drone', whyKey: 'preset.broker.fakeDrone.why' },
   { id: 'manual', labelKey: 'preset.manual', url: '', whyKey: 'preset.manual.why' },
 ];
 

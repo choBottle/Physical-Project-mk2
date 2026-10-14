@@ -42,6 +42,7 @@ import { parseRtcmStatus, RTCM_TOPIC, rtcmChannel } from './rtcmFeed.ts';
 import { noteRtcmStatus } from '../shared/rtcmStatus.ts';
 import { FCX_TOPIC, fcxChannel, parseFcx } from './fcxFeed.ts';
 import { FLIGHT_RUN_TOPIC, flightRunChannel, noteFlightRun, parseFlightRun } from './flightRunFeed.ts';
+import { fakeMqtt, isFakeAddress } from './fakeDevice.ts';
 import { noteFcx } from '../shared/fcxStatus.ts';
 import { decodeCapability, decodeUplink, type UplinkMessage } from './uplink.ts';
 
@@ -149,7 +150,7 @@ export function resolveConnect(mod: unknown): (url: string, opts: Record<string,
 }
 
 /** mqtt.js 클라이언트에서 우리가 쓰는 만큼. 라이브러리 타입을 끌어오지 않는다. */
-type MqttLike = {
+export type MqttLike = {
   on(event: string, handler: (...args: never[]) => void): void;
   subscribe(topic: string, opts: { qos: number }, done?: () => void): void;
   publish(topic: string, payload: Uint8Array, opts: { qos: number }): void;
@@ -278,7 +279,8 @@ export class PhysicalClient {
      */
     resetDeviceIdentity(url);
     try {
-      const client = (await mqttConnect())(url, {
+      // 연결 관리의 「가짜 Go1 · 가짜 드론」(261014) — mqtt.js 대신 같은 면의 흉내에 붙는다. 그 뒤는 실물과 같은 길이다.
+      const client = isFakeAddress(url) ? fakeMqtt(url) : (await mqttConnect())(url, {
         protocolVersion: 5,
         reconnectPeriod: 0,
         /**

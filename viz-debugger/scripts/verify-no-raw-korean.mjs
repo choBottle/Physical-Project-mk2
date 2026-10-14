@@ -54,6 +54,9 @@ const KEPT = [
   ['generate/planShape.ts', 16,
    'LOOP_MARKERS · BRANCH_MARKERS — **발화를 `includes()` 로 읽는 키워드**다. 영어로 바꾸면 「…할 때까지 반복해」를 못 잡는다'],
 
+  ['physical/fakeDevice.ts', 79,
+   '가짜 드론 · 가짜 Go1(연결 관리 「가짜」 프리셋)이 **장비로서 보내는 데이터** — pi3 의 test_sar_rtk.py · emergency_land.py 가 찍는 출력 원문을 흉내 낸다. 화면 글자가 아니고, 화면은 이 원문을 `flightRunFeed.readProgress` 로 읽는다'],
+
   // ③ 화면에 닿지 않는 경로
   ['shared/pipeline-contract.ts', 20,
    '`gateway/` 셋이 쓰지만 **소비하는 화면이 없다** — 탭⑥이 2026-08-31 에 제거됐다(`gateway/server.ts` 주석). 그 파일 머리에 경위가 있다'],
