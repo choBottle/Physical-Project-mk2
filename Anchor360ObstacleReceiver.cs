@@ -54,27 +54,29 @@ public class Anchor360ObstacleReceiver : MonoBehaviour
     [Header("Debug")]
     public bool printReceivedJson = false;
 
-    // ---- JSON 구조 (서버 detect_send_3b2.py의 스키마) ----
+    // ---- JSON 구조 (서버 anchor360_live.py 의 패킷 — 2026-10-14 통합데이터규약 v2, CAM360-04) ----
+    // 옛 이름: name → label · pos3d → position · dist_m → ground_dist_m · size → size_m · bbox_xyxy → bbox · conf → confidence
+    // 서버(anchor360_live.py v2)와 같은 날 바꾼다 — 옛 서버 패킷은 이 판에서 큐브가 생기지 않는다.
     [Serializable] public class Pos3D { public float x, y, z; }
     [Serializable] public class Size  { public float w, h, d; }
     [Serializable]
     public class Det360
     {
-        public int id;
-        public string name;
+        public int id;                 // 이 패킷 안의 번호 (1부터). 여러 프레임에 걸친 ID 가 아니다
+        public string label;
         public string group;
-        public Pos3D pos3d;
-        public float dist_m;
-        public Size size;
-        public int[] bbox_xyxy;
+        public float confidence;
+        public float[] bbox;           // [x1, y1, x2, y2] 픽셀 (슬라이스 기준). 소수가 와도 깨지지 않게 float
+        public Pos3D position;         // anchor 로컬 (m)
+        public float ground_dist_m;
+        public Size size_m;
         public bool ground_clipped;
     }
     [Serializable]
     public class Anchor360Packet
     {
-        public string timestamp;
-        public string camera_id;
-        public string frame;
+        public string timestamp;       // 원본 프레임 시각 (ISO). 쓰지 않는다 — 디버그 출력용
+        public string emitted_at;      // 패킷을 만든 순간 (ISO). 쓰지 않는다
         public Det360[] detections;
     }
 
@@ -153,24 +155,24 @@ public class Anchor360ObstacleReceiver : MonoBehaviour
 
         foreach (var det in pkt.detections)
         {
-            if (det.pos3d == null) continue;
+            if (det.position == null) continue;
 
             // anchor 로컬 좌표(가로만 사용). y는 뒤에서 바닥으로 강제.
-            float lx = det.pos3d.x * (invertX ? -1f : 1f) * distanceScale;
-            float lz = det.pos3d.z * distanceScale;
+            float lx = det.position.x * (invertX ? -1f : 1f) * distanceScale;
+            float lz = det.position.z * distanceScale;
             Vector3 local = yawFix * new Vector3(lx, 0f, lz);
 
             Vector3 world = anchorTransform.TransformPoint(local);
 
             // 크기
-            Vector3 scale = ComputeScale(det.size);
+            Vector3 scale = ComputeScale(det.size_m);
             // 바닥에 세우기: 높이는 맵 바닥으로 강제, 큐브 중심은 절반 위로
             Vector3 pos = new Vector3(world.x, floorWorldY + scale.y * 0.5f, world.z);
 
             GameObject obj = (obstaclePrefab != null)
                 ? Instantiate(obstaclePrefab)
                 : GameObject.CreatePrimitive(PrimitiveType.Cube);
-            obj.name = $"Obs360_{det.name}_{det.id}";
+            obj.name = $"Obs360_{det.label}_{det.id}";
             obj.transform.SetParent(root.transform, true);
             obj.transform.position = pos;
             obj.transform.localScale = scale;

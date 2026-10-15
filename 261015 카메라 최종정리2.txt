@@ -103,12 +103,19 @@ python anchor360_bridge.py --unity-ip <유니티 PC IP> --poll 0.3
 python stream_to_server.py --fps 2 --upload http://210.110.250.33:10001/upload_pano
 
 ★ 만약 360도 카메라가 data stream 돌리는 노트북과 같은 노트북에 연결되어 있으면 
-python stream_to_server.py --fps 3 http://127.0.0.1:10001/upload_pano
+python stream_to_server.py --fps 3 --upload http://127.0.0.1:10001/upload_pano
 아래 명령어를 돌려야 함.
 
 ※ 팀원 핸드폰 핫스팟으로 해본 결과, 5fps 목표로 전송해도 2.3fps 정도가 실측되었음. 따라서 2fps로 하였음.
 ※ 목적지가 서버가 아닌 엣지(노트북 내)일 경우, 'http://210.110.250.33:10001/upload_pano' 코드가 달라져야 함. 이건 server_stream_multi_source.py 참고해서 엣지(노트북)에서 server_stream_multi_source를 돌릴때, stream_to_server 변경 사항을 알아야 함.
 ※ bridge 파일 자체도 나중에 multi_source.py에서 360도 카메라 비전처리 결과(json)가 나오는 경로를 반영해야함. 지금은 수정 전.
+※ (2026-10-15 추가) 위 ★ 명령은 '--upload' 가 빠져 있었다 — 빼면 'unrecognized arguments' 로 시작도 안 된다. 고쳐 두었다.
+※ (2026-10-15 추가) 노트북 안에서 보내는 길(360 → 같은 노트북 data stream)은 WSL 안에서 돌리는 것으로 정리했다 —
+  'Claude outputs\261014_WSL_v2_적용\261014_WSL_v2_적용_시험_매뉴얼.md' (통합데이터규약 v2 판 stream_to_server 포함, --upload 를 꼭 붙인다).
+※ (2026-10-15 추가) 통합데이터규약 v2 판 360 파일 넷(stream_to_server · pano_receiver · anchor360_live · Anchor360ObstacleReceiver.cs)은
+  서버 둘과 Unity 를 한 날에 바꾼다(묶음 F · I). 바꾸기 전까지는 이 문서 그대로 돈다. 바꾼 뒤에는 서버 pano 저장 폴더가
+  'pano_captures/cam360-001_main/' 이 되고(예전 'pro2_anchor' 는 더 갱신되지 않는다), live 줄 끝에 '원본 <번호> (meta 맞음)' 이 붙는다.
+  ⚠ 노트북 stream_to_server 만 먼저 v2 로 바꾸고 서버 7866 으로 보내면 옛 anchor360_live 가 보는 폴더가 멈춘다.
 
 =====================
 

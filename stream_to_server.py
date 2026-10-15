@@ -9,6 +9,21 @@ stream_to_server.py — pro2_auto_bg.py 의 영상판 (사진 촬영 → 실시�
   같은 /upload_pano 에 같은 equirect.jpg 를 올리므로 live.py 감시 루프가 그대로 집어간다.
   (2026-10-01 부터 같은 사진을 10001 데이터 스트림에도 보낸다 — 아래 [2026-10-01 수정])
 
+[2026-10-14 수정 — 통합데이터규약 v2 (CAM360-01)]
+  장마다 보내는 폼을 바꿨다 (첫 번째 7866 · 두 번째부터 10001 모두 같은 폼).
+       capture_id  그대로 (pano_receiver 의 저장 폴더 이름)
+       camera_id   값이 cam360-001_main 으로 바뀐다 (--camera-id 기본값). meta 의 camera_id 와 같은 값
+       meta        새 칸, application/json — 프레임 헤더 (규약 §3-5):
+                   schema_version "2.0" · source_id "cam360-001" · node_id(이 노트북 이름) · zone_id "zoneA" ·
+                   camera_id · sequence_id(정수) · session_id(기동마다 12자리) · timestamp(ISO 밀리초 +09:00) ·
+                   encoding "jpeg" · width · height
+       seq · timestamp 글자 칸은 지웠다 (meta 가 대신한다)
+  sequence_id 는 예전 seq 와 같은 값 — 목표 fps 로 고른 장의 순번이다. 고르는 순간 매기고 업로드에 실패해도
+  번호가 오르므로 받는 쪽은 실패를 불연속으로 본다. 솎아 버린 장은 번호를 매기지 않는다.
+  timestamp 는 그 장을 카메라 스트림에서 받은 시각(예전 timestamp 칸과 같은 순간)이다.
+  pano_receiver 는 meta 를 같은 폴더의 equirect.json 에 남기고, anchor360_live 가 그것으로 원본 프레임을 가리킨다.
+  ※ 아래 [2026-10-01 수정] 2) 의 seq · timestamp 칸 설명은 이력이다.
+
 [2026-10-01 수정 — 데이터 스트림(server_stream_multi_source.py) 연결]
   1) 기본으로 서버 두 곳에 보낸다
        7866  pano_receiver → anchor360_live → 유니티 (예전 그대로. 응답을 기다리고 시간을 잰다)
@@ -60,10 +75,13 @@ stream_to_server.py — pro2_auto_bg.py 의 영상판 (사진 촬영 → 실시�
 import sys
 import json
 import time
+import uuid
+import socket
 import signal
 import argparse
 import threading
 import statistics
+from datetime import datetime, timedelta, timezone
 
 import cv2
 import requests
@@ -72,7 +90,17 @@ DEF_IP         = "192.168.100.124"
 DEF_UPLOAD     = "http://210.110.250.33:7866/upload_pano"
 DEF_UPLOAD_STREAM = "http://210.110.250.33:10001/upload_pano"  # 데이터 스트림 360 입구 (2026-10-01 추가)
 DEF_CAPTURE_ID = "LIVE_STREAM"
-DEF_CAMERA_ID  = "pro2_anchor"
+DEF_CAMERA_ID  = "cam360-001_main"     # 2026-10-14 통합데이터규약 v2 (예전 "pro2_anchor")
+SOURCE_ID      = "cam360-001"          # 카메라가 달린 장비 (규약 §2-3)
+ZONE_ID        = "zoneA"
+SESSION_ID     = uuid.uuid4().hex[:12] # 기동할 때 한 번 — sequence_id 가 다시 시작되는 경계
+NODE_ID        = socket.gethostname()  # 이 노트북
+KST            = timezone(timedelta(hours=9))
+
+
+def iso_ms(t=None):
+    """epoch 초 → '2026-10-12T14:10:31.086+09:00'. 밀리초 아래는 버린다 (규약 §2-2)."""
+    return datetime.fromtimestamp(time.time() if t is None else t, KST).isoformat(timespec="milliseconds")
 
 RECONNECT_S     = 5.0     # 새 프레임이 이만큼 없으면 끊긴 것으로 보고 다시 붙는다
 READ_TIMEOUT_MS = 5000    # 프레임 읽기 제한시간 (OpenCV 4.6 이상). 기본 30초 대신 5초 안에 멈춘 연결을 알아챈다
@@ -274,11 +302,12 @@ class ExtraUploader:
         self.th = threading.Thread(target=self._run, daemon=True)
         self.th.start()
 
-    def put(self, form, data):
+    def put(self, form, data, meta=None):
+        """meta = 프레임 헤더 JSON 글자 (첫 번째 업로드와 같은 것)"""
         with self.cv:
             if self.item is not None:
                 self.skipped += 1              # 아직 못 보낸 장 = 최신 장으로 바꿔치기
-            self.item = (form, data)
+            self.item = (form, data, meta)
             self.cv.notify()
 
     def close(self, timeout=3.0):
@@ -295,13 +324,14 @@ class ExtraUploader:
                     self.cv.wait(0.5)
                 if self.item is None:
                     return
-                form, data = self.item
+                form, data, meta = self.item
                 self.item = None
             t1 = time.perf_counter()
+            files = {"file": ("equirect.jpg", data, "image/jpeg")}
+            if meta is not None:
+                files["meta"] = (None, meta, "application/json")
             try:
-                r = sess.post(self.url, data=form,
-                              files={"file": ("equirect.jpg", data, "image/jpeg")},
-                              timeout=15)
+                r = sess.post(self.url, data=form, files=files, timeout=15)
                 self.status = r.json().get("status", "?")
                 self.sent += 1
             except Exception as e:
@@ -321,7 +351,8 @@ def main():
                          "안 주면 %s 와 %s 두 곳" % (DEF_UPLOAD, DEF_UPLOAD_STREAM))
     ap.add_argument("--capture-id", default=DEF_CAPTURE_ID,
                     help="서버에 덮어쓸 폴더명. 고정이라 디스크가 늘지 않는다")
-    ap.add_argument("--camera-id", default=DEF_CAMERA_ID)
+    ap.add_argument("--camera-id", default=DEF_CAMERA_ID,
+                    help="카메라 키 (기본 %s). meta 의 camera_id 와 pano_receiver 저장 폴더 이름이 된다" % DEF_CAMERA_ID)
     ap.add_argument("--rotate", type=int, default=0,
                     help="capture_id 를 N개 폴더로 돌려쓴다. 0=고정 1개. "
                          "서버 live.py 의 wait_stable 이 '쓰이는 중'으로 오판해 "
@@ -452,14 +483,21 @@ def main():
 
         cap_id = (args.capture_id if args.rotate <= 0
                   else "%s_%02d" % (args.capture_id, n_up % args.rotate))
-        form = {"capture_id": cap_id,
+        meta = {"schema_version": "2.0", "source_id": SOURCE_ID, "node_id": NODE_ID, "zone_id": ZONE_ID,
                 "camera_id": args.camera_id,
-                "seq": str(n_up + 1),             # 프레임 번호 = 이 장의 n_up (화면의 #번호와 같다)
-                "timestamp": "%.6f" % t_frame}    # 카메라 스트림에서 이 장을 받은 시각 (epoch 초)
+                "sequence_id": n_up + 1,          # 고른 장의 순번 = 예전 seq (화면의 #번호와 같다)
+                "session_id": SESSION_ID,
+                "timestamp": iso_ms(t_frame),     # 카메라 스트림에서 이 장을 받은 시각
+                "encoding": "jpeg",
+                "width": int(frame.shape[1]), "height": int(frame.shape[0])}
+        meta_json = json.dumps(meta, ensure_ascii=False)
+        form = {"capture_id": cap_id, "camera_id": args.camera_id}
+        files = {"file": ("equirect.jpg", data, "image/jpeg"),
+                 "meta": (None, meta_json, "application/json")}
 
         if not args.dry_run:
             for x in extras:                      # 두 번째부터는 따로 보낸다 — 기다리지 않는다
-                x.put(form, data)
+                x.put(form, data, meta_json)
         t1 = time.perf_counter()
         if args.dry_run:
             t_up = 0.0
@@ -468,7 +506,7 @@ def main():
             try:
                 r = sess.post(uploads[0],
                               data=form,
-                              files={"file": ("equirect.jpg", data, "image/jpeg")},
+                              files=files,
                               timeout=15)
                 status = r.json().get("status", "?")
             except Exception as e:
