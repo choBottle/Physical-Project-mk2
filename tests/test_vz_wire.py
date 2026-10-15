@@ -112,18 +112,26 @@ def test_entity_id가_있으면_그것을_없으면_source_id를_쓴다():
 # ── 변환 ────────────────────────────────────────────────────────────────────
 
 def test_봉투_11칸이_전부_채워진다():
+    """다섯 칸 이름은 BE-08(2026-10-14) 로 공통 머리 이름 — zone_id · node_id · source_id · timestamp · sequence_id."""
     env = vz_wire.to_vz_envelope("state", ROBOT, scope="all")
     assert set(env) == {
-        "zone", "node", "entity", "channel", "ts", "seq",
+        "zone_id", "node_id", "source_id", "channel", "timestamp", "sequence_id",
         "payload", "quality", "aggregation", "scope", "coordinate_frame",
     }
-    assert env["zone"] == "zoneA"
-    assert env["node"] == "pi7"
-    assert env["entity"] == "go1-001"
+    assert env["zone_id"] == "zoneA"
+    assert env["node_id"] == "pi7"
+    assert env["source_id"] == "go1-001"
     assert env["channel"] == "state"
-    assert env["ts"] == "2026-09-21T09:00:00+09:00"
-    assert env["seq"] == 4837
+    assert env["timestamp"] == "2026-09-21T09:00:00+09:00"
+    assert env["sequence_id"] == 4837
     assert env["scope"] == "all"
+
+
+def test_옛_봉투_이름은_없다():
+    """BE-08 — 옛 이름(zone · node · entity · ts · seq)이 남으면 같은 뜻에 이름이 둘이 된다(R2)."""
+    env = vz_wire.to_vz_envelope("state", ROBOT)
+    assert not {"zone", "node", "entity", "ts", "seq"} & set(env)
+    assert vz_wire.to_vz_envelope("state", SENSOR)["source_id"] == "wl-001"     # entity_id 없음 → source_id
 
 
 def test_payload는_봉투를_통째로_싣는다():
@@ -144,27 +152,27 @@ def test_구독_요청의_scope를_되돌려준다():
 
 def test_빈_봉투로도_죽지_않는다():
     env = vz_wire.to_vz_envelope("state", {})
-    assert env["zone"] is None          # VZ 타입이 `string | null`
-    assert env["node"] == ""
-    assert env["entity"] == ""
-    assert env["ts"] == ""
-    assert env["seq"] == 0
+    assert env["zone_id"] is None       # VZ 타입이 `string | null`
+    assert env["node_id"] == ""
+    assert env["source_id"] == ""
+    assert env["timestamp"] == ""
+    assert env["sequence_id"] == 0
     assert env["payload"] == {}
 
 
 def test_순번이_없거나_이상해도_0으로_간다():
     """`sequence_id` 는 선택 필드다. `bool` 은 `int` 의 하위형이라 따로 막는다."""
-    assert vz_wire.to_vz_envelope("state", {})["seq"] == 0
-    assert vz_wire.to_vz_envelope("state", {"sequence_id": None})["seq"] == 0
-    assert vz_wire.to_vz_envelope("state", {"sequence_id": "4837"})["seq"] == 0
-    assert vz_wire.to_vz_envelope("state", {"sequence_id": True})["seq"] == 0
-    assert vz_wire.to_vz_envelope("state", {"sequence_id": 0})["seq"] == 0
-    assert vz_wire.to_vz_envelope("state", {"sequence_id": 7})["seq"] == 7
+    assert vz_wire.to_vz_envelope("state", {})["sequence_id"] == 0
+    assert vz_wire.to_vz_envelope("state", {"sequence_id": None})["sequence_id"] == 0
+    assert vz_wire.to_vz_envelope("state", {"sequence_id": "4837"})["sequence_id"] == 0
+    assert vz_wire.to_vz_envelope("state", {"sequence_id": True})["sequence_id"] == 0
+    assert vz_wire.to_vz_envelope("state", {"sequence_id": 0})["sequence_id"] == 0
+    assert vz_wire.to_vz_envelope("state", {"sequence_id": 7})["sequence_id"] == 7
 
 
 def test_타입이_어긋난_값은_빈_값으로_떨어진다():
     env = vz_wire.to_vz_envelope("state", {"zone_id": 5, "node_id": None, "timestamp": 12345})
-    assert env["zone"] is None and env["node"] == "" and env["ts"] == ""
+    assert env["zone_id"] is None and env["node_id"] == "" and env["timestamp"] == ""
 
 
 # ── 잠정값 — Phase 5 에서 바뀔 자리를 못 박는다 ─────────────────────────────
@@ -184,7 +192,7 @@ def test_data_메시지_모양():
     msg = vz_wire.data_message("sub-1", "state", ROBOT, scope="all")
     assert msg["type"] == "data"
     assert msg["sub"] == "sub-1"
-    assert msg["envelope"]["entity"] == "go1-001"
+    assert msg["envelope"]["source_id"] == "go1-001"
 
 
 # ── 구독표 ──────────────────────────────────────────────────────────────────

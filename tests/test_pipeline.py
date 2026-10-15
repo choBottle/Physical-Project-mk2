@@ -231,14 +231,14 @@ def test_ws_delivery_vz_wire(broker, ws_url, timeout_s) -> None:
     assert received is not None, f"WS({ws_url})로 VZ 형식이 도달하지 않았다"
     assert received["sub"] == "sub-1", "VZ 가 붙인 구독 ID 를 그대로 돌려줘야 찾을 수 있다"
     env = received["envelope"]
-    assert set(env) == {"zone", "node", "entity", "channel", "ts", "seq",
+    assert set(env) == {"zone_id", "node_id", "source_id", "channel", "timestamp", "sequence_id",   # BE-08 이름
                         "payload", "quality", "aggregation", "scope", "coordinate_frame"}
     assert env["channel"] == "state"
-    assert env["zone"] == payload["zone_id"]
-    assert env["node"] == payload["node_id"]
-    assert env["entity"] == source_id          # entity_id 가 없으면 source_id 가 개체를 가리킨다
-    assert env["ts"] == payload["timestamp"]
-    assert env["seq"] == payload["sequence_id"]
+    assert env["zone_id"] == payload["zone_id"]
+    assert env["node_id"] == payload["node_id"]
+    assert env["source_id"] == source_id       # entity_id 가 없으면 source_id 가 개체를 가리킨다
+    assert env["timestamp"] == payload["timestamp"]
+    assert env["sequence_id"] == payload["sequence_id"]
     assert env["payload"] == payload           # 봉투를 통째로 싣는다(걷어내지 않는다)
     assert env["scope"] == "all"               # 구독 요청의 값을 되돌려준다
     # 잠정값 셋 — 진짜 값이 아니다(Phase 5 에서 바뀐다). 바뀌면 여기가 먼저 걸린다.

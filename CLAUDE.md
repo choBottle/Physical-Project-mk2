@@ -22,6 +22,9 @@ MQTT·Kafka·OpenTelemetry·K3s·Tailscale은 **지금 쓰는 구현(교체 가�
 - 구현 순서·Tier 분류: [`docs/be/01-standalone-implementation-plan.md`](docs/be/01-standalone-implementation-plan.md)
 - 요구사항 상태: [`docs/be/requirement-traceability.md`](docs/be/requirement-traceability.md)
 - 파트 간 공통 규격: [`contracts/common/`](contracts/common/) (공통 헤더·frame_ref, 백엔드 소유)
+- 파트 간 데이터 이름·형식: **통합데이터규약**(2026-10-13 문서 v3 · 데이터 판 `2.0` — 저장소 밖
+  `Claude outputs/261013_통합데이터규약_v3.md`). 다섯 파트 공통 기준이고 `contracts/common/` 규격이 그것을 따른다.
+  BE 적용 기록: [`reports/2026-10-13_1850_통합데이터규약_v3_적용.md`](reports/2026-10-13_1850_통합데이터규약_v3_적용.md)
 
 ### 명령
 
@@ -59,7 +62,8 @@ python -m pytest -q
 python -m pytest -q tests/test_pipeline.py::test_valid_roundtrip
 python -m pytest -q tests/test_pipeline.py::test_contract_fixtures   # 인프라 없이도 도는 공통 규격 검증
 python -m pytest -q tests/test_contract_media.py tests/test_media_frame.py tests/test_media_dropold.py   # 미디어 규격·프레이밍·drop-old (소켓 없음, 컴퓨터에서도)
-#   tests/test_media_relay.py 12건은 엣지 입구 8766 이 열려 있을 때만 돈다(닫혀 있으면 skip 이 정상 — MK2_MEDIA_INGEST_PORT=0).
+#   tests/test_media_relay.py 13건은 엣지 입구 8766 에 닿을 때만 돈다 — 2026-09-22(실측 단계 1-d)부터 서버에서 열려 있어 skip 0 이 정상.
+#   skip 13 이면 8766 이 닫혔거나 .env 에 MK2_MEDIA_INGEST_URL 이 없다(8766 은 단일 주소 바인딩이라 시험이 그 주소로 붙는다).
 python -m pytest -q tests/test_capture_upload.py   # 4b — 프로세스 안에 수신단을 띄운다. MySQL 이 닿으면 실제 media_capture, 아니면 가짜 저장소(컴퓨터)
 
 # ── 미디어 송신 fixture (Phase 4 — 홉2 방식 B 참조 구현. 엣지 실물이 없을 때 그 자리) ──
@@ -78,7 +82,8 @@ python tests/media_publisher.py --encoding jpeg --fps 15 --count 45
   **Phase 4(미디어)에서 더해진 것:** `MK2_WS_HOST`는 **콤마 목록**(`127.0.0.1,<서버 tailscale IP>`) ·
   `MK2_WS_TOKEN`·`MK2_EDGE_TOKEN`(URL 쿼리 토큰 — **loopback 이 아닌 바인딩에 토큰이 비어 있으면 기동 시
   이름을 대며 죽는다**) · `MK2_WS_URL` · `MK2_MEDIA_INGEST_PORT`/`_HOST`(엣지 입구 8766, **`0`이면 닫힘** —
-  실측 뒤 닫아 둔 상태) · `MK2_MEDIA_INGEST_URL` · `MK2_MEDIA_DROP_WINDOW_MS`·`MK2_MEDIA_BUFFER_MAX_BYTES`·
+  2026-09-22 실측 단계 1-d 부터 **열려 있다**) · `MK2_MEDIA_INGEST_URL`(서버 `.env` 에
+  `ws://<서버 tailscale IP>:8766/ingest` — 8766 은 **단일 주소** 바인딩이라 시험·송신기가 이 주소로 붙어야 한다) · `MK2_MEDIA_DROP_WINDOW_MS`·`MK2_MEDIA_BUFFER_MAX_BYTES`·
   `MK2_MEDIA_MAX_FRAME_BYTES`·`MK2_MEDIA_WRITE_LIMIT`·`MK2_MEDIA_SNDBUF`(drop-old 매개변수 — 지연 바운드 =
   `T_drop + write_limit + sndbuf`) · **4b** `MK2_CAPTURE_HOST/PORT/TOKEN/DIR/MAX_BYTES/URL`(PUT 입구 8767, `0`이면
   닫힘, 저장 루트는 서버 `.env`로 저장소 밖 절대 경로).
@@ -108,7 +113,9 @@ backend/
                  capture.py = 4b 촬영본(정지 촬영 세션) PUT 수신단 — PUT 두 번(매니페스트→tar.gz), 파일시스템 + MySQL media_capture 한 행. 별도 유닛 mk2-capture(8767)
   twin/          디지털 트윈 (위치·클래스 융합, 커버리지·사각지대, 시의성, 로봇 투입)
 contracts/common/  파트가 나뉘는 지점의 공통 규격 (JSON Schema). 이것이 기준이지 파이썬 타입이 아니다.
-                   message(공통 헤더) · frame-reference · media-header(Phase 4) · detections(초안) · payload/ 본문 6종
+                   message(공통 헤더) · frame-reference · media-header(Phase 4 — 2026-10-13 v2 평평한 프레임 헤더) ·
+                   detections(초안, v2 비전 결과) · payload/ 본문 7종(2026-09-29 drone 추가)
+                   *.v1.schema.json 둘 = 과도기 사본(v1 frame_ref·미디어 헤더 — 모든 생산자가 v2 로 바뀐 뒤 단계 5 에서 지운다)
                    파일 간 $ref 는 backend/ingest/envelope.py 의 레지스트리($id → 로컬 파일)가 푼다 — 네트워크 0
 infra/             docker-compose · Collector · Grafana 등 배포 자산
   systemd/         상주 4개 유닛(mk2-ingest · mk2-storage-consumer · mk2-ws-echo · mk2-capture). 커밋한다
@@ -174,8 +181,9 @@ tests/             pytest + 가짜 발행자(publisher.py MQTT · media_publishe
   """
   ```
 - **변수·필드 이름은 [`contracts/common/`](contracts/common/)의 공통 헤더를 기준으로 통일한다.**
-  공통 헤더 항목(`source_id`·`entity_id`·`node_id`·`zone_id`·`timestamp`·`sequence_id`·
-  `correlation_id`·`origin_kind`)는 이 이름 그대로 쓴다. 새 이름이 필요하면 먼저 공통 규격에
+  공통 헤더 항목(`source_id`·`entity_id`·`node_id`·`zone_id`·`timestamp`·`sequence_id`·`session_id`·
+  `sent_at`·`correlation_id`·`origin_kind`)는 이 이름 그대로 쓴다. 프레임·비전 칸 이름(`camera_id`·`frame_ref`·
+  `received_at`·`emitted_at` 등)은 통합데이터규약(데이터 판 2.0)을 따른다. 새 이름이 필요하면 먼저 공통 규격에
   의미를 정의한다.
 - **작업 단위별 보고서는 `reports/YYYY-MM-DD_HHMM_주제.md` 형식으로 남긴다** — 배경 / 한 일 /
   검증 / 다음. 이 보고서가 다음 설계 세션의 입력이 된다.

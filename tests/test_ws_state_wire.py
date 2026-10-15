@@ -132,11 +132,11 @@ def test_구독을_보낸_클라이언트는_data_메시지를_받는다():
     m = b.sent[0]
     assert m["type"] == "data"
     assert m["sub"] == "sub-1"                    # VZ 가 붙인 ID 를 그대로 돌려줘야 찾는다
-    assert set(m["envelope"]) == {
-        "zone", "node", "entity", "channel", "ts", "seq",
+    assert set(m["envelope"]) == {          # 다섯 칸 이름은 BE-08(2026-10-14) — 공통 머리 이름
+        "zone_id", "node_id", "source_id", "channel", "timestamp", "sequence_id",
         "payload", "quality", "aggregation", "scope", "coordinate_frame",
     }
-    assert m["envelope"]["entity"] == "go1-001"
+    assert m["envelope"]["source_id"] == "go1-001"
     assert m["envelope"]["payload"] == ROBOT      # 봉투를 통째로 싣는다
 
 

@@ -385,7 +385,7 @@ Phase 7  디지털 트윈         DT 7건 (좌표 변환·융합·커버리지�
     `/state`의 VZ 와이어 계약 정합은 **Phase 5/7**(그때까지 VZ는 목 게이트웨이 8790).
   - **2026-09-17 대조 이월 → 역할 경계·#15 결정 9·회신 범위·VZ 통지·결정 2/3/5/7은 지시서 §2-3·§2-5로 확정돼 그대로 이행.**
     결정 7은 **A**(4318 Tailscale IP 바인딩 + CORS + ufw `/32`, 브라우저는 tailnet 안)이며 **구현은 VZ 주소·origin 회신 뒤**
-    — 이번에 4318은 손대지 않았다. 라벨 6종 확장은 8종으로(`frame_ref`·`correlation_id` 추가), 「발화 원문」은 키 이름
+    — 이번에 4318은 손대지 않았다. 🔄 **2026-09-29 실측 단계 1-e 에서 열었다.** 라벨 6종 확장은 8종으로(`frame_ref`·`correlation_id` 추가), 「발화 원문」은 키 이름
     회신 뒤.
 - **단계 9 ✅(2026-09-19):** HW 회신 [`hw-envelope-conformance.md`](hw-envelope-conformance.md) §8 · VZ 통지
   [`vz-media-interface.md`](vz-media-interface.md)(관측 회신 답 §9 포함) · AI 통지 [`ai-detections-interface.md`](ai-detections-interface.md)
@@ -398,16 +398,41 @@ Phase 7  디지털 트윈         DT 7건 (좌표 변환·융합·커버리지�
   [`../../reports/2026-09-19_0600_phase4_미디어경로.md`](../../reports/2026-09-19_0600_phase4_미디어경로.md).
 - **🆕 이 Phase가 미래 Phase로 보내는 것(규율 8 — 아래 각 Phase 항목에도 적었다):**
   - **Phase 5:** `video_meta` 상태 채널 발행(실체·시점은 정했다) · `/state` VZ 와이어 계약 정합(`hello`·`subscribed`·구독 즉시
-    스냅샷·`unsubscribe`) · 레지스트리(BE-Q-03)로 entity↔`source_id` 목록(그때까지 화면에서 직접 설정) · `MK2_MEDIA_SNDBUF`
+    스냅샷·`unsubscribe` — 🔄 09-21 최소 어댑터로 「업무 데이터 도달」은 먼저 풀었다) · 레지스트리(BE-Q-03)로 entity↔`source_id` 목록(그때까지 화면에서 직접 설정) · `MK2_MEDIA_SNDBUF`
     하향 여부(지연 vs DERP 처리량 — 결정 항목).
   - **Phase 6:** 서버→엣지 온디맨드 개폐 배선(길 B의 절약 — HW `stream_start`/`stream_stop` 우회 전제) · `.proto` 개정(문자열
-    파라미터·`traceparent`와 같은 커밋) · **Kafka EDGE SASL** · **OTLP 4316 토큰(확장 조사)** · **4318 브라우저 입구**(VZ 회신 뒤,
-    결정 7 A) · **tailnet 밖 뷰어용 WSS** · `DOCKER-USER`로 tailnet 안 좁히기 · 탐지 채널·토픽(AI→Kafka→`/state`) · 촬영본
+    파라미터·`traceparent`와 같은 커밋) · **Kafka EDGE SASL** · **OTLP 4316 토큰(확장 조사)** · ~~**4318 브라우저 입구**(VZ 회신 뒤,
+    결정 7 A)~~ ✅ 2026-09-29 개통 · **tailnet 밖 뷰어용 WSS** · `DOCKER-USER`로 tailnet 안 좁히기 · 탐지 채널·토픽(AI→Kafka→`/state`) · 촬영본
     세 곳 중복 정리(pi·VZ·4b).
   - **Phase 7:** 소스별 촬영 시각 보정(imageai 프레임의 촬영 시각 유무 — HW 답 뒤) · 트윈 형식(#14) · `object-reference.schema.json`을
     `$ref` 레지스트리 검증 경로에 편입 · 다중 소스 병합 규칙(#14) 뒤 `media_capture` 파생.
 - 관련: BE-T-07(미디어 중계 — 부분)·BE-C-03(frame_ref·미디어 헤더 — 부분)·BE-T-08(오버레이 터널 — 부분)·BE-T-03(경로
   분리·토큰)·BE-T-02(EDGE 실증)·**VZ-C-07(WS 주소 설정)**·**BE-S-09(#15 촬영본 저장소 — 부분, 4b 구현)**.
+
+#### 🔄 Phase 4 뒤 — 실측 단계 1·2 · 통합데이터규약 v3 적용 (2026-09-21 ~ 10-14)
+
+Phase 5 앞에 끼어든 두 갈래다. **Phase 번호는 그대로**이고, 둘 다 Phase 4가 만든 것 위에서 했다.
+
+- **실측**(근거 `260919_실측준비_올인원_v2.md` v2.3 — 저장소 밖):
+  - 09-21 실측대비 — `/state` VZ 와이어 최소 어댑터(`backend/gateway/vz_wire.py` — 업무 데이터가 VZ 화면까지 간다) · HW·VZ 회신 정리([`2026-09-21_실측_작업로그.md`](../../reports/2026-09-21_실측_작업로그.md)).
+  - 09-22 · 09-29 **단계 1 — 서버 입구 넷 개통:** 4316(관측 수집기 tailnet) · 9095(Kafka EDGE) · 8766(엣지 입구 + `MK2_MEDIA_INGEST_URL`) ·
+    4318(브라우저 관측, CORS origin 여덟). 서버 pytest **326 passed · skip 0**(relay 12 가 실제로 돈다 — 이제 skip 0 이 정상값) →
+    `state.drone` 신설(어휘 넷 → 다섯, 파이썬 변경 0) 뒤 **328**. VZ §17 · HW §11 통지. HW 팀 tailnet 합류(09-29). **1-b**(`edge_federate`
+    타깃을 HW 엣지로)는 아직이다([`2026-09-29_실측_단계1_작업로그.md`](../../reports/2026-09-29_실측_단계1_작업로그.md)).
+  - 09-30 **단계 2 — 합성 프레임 서버 관통:** 이대규 PC → 8766 → 8765 확인용 뷰어 **600 = 600 = 600** · gaps 0 · 서버 CPU 최대 3%([`2026-09-30_실측_단계2_작업로그.md`](../../reports/2026-09-30_실측_단계2_작업로그.md)).
+- **통합데이터규약 v3 적용**(10-13 착수 · 10-14 서버 배포): BE-01~07 · BE-09~13 → 서버 **352 passed · skip 0**. v2 프레임 헤더 ·
+  `frame_ref{camera_id, sequence_id, timestamp}` · 입구 쿼리 `camera_id` · 비전 결과 v2 · 원칙 10 v2. 과도기 동안 v1 헤더·옛 쿼리도 받는다.
+  **BE-08**(VZ 봉투 이름)은 PC 저장소에만 있다 — VZ-01(화면) 배포 알림 뒤 서버에 올린다([`2026-10-13_1850_통합데이터규약_v3_적용.md`](../../reports/2026-10-13_1850_통합데이터규약_v3_적용.md)).
+- **🆕 여기서 미래로 보내는 것(규율 8):**
+  - **실측 계속(Phase 와 별도):** 단계 4(관문 B — VZ 앱이 뷰어 자리에) · 4-b(관문 C-a) · 1-b(엣지 지표 — HW 엣지 `9090` 인바운드가 전제) ·
+    5~9(엣지 노트북 · 홉2 송신기 — 헤더는 통합데이터규약 EDGEHW-01 v2 · 관문 C-b · A · 관통). ⚠ **드론 상태는 서버로 오지 않는다**
+    (2026-09-29 조회 TSDB 0행) — pi3 는 자기 브로커로 발행하고 우리 브릿지는 서버 브로커만 본다. 서버에서 pi3 브로커를 구독하는
+    **둘째 브릿지 프로세스**(`client_id`·`MK2_QUARANTINE_PATH` 를 가른다)가 그 길이다(단계 1 로그 「발견 추가」).
+  - **통합데이터규약 남은 것(조건이 서면):** BE-08 서버 배포(VZ-01 화면 알림 뒤) · **단계 5 정리**(v1 규격 둘 · `validator_v1` 갈래 ·
+    쿼리 `source_id` · v1 시험 · 저장소 밖 `_serverinfo/edge_probe_260919/` 의 `?source_id=` — **모든 생산자(HW 엣지 포함)가 v2 를 배포한
+    뒤에만**).
+  - **Phase 6(탐지 채널):** DS 비전 결과에 `alignment` 가 없다 — VZ 가 DS 박스를 직접 그리게 되면 `"alignment": "frame"` 을 넣을지
+    정한다(지금 VZ 비전 탭은 DS 가 만든 오버레이 JPEG 를 보여 줘 영향 없다).
 
 ### Phase 5 — 가용성 판정기
 
@@ -472,8 +497,9 @@ Phase 7  디지털 트윈         DT 7건 (좌표 변환·융합·커버리지�
     + 마지막 도착 시각)와 발행 시점(`/ingest` 첫 프레임·해상도 변경 = 스트림 재개 사건)을 정했고 **발행은 하지 않았다**
     (`02-media-path.md` §1-5-4·`00-architecture.md` §7-4). 카메라 영상 가용성은 장치 가용성과 **별개 신호** — 판정기가
     섞지 않는다.
-  - **`/state`의 VZ 와이어 계약 정합.** 지금 `/state`는 Phase 1 echo 그대로라 VZ `WsTransport`가 붙으면 전량 버린다(`type`
-    필드 없음). `hello`·`subscribed`·**구독 즉시 캐시 1회 푸시**(화면이 실제로 비는 것은 이것뿐)·`unsubscribe`. 재접속
+  - **`/state`의 VZ 와이어 계약 정합.** ~~지금 `/state`는 Phase 1 echo 그대로라 VZ `WsTransport`가 붙으면 전량 버린다(`type`
+    필드 없음).~~ 🔄 2026-09-21 실측대비로 최소 어댑터(`vz_wire.py` — `{type:'data', sub, envelope}` · 구독 읽기)를 먼저 만들어 업무
+    데이터는 VZ 화면까지 간다. 남은 것: `hello`·`subscribed`·**구독 즉시 캐시 1회 푸시**(화면이 실제로 비는 것은 이것뿐)·`unsubscribe`. 재접속
     캐시(BE-T-06)와 같은 자리. `stale_threshold_ms`는 state payload의 `layers.stale_threshold_ms`가 실제 표시를 하므로 그쪽을
     먼저 맞춘다.
   - **레지스트리(BE-Q-03)로 entity ↔ `source_id`(카메라) 목록.** `/media`는 카메라 단위(`go1-001_front`)이고 `target_entity_id`는
@@ -577,8 +603,9 @@ Phase 7  디지털 트윈         DT 7건 (좌표 변환·융합·커버리지�
     `map<string,double>`이라 명령에 문자열을 실을 자리가 애초에 없다**(`physical_command.proto:32`). SDP 같은 세션 정보는
     `CommandStatus.detail`로 충분하니 `.proto`를 앞당기지 않는다.
   - **Kafka EDGE 리스너 SASL**(BE-Q-04와 함께 — Phase 4는 평문 + 바인딩 + ufw `/32`) · **OTLP 4316 토큰**(Collector 토큰 확장
-    조사 ⏭ — 없거나 receiver 분리가 필요하면 ufw `/32`만) · **4318 브라우저 관측 입구**(결정 7 A — VZ가 tailnet 주소·CORS
-    origin·exporter 종류·https 여부를 회신한 뒤 Tailscale IP 바인딩 + CORS + ufw `/32`) · **tailnet 밖 뷰어용 WSS**(결정 5 —
+    조사 ⏭ — 없거나 receiver 분리가 필요하면 ufw `/32`만) · ~~**4318 브라우저 관측 입구**(결정 7 A — VZ가 tailnet 주소·CORS
+    origin·exporter 종류·https 여부를 회신한 뒤 Tailscale IP 바인딩 + CORS + ufw `/32`)~~ ✅ **2026-09-29 실측 단계 1-e 에서
+    열었다**(VZ 발행부는 VZ 몫) · **tailnet 밖 뷰어용 WSS**(결정 5 —
     외부 관제·시연장 게스트가 필요해지면 관측 대체 경로와 함께) · **`DOCKER-USER`로 도커 발행 포트를 tailnet 안 특정 기기로
     좁히기**(실 엣지 상시 연결 시).
   - **탐지 채널·토픽(AI→Kafka→`/state`).** `detections.schema.json` 초안이 AI·VZ 회신 뒤 `payload/`로 오르면 그 규격을 싣는
@@ -611,7 +638,9 @@ Phase 7  디지털 트윈         DT 7건 (좌표 변환·융합·커버리지�
     (`$id` → 로컬 파일, `referencing.Registry`)를 세웠고 `media-header`가 `frame-reference`를 그 경로로 참조한다(결정 12).
     `object-reference`도 같은 경로를 쓴다 — 인라인 복제하지 않는다(`tests/test_contract_media.py::test_registry_resolves_object_reference_like_media_header`가
     이미 해석을 확인한다).
-  - **소스별 촬영 시각 보정.** `frame_ref.capture_timestamp`는 엣지가 프레임 경계를 확정한 시각(말단 지연 포함·미보정)이다.
+  - **소스별 촬영 시각 보정.** `frame_ref.capture_timestamp`는 엣지가 프레임 경계를 확정한 시각(말단 지연 포함·미보정)이다. 🔄 **2026-10-14 v2:** 이제
+    `frame_ref.timestamp` = **프레임을 처음 손에 넣은 기기**(GO1 은 pi7)가 붙인 시각이다(원칙 10 v2). GO1 의 H.264 수신 → JPEG 생성 사이
+    약 37ms 를 언제·어떻게 보정할지는 통합데이터규약 §9 질문 8(D4)로 열려 있다.
     HW에 "imageai 웹소켓 프레임에 Go1이 찍은 촬영 시각이 실려 있는가"를 물었다(Phase 4 회신) — 있으면 편향이 사라지고,
     없으면 여기서 소스별 보정을 설계한다. 시연의 자세 정합(`rotation_deg`)은 DT-01·DT-04의 pose 부착으로 일반화한다.
   - **트윈 형식(HW #14)·다중 소스 병합 규칙.** 좌표 규약 ENU 이행·객체 핸드오프(DT-06)와 한 묶음. 병합 규칙이 정해지면
@@ -659,7 +688,12 @@ Phase 7  디지털 트윈         DT 7건 (좌표 변환·융합·커버리지�
   / 작업로그: [`../../reports/2026-09-18_2100_phase4_작업로그.md`](../../reports/2026-09-18_2100_phase4_작업로그.md)
   / 회신·통지: [`hw-envelope-conformance.md`](hw-envelope-conformance.md) §8 · [`vz-media-interface.md`](vz-media-interface.md) ·
   [`ai-detections-interface.md`](ai-detections-interface.md)
-- [ ] **⑦ 가용성 판정기 (Phase 5)** ← **다음** — `video_meta` 발행·`/state` VZ 계약 정합·레지스트리 목록·`MK2_MEDIA_SNDBUF`
+- [x] **⑥-2 실측 단계 1·2** — 완료(2026-09-22 ~ 09-30). 서버 입구 넷(8766·9095·4316·4318) 개통 · 합성 프레임 서버 관통 600 = 600 ·
+  `state.drone` 신설 · VZ §17 · HW §11 통지. 단계 4(관문 B)부터는 VZ·HW 와 시각을 맞춘다. 근거 `260919_실측준비_올인원_v2.md`(저장소 밖) /
+  작업로그: [`2026-09-29_실측_단계1_작업로그.md`](../../reports/2026-09-29_실측_단계1_작업로그.md) · [`2026-09-30_실측_단계2_작업로그.md`](../../reports/2026-09-30_실측_단계2_작업로그.md)
+- [x] **⑥-3 통합데이터규약 v3 적용 — BE** — 2026-10-14 서버 배포(**352 passed**, skip 0). 남은 것: VZ(VZ-02)·HW(EDGEHW-01) 알림 ·
+  BE-08(VZ-01 화면 뒤) · 단계 5 정리(모든 생산자 배포 뒤). 작업로그: [`2026-10-13_1850_통합데이터규약_v3_적용.md`](../../reports/2026-10-13_1850_통합데이터규약_v3_적용.md)
+- [ ] **⑦ 가용성 판정기 (Phase 5)** ← **다음**(그 앞에 실측 단계 4 — 관문 B) — `video_meta` 발행·`/state` VZ 계약 정합·레지스트리 목록·`MK2_MEDIA_SNDBUF`
   결정이 Phase 4에서 이월됐다. 회신 대기: HW **4**(`stream_start/stop`·촬영 시각·IDR 간격·**실 스트림 장당 바이트·초당 장수** — 바로 위 `MK2_MEDIA_SNDBUF` 결정의 유일한 입력값이다) · VZ 5+1 · AI 2.
 
 ---
@@ -683,6 +717,11 @@ Phase 7  디지털 트윈         DT 7건 (좌표 변환·융합·커버리지�
 | 김현우 (가시화) | Phase 5 · Phase 6 | VZ 요구사항정의서 §7.6 — HW-C-05 60초 export vs BE-S-03 15초 pull 불일치(→Phase 5) · §7.3 — 감사 `origin.path`를 `input.mode`·`decision.source` 두 축으로 분리 요청 중(→Phase 6 감사 규격) |
 | 김현우 (가시화) | ~~**Phase 6 전 회신 대기**~~ → ✅ **회신 받음 2026-09-17** ([`received/2026-09-17_vz-mission-record-reply.md`](received/2026-09-17_vz-mission-record-reply.md)) | 골격 맞음(재작성 없음). 확정: 실패 4단계 `plan_failed`·`dispatch_failed`·`execution_failed`·`evaluation_failed` · `node_ref`·`mission_id` VZ 부여(판마다 새 `mission_id`) · 8종 파생·구간 계산 VZ · 보존 무기한 · `event_key`=`{mission_id}:{VZ 순번}`. **백엔드가 할 것(Phase 6 이월):** 임무 정의 저장 자리 · `layer`에 `mission` · `subject_kind` 3종 방식 · `origin_kind` 발행 주체 · Go1 `source_id`=`go1-001` 답 |
 | 김현우 (가시화) | ~~**지표 발행 시작 전 회신 대기**~~ → ✅ **회신 받음 2026-09-17** ([`received/2026-09-17_vz-observability-namespace-reply.md`](received/2026-09-17_vz-observability-namespace-reply.md)) | 수용: `vz.` · `service.name` = `vz-viewer`·`vz-stt`·`vz-gen` · 지표만(로그·트레이스 없음). **백엔드의 답 ✅ 2026-09-19 — [`vz-media-interface.md`](vz-media-interface.md) §9(+§11 우리 통지 §4 정정):** ① 발행 주기 60초 OK — 단 근거 정정: HW는 15초로 **공식 채택·정의서 개정 완료**(`BACKEND_AGENDA` §10-1·SRS §9.11), 주기는 발신자 몫이라 VZ 60초는 그대로 괜찮다 ② **브라우저 발신 경로 = 결정 7 A**(Collector OTLP/HTTP **4318을 Tailscale IP에만** + CORS + ufw `/32` — 뷰어는 tailnet 안이라 인터넷 노출 아님). **구현은 tailnet 주소·CORS origin·exporter 종류·https 여부 회신 뒤**(위 행) · `vz-stt`·`vz-gen`은 별도 프로세스라 발신 주소를 따로 묻는다 · 우리 통지 §4의 세 문장(4318 닫힘·4316·TLS)을 **개정 고지** ③ ✅ 라벨 8종 `FORBIDDEN_LABELS`에 반영(`node_id` 제외 → DAG 노드는 **`node_ref`라는 이름으로** 내보내 달라 요청) — 「발화 원문」은 키 이름 회신 뒤. Unity 트윈 담당 미정은 Phase 7 메모 |
+| 조병현 (HW) | 🔄 **실측 단계 1 통지 2026-09-29** — [`hw-envelope-conformance.md`](hw-envelope-conformance.md) **§11** | **HW 할 일 26 · 27 · 28 회신 대기**(26 엣지 `9090` 인바운드 — 1-b 의 전제 · 27 반대 방향 `tailscale ping` · 28 193장의 행방). 팀 tailnet 합류 ✅(2026-09-29) |
+| 조병현 (HW) | 🔄 **통합데이터규약 v3 (2026-10-13)** | BE-07 서버 배포(2026-10-14)를 알린다(V3 — EDGEHW-01 이 기다린다. 작업로그 기준 2026-10-14 에 남음). HW 항목: GO1-01~09 · EDGEHW-01. 장비가 v2 로 바뀌기 전까지 서버는 옛 헤더·옛 쿼리를 받는다 |
+| 김현우 (가시화) | 🔄 **실측 단계 1 통지 2026-09-29** — [`vz-media-interface.md`](vz-media-interface.md) **§17** | 4318 개통 통보(VZ 발행부는 의존성 0건 — 통보 뒤 붙인다고 했다) · 드론 본문 규격 신설 · 드론 브릿지 `client_id` 분리 |
+| 김현우 (가시화) | 🔄 **통합데이터규약 v3 (2026-10-13)** | BE-07 서버 배포(2026-10-14)를 알린다(VZ-02 쿼리 이름은 배포 뒤에만 바꾼다. 작업로그 기준 2026-10-14 에 남음). **VZ-01(화면 둘 다 읽기) 배포 알림을 받으면 BE-08 을 서버에 올린다** |
+| 드론 담당 | 🔄 **통합데이터규약 v3 (2026-10-13)** | DS 최신본 `DRONE_CAM = 1`(pi3 카메라 둘 — 규약 §3-7 예시 `?cam=0` → `?cam=1`, §9 질문 6 위치 이름)을 알린다 · BE-05 가 서버에 있으므로 DRONE-04(드론 state v2)는 언제든 된다 |
 | 현장/실측 | Phase 4·5 | 회선 QoS·콜드스타트(Tier C) · **Tailscale은 연구실 환경에서 Phase 3(DERP 72ms → 직접 3ms)·Phase 4(직접 2ms/22ms, 미디어·Kafka·관측이 한 터널 공유)에 실측** · **느린 링크는 서버 `tc tbf 500kbit` 한 조건만**(drop-old IDR 재개·지연 p90 2.34s) — 현장 엣지-서버 배치·DERP 경유·실물 로봇 영상·실물 엣지 노트북·GOP 경계 프레임률 불균일은 남아 있다 |
 
 > **HW 소스의 최신본은 `_hwsrc/upstream_<날짜>/`** 에 둔다(gitignore, 절대 고치지 않는다). 새 브랜치가
@@ -704,7 +743,8 @@ Phase 7  디지털 트윈         DT 7건 (좌표 변환·융합·커버리지�
   `tsdb_conn`·`mysql_conn` fixture가 접속 실패를 `pytest.skip`으로 바꾼다(서버 skip 0 / 컴퓨터 28 skip,
   양방향 확인). 새 저장소·외부 의존이 생기면 같은 방식으로 fixture를 더한다. **Phase 3에서 관측 3종에도
   같은 fixture를 더했다**(`prometheus_url`·`loki_url`·`tempo_url`, 표준 `urllib`만). 서버 전건 **184건**(2026-09-16,
-  skip 0) → **Phase 4 뒤 272 passed + 12 skip**(2026-09-19, skip은 8766 닫힘이 정상), 컴퓨터는 단위 파일만
+  skip 0) → **Phase 4 뒤 272 passed + 12 skip**(2026-09-19, skip은 8766 닫힘이 정상) → 🔄 **실측 단계 1-d 뒤 326 passed · skip 0**(2026-09-22 —
+  8766 이 열려 이제 skip 0 이 정상) → **328**(드론 규격) → **352**(2026-10-14 통합데이터규약 v3), 컴퓨터는 단위 파일만
   돌려 **139 passed / 2 skipped**(Phase 3) → **133 + 28 passed**(Phase 4, 4b 포함) — Mosquitto·Kafka를 필수로 두는 `test_pipeline.py`와
   저장소 전용 파일 셋은 컴퓨터에서 돌리지 않는다.
 - **"떠 있다"로 판정하지 않는다.** 관측 스택은 컨테이너가 `Up`이어도 데이터가 0건일 수 있었다(Phase 3 착수 시

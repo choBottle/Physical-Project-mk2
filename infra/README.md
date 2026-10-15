@@ -86,6 +86,14 @@ Phase 0(인프라 기동)에서 세운 스택의 현재 상태와 운영 방법.
 `environment`의 EDGE 판 3줄(주석) · `config/prometheus.yml`의 `# - job_name: 'edge_federate'` 블록(타깃 주소만 교체) ·
 `.env`의 `MK2_MEDIA_INGEST_PORT=0` 삭제(또는 8766) + ufw 엣지 `/32`(8766·9095·4316).
 
+🔄 **2026-09-22 ~ 09-29 실측 단계 1 에서 넷 중 셋을 되살렸다** — compose `otel-collector.ports` 의 `<서버 tailscale IP>:4316:4317` ·
+`kafka` EDGE 넷(ports 1 + env 3) · `.env` `MK2_MEDIA_INGEST_PORT=8766` + **`MK2_MEDIA_INGEST_URL=ws://<서버 tailscale IP>:8766/ingest`**
+(새 줄 — 8766 은 단일 주소 바인딩이라 시험·송신기가 이 주소로 붙어야 한다). 그리고 **4318**(Collector `otlp/http` + CORS, compose
+`<서버 tailscale IP>:4318:4318`)을 새로 열었다. **`edge_federate`(실측 단계 1-b)만 아직 주석이다** — 타깃은 HW 엣지, HW 엣지의 `9090`
+인바운드가 전제다. 서버 백업 넷: `docker-compose.yml.bak_before_260922_step1` · `.env.bak_before_260922_step1d` ·
+`config/otel-collector-config.yaml.bak_before_260922_step1e` · `docker-compose.yml.bak_before_260922_step1e`. 근거
+`reports/2026-09-29_실측_단계1_작업로그.md`.
+
 ---
 
 ## 2. 스택 9개 — 신규 설치 vs 기존 가동
@@ -178,14 +186,17 @@ Phase 0(2026-09-04)에 8개, **Phase 2(2026-09-10)에 TimescaleDB가 더해져 9
 | Loki | 3100 | 3100 | Collector가 `http://loki:3100/otlp`(도커 망)로 log를 넣는다. 호스트 3100은 조회용 |
 | Tempo | 3200 | 3200 | 조회용 |
 | Tempo (OTLP) | 4317 | 4317 | Phase 0 유물 — **Collector 우회 입구**. Collector는 도커 망 `tempo:4317`로 넣으므로 호스트 4317은 쓰지 않는다. 닫지 않고 기록만(§6 ⓓ) |
-| **OTel Collector** | **127.0.0.1:4316** (+ `<서버 tailscale IP>:4316` — Phase 4 단계 5-1 되살려 실측 뒤 **단계 8에서 다시 주석**, 2026-09-19) | 4317 | 백엔드 3개(호스트 프로세스)가 loopback 으로 metric·log를 낸다. Tailscale 쪽은 엣지 Agent 입구 — **인증 없음**(OTLP 토큰 확장 조사 ⏭ Phase 6), 되살릴 때 ufw 엣지 `/32`(§6 ⓗ). ⚠ 도커 발행 포트라 실질 통제는 바인딩 주소다(§5 정정) |
+| **OTel Collector** | **127.0.0.1:4316** (+ `<서버 tailscale IP>:4316` — Phase 4 단계 5-1 되살려 실측 뒤 **단계 8에서 다시 주석**, 2026-09-19 → 🔄 **2026-09-22 실측 단계 1-a 에서 되살렸다**) | 4317 | 백엔드 3개(호스트 프로세스)가 loopback 으로 metric·log를 낸다. Tailscale 쪽은 엣지 Agent 입구 — **인증 없음**(OTLP 토큰 확장 조사 ⏭ Phase 6), 되살릴 때 ufw 엣지 `/32`(§6 ⓗ). ⚠ 도커 발행 포트라 실질 통제는 바인딩 주소다(§5 정정) |
+| **OTel Collector OTLP/HTTP** | **`<서버 tailscale IP>:4318`** (🔄 2026-09-29 실측 단계 1-e 신설) | 4318 | 브라우저 관측 입구(VZ 화면 자체 지표 — Phase 4 결정 7 A). 컨테이너 안 `0.0.0.0:4318` · `cors.allowed_origins` 여덟(VZ 기기 둘 × `:5174`·`:5175` + `localhost`·`127.0.0.1` 판) · `allowed_headers` 넷 · `max_age 7200`. **도커 발행 포트라 실질 통제는 바인딩 주소**이고 ufw VZ 기기 둘은 문서용. TLS 없음(VZ 가 https 로 바꾸면 Phase 6). loopback 에는 발행하지 않는다(백엔드는 4316/gRPC) |
 | OTel Collector (exporter) | — | 8889 | Prometheus가 docker 네트워크 안에서 직접 scrape |
-| **WS 게이트웨이 뷰어** | **127.0.0.1:8765** → Phase 4 단계 7부터 **`127.0.0.1` + `<서버 tailscale IP>` 둘 다** | — | 호스트 프로세스(systemd `mk2-ws-echo`). 경로 `/state`(Phase 1 echo)·`/media?source_id=…`(방식 B 영상). **URL 쿼리 토큰 `MK2_WS_TOKEN`**, 불일치·부재 close 4401. 호스트 파이썬이라 **ufw 가 진짜 통제**(사용자 컴퓨터 `/32`, VZ PC 는 주소를 받은 뒤) |
-| **WS 게이트웨이 엣지 입구** | ~~127.0.0.1:8766~~ → 단계 7 `<서버 tailscale IP>:8766` 실측 → **단계 8(2026-09-19) 닫음 — 현재 `MK2_MEDIA_INGEST_PORT=0`**, 게이트웨이 로그 `엣지 입구 닫힘` | — | 같은 프로세스의 두 번째 서버. 경로 `/ingest?source_id=…`, 토큰 `MK2_EDGE_TOKEN`. 엣지가 클라이언트로 붙는다(엣지에 인바운드 불필요). 되살릴 때 `.env` 포트 + `MK2_MEDIA_INGEST_HOST` + ufw 엣지 `/32`. 닫혀 있으면 `tests/test_media_relay.py` 12건이 skip 된다(정상) |
+| **WS 게이트웨이 뷰어** | **127.0.0.1:8765** → Phase 4 단계 7부터 **`127.0.0.1` + `<서버 tailscale IP>` 둘 다** | — | 호스트 프로세스(systemd `mk2-ws-echo`). 경로 `/state`(Phase 1 echo + 🔄 2026-09-21 VZ 와이어 최소 어댑터)·`/media?source_id=…`(방식 B 영상 — 🔄 2026-10-14 부터 `?camera_id=…`, 옛 이름도 과도기 동안 받는다). **URL 쿼리 토큰 `MK2_WS_TOKEN`**, 불일치·부재 close 4401. 호스트 파이썬이라 **ufw 가 진짜 통제**(사용자 컴퓨터 `/32` + 🔄 VZ 기기 둘 — 2026-09-21) |
+| **WS 게이트웨이 엣지 입구** | ~~127.0.0.1:8766~~ → 단계 7 `<서버 tailscale IP>:8766` 실측 → **단계 8(2026-09-19) 닫음 — 현재 `MK2_MEDIA_INGEST_PORT=0`**, 게이트웨이 로그 `엣지 입구 닫힘` → 🔄 **2026-09-22 실측 단계 1-d 에서 다시 열었다**(`.env` 포트 8766 + `MK2_MEDIA_INGEST_URL`, 기동 로그 `READY — 엣지 입구`, ufw 이대규 PC · HW PC) | — | 같은 프로세스의 두 번째 서버. 경로 `/ingest?source_id=…`(🔄 2026-10-14 부터 `?camera_id=…`), 토큰 `MK2_EDGE_TOKEN`. 엣지가 클라이언트로 붙는다(엣지에 인바운드 불필요). 되살릴 때 `.env` 포트 + `MK2_MEDIA_INGEST_HOST` + ufw 엣지 `/32`. 닫혀 있으면 `tests/test_media_relay.py` 12건이 skip 된다(정상) → 🔄 열린 지금은 13건이 돈다 — **skip 0 이 정상**(skip 13 이면 닫혔거나 `MK2_MEDIA_INGEST_URL` 이 없다) |
 | **4b 촬영본 PUT 입구** | **`<서버 tailscale IP>:8767`** (Phase 4 단계 10, 2026-09-19 — **남긴다**, 되돌림 대상 아님) | — | 호스트 프로세스(systemd **`mk2-capture`**, `backend/gateway/capture.py`). `PUT /capture/<세션>.manifest.json` → `PUT /capture/<세션>.tar.gz`, 토큰 `MK2_CAPTURE_TOKEN`(쿼리/헤더), 401·409·400. 저장 루트 `MK2_CAPTURE_DIR`(서버 `.env`, 저장소 밖) + MySQL `media_capture`. 호스트 파이썬이라 **ufw 가 진짜 통제** — pi7 `/32` 한 줄. HW 에는 입구 개통을 **회신 문서에 적었다**(`docs/be/hw-envelope-conformance.md` §8-8 「✅ 2026-09-19 개통됨」 · §8-12 실측) |
-| Kafka EDGE | `<서버 tailscale IP>:9095` (Phase 4 단계 6 → 실측 → **단계 8 주석**, 2026-09-19) | 9095 | 원격 엣지용 리스너(PLAINTEXT, SASL 은 Phase 6). 도커 발행 포트 — **바인딩 주소가 통제**, ufw 는 문서용(§5). 현재 compose 에 주석 판 4자리(ports 1 + env 3)로 남아 있다 |
+| Kafka EDGE | `<서버 tailscale IP>:9095` (Phase 4 단계 6 → 실측 → **단계 8 주석**, 2026-09-19 → 🔄 **2026-09-22 실측 단계 1-c 에서 되살렸다**) | 9095 | 원격 엣지용 리스너(PLAINTEXT, SASL 은 Phase 6). 도커 발행 포트 — **바인딩 주소가 통제**, ufw 는 문서용(§5). ~~현재 compose 에 주석 판 4자리(ports 1 + env 3)로 남아 있다~~ 🔄 지금은 네 자리가 활성이다(ufw HW PC — 문서용) |
 
 **2026-09-19 단계 8 되돌린 뒤 실제 상태(`ss -ltnp`·ufw 실측):** 열린 MK2 입구는 **8765**(`127.0.0.1` + `<서버 tailscale IP>`, ufw 사용자 컴퓨터 `/32`)와 **단계 10 에서 연 8767**(`<서버 tailscale IP>`, ufw pi7 `/32`) 둘. 8766·`<서버 tailscale IP>:4316`·9095 없음, `docker port`도 kafka `127.0.0.1:9092`·collector `127.0.0.1:4316` 만. ufw 의 Phase 4 규칙은 8765·8767 두 줄.
+
+🔄 **2026-09-29 실측 단계 1 뒤 실제 상태(작업로그 실측 원문):** 열린 MK2 입구 **여섯** — 8765(`127.0.0.1` + 서버 tailnet) · 8766 · 8767(호스트 파이썬, ufw 가 통제) · 9095 · 4316(서버 tailnet + `127.0.0.1:4316` 유지) · 4318(도커 발행, 바인딩이 통제). MK2 ufw 규칙 **열 줄** — 8765 ← 이대규 PC · VZ 기기 둘 / 8767 ← pi7 / 8766 ← 이대규 PC · HW PC / 4318 ← VZ 기기 둘 / 9095 · 4316 ← HW PC(문서용). 평문 9092 는 `127.0.0.1` 그대로.
 
 ### 7859 — ufw는 이미 열려 있고, 실질 노출은 없다
 
@@ -401,7 +412,8 @@ curl -s 'localhost:7861/api/v1/query' --data-urlencode 'query=count by (__name__
 **인프라가 없으면 그 테스트만 건너뛰고 나머지는 통과**한다. **Phase 3의 관측 3종도 같다** —
 `prometheus_url`·`loki_url`·`tempo_url` fixture(`tests/conftest.py`)가 `/-/healthy`·`/ready`로 확인해 없으면 skip.
 서버 전건은 Phase 3 뒤 **184건**(2026-09-16, skip 0) → **Phase 4 뒤 272 passed + 12 skip**
-(2026-09-19 — skip 12건은 전부 `tests/test_media_relay.py`이며 엣지 입구 8766이 닫혀 있을 때의 정상값이다).
+(2026-09-19 — skip 12건은 전부 `tests/test_media_relay.py`이며 엣지 입구 8766이 닫혀 있을 때의 정상값이다). 🔄 2026-09-22 부터 8766 이
+열려 **skip 0 이 정상**이다 — 326 → 328(드론 규격) → **352 passed**(2026-10-14 통합데이터규약 v3).
 
 ---
 
@@ -428,15 +440,15 @@ Kafka와, Phase 3이 고친 관측 4개(§5-0)만 적는다. 나머지는 기존
 | `KAFKA_NODE_ID` | `1` | 단일 노드 | 브로커 추가 시 |
 | `KAFKA_PROCESS_ROLES` | `broker,controller` | KRaft 겸용, ZooKeeper 불필요 | 노드 분리 시 |
 | `KAFKA_CONTROLLER_QUORUM_VOTERS` | `1@localhost:9093` | 투표자가 자기 자신뿐 | 브로커 추가 시 |
-| `KAFKA_LISTENERS` | `PLAINTEXT :9092`<br>`CONTROLLER :9093`<br>`INTERNAL :9094`<br>(`EDGE :9095` — Phase 4 단계 6 추가 → **단계 8 주석 판**) | 호스트 프로세스 / KRaft 합의 / docker 네트워크 내부 / **원격 엣지(Tailscale)** | EDGE 는 2026-09-19 실측 뒤 주석으로 되돌렸다(실 엣지가 오면 넷을 한 묶음으로 되살린다 — §5 「원격 엣지가 붙는 방법」) |
-| **`KAFKA_ADVERTISED_LISTENERS`** | `PLAINTEXT://localhost:9092`<br>`INTERNAL://kafka:9094`<br>(`EDGE://<서버 tailscale IP>:9095` — 주석 판) | 브로커가 클라이언트에게 알려주는 자기 주소. **EDGE 를 `localhost` 로 두면 엣지가 접속은 되는데 브로커가 "localhost 로 오라"고 답해 자기 자신으로 되돌아간다**(Phase 0 미결이 Phase 1 까지 끌었던 함정 — 2026-09-19 컴퓨터에서 `brokers(advertised): {1: '<서버 tailscale IP>:9095'}` 로 오는 것을 확인) | PLAINTEXT 는 **한 줄도 안 바꿨다** — 백엔드 3개가 그대로 붙는다 |
-| `KAFKA_LISTENER_SECURITY_PROTOCOL_MAP` | `PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT` (+`EDGE:PLAINTEXT` — 주석 판) | **EDGE 항목이 빠지면 브로커가 기동에 실패한다**(상주 3개가 붙어 있는 상태라 제일 아프다). SASL 은 Phase 6(BE-Q-04) | — |
+| `KAFKA_LISTENERS` | `PLAINTEXT :9092`<br>`CONTROLLER :9093`<br>`INTERNAL :9094`<br>(`EDGE :9095` — Phase 4 단계 6 추가 → **단계 8 주석 판** → 🔄 2026-09-22 활성) | 호스트 프로세스 / KRaft 합의 / docker 네트워크 내부 / **원격 엣지(Tailscale)** | EDGE 는 2026-09-19 실측 뒤 주석으로 되돌렸다(실 엣지가 오면 넷을 한 묶음으로 되살린다 — §5 「원격 엣지가 붙는 방법」) |
+| **`KAFKA_ADVERTISED_LISTENERS`** | `PLAINTEXT://localhost:9092`<br>`INTERNAL://kafka:9094`<br>(`EDGE://<서버 tailscale IP>:9095` — 🔄 2026-09-22 활성) | 브로커가 클라이언트에게 알려주는 자기 주소. **EDGE 를 `localhost` 로 두면 엣지가 접속은 되는데 브로커가 "localhost 로 오라"고 답해 자기 자신으로 되돌아간다**(Phase 0 미결이 Phase 1 까지 끌었던 함정 — 2026-09-19 컴퓨터에서 `brokers(advertised): {1: '<서버 tailscale IP>:9095'}` 로 오는 것을 확인) | PLAINTEXT 는 **한 줄도 안 바꿨다** — 백엔드 3개가 그대로 붙는다 |
+| `KAFKA_LISTENER_SECURITY_PROTOCOL_MAP` | `PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT` (+`EDGE:PLAINTEXT` — 🔄 2026-09-22 활성) | **EDGE 항목이 빠지면 브로커가 기동에 실패한다**(상주 3개가 붙어 있는 상태라 제일 아프다). SASL 은 Phase 6(BE-Q-04) | — |
 | 복제 인자 4종 | 전부 `1` | 기본값 3이면 내부 토픽 생성이 즉시 실패 | 브로커 추가 시 |
 | `KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS` | `0` | 기본 3000ms 대기가 개발 중 불편 | 운영 전환 시 상향 |
 | `KAFKA_LOG_DIRS` | `/var/lib/kafka/data` | 기본값 `/tmp/...` 회피 | — |
 | `KAFKA_LOG_RETENTION_HOURS` | `168` (7일) | **Kafka는 장기 저장소가 아니다**(원칙 11). 단기 버퍼·단기 replay용 | 디스크·replay 요구에 따라 |
 | `KAFKA_AUTO_CREATE_TOPICS_ENABLE` | `"false"` | 오타 토픽이 자동 생성되면, 발행자는 성공했다고 믿는데 아무도 안 읽는 상황이 생긴다 | 유지 권장 |
-| `ports` | `127.0.0.1:9092:9092`<br>(`<서버 tailscale IP>:9095:9095` — Phase 4 단계 6 → **단계 8 주석 판**) | 9092 는 로컬 전용 그대로. 9095 는 **바인딩 주소가 곧 통제**다 — `9095:9095` 로 적으면 `0.0.0.0` 이 되어 인증 없는 Kafka 가 모든 인터페이스에 열린다(결정 6 β). 없는 IP 에는 바인딩 실패(제약 15 — `tailscale ip -4` 먼저) | 9095 는 2026-09-19 주석으로 되돌림. 현재 `docker port capstone_kafka` = `9092/tcp -> 127.0.0.1:9092` 만 |
+| `ports` | `127.0.0.1:9092:9092`<br>(`<서버 tailscale IP>:9095:9095` — Phase 4 단계 6 → **단계 8 주석 판** → 🔄 2026-09-22 활성) | 9092 는 로컬 전용 그대로. 9095 는 **바인딩 주소가 곧 통제**다 — `9095:9095` 로 적으면 `0.0.0.0` 이 되어 인증 없는 Kafka 가 모든 인터페이스에 열린다(결정 6 β). 없는 IP 에는 바인딩 실패(제약 15 — `tailscale ip -4` 먼저) | 9095 는 2026-09-19 주석으로 되돌림. 현재 `docker port capstone_kafka` = `9092/tcp -> 127.0.0.1:9092` 만 |
 
 ### 토픽 (Phase 1에서 생성)
 
@@ -531,7 +543,9 @@ Phase 4보다 이르더라도 바꾼다(그때 이 문서를 갱신한다).
 함께 영향을 받는다.** Phase 4 는 대신 **리스너를 하나 더 둬 PLAINTEXT `localhost:9092` 를 한 줄도 바꾸지 않았다.**
 항목 ①(바인딩 주소)과 ③(ufw)이 여전히 필요하다는 것은 그대로다 — 다만 그 대상이 9092 가 아니라 **9095** 다.
 
-**현재 상태(단계 8, 2026-09-19): 아래 네 자리는 compose 에 주석 판으로 남아 있고 활성 값은 단계 6 이전(EDGE 없음)이다.**
+~~**현재 상태(단계 8, 2026-09-19): 아래 네 자리는 compose 에 주석 판으로 남아 있고 활성 값은 단계 6 이전(EDGE 없음)이다.**~~
+🔄 **2026-09-22 실측 단계 1-c 에서 네 자리를 한 묶음으로 되살렸다** — EDGE 리스너로 실접속해 `ADVERTISED` 가 서버 주소로 돌아오는 것을
+확인했고, kafka 재생성에도 상주 셋은 `NRestarts=0`. 아래는 2026-09-19 서술(이력).
 컴퓨터 임시 엣지에서 produce/consume 왕복 + 저장 소비자 TSDB 적재까지 확인(advertised 가 `<서버 tailscale IP>:9095` 로
 오는 것 포함)한 뒤 되돌렸다. 실 엣지가 서면 **넷을 한 묶음으로** 되살리고 ADVERTISED 의 주소만 실 엣지가 닿는 서버
 주소로 바꾼다. 재생성은 `capstone_kafka` 1회(`kafka_data` bind mount 라 토픽·오프셋 유지).
@@ -580,8 +594,8 @@ ports:  - "<서버 tailscale IP>:9095:9095"                              # 🔴 
 > - 🔴 **8765·8766·8767 은 호스트 파이썬 프로세스**라 DNAT 를 타지 않고 `INPUT` 으로 들어온다 — **여기서는 ufw 가 진짜
 >   통제다.** 미디어 경로의 입구 셋이 전부 여기 속한다.
 >
-> **그래서 규칙은 이렇다:** 도커 발행 포트(9095·4316 … — **4318은 아직 발행하지 않는다**: Collector에
-> HTTP receiver 자체가 없고 결정 7 A로 열 때 같은 규칙을 적용한다)는 **바인딩 주소를 정확히 쓴다**(노출 통제) **+ ufw 도
+> **그래서 규칙은 이렇다:** 도커 발행 포트(9095·4316 … — ~~**4318은 아직 발행하지 않는다**: Collector에
+> HTTP receiver 자체가 없고 결정 7 A로 열 때 같은 규칙을 적용한다~~ 🔄 2026-09-29 4318 도 같은 규칙으로 열었다)는 **바인딩 주소를 정확히 쓴다**(노출 통제) **+ ufw 도
 > 적는다**(장애 원인 배제·문서용 — 「통제」로 세지 않는다). 호스트 프로세스 포트(8765·8766·8767)는 **ufw 가 통제**다.
 > 바인딩과 ufw 는 층이 다르며 충돌하지 않는다 — Phase 2 의 7859(§3 주)와 같다. ⏭ 도커 발행 포트 **전반**의 노출 점검·정리는
 > 이번 범위가 아니다(Phase 0 부터 있던 상태이고 다른 파트 포트가 섞여 있다 — 분류 ③).
@@ -650,7 +664,7 @@ Phase 3 뒤: 셋 다 흐른다 — `be_*` 21종(A 9 + C 12)·`{service_name="be-
 | **digest 미고정 잔여 6개** | `:latest` 가 남은 서비스 — **grafana** · **loki** · **mongo** · **tempo** · **pushgateway 2개**(`rpi_pushgateway`·`thermal_pushgateway`). Phase 4 는 Prometheus 만 고정했다(분류 ③·② 접촉 최소화). 고정할 때는 위와 같이 **도는 이미지의 digest** 를 읽어 박고, 서비스 이름을 명시해 `up -d` 한다(재생성 1회씩) | 기록 — 다음 유지보수 창 |
 | **브리지 대역 미고정** | compose 에 `ipam`·`subnet` 블록이 없어 `capstone-db_default` 의 `172.18.0.0/16` 이 **고정돼 있지 않다**(09-18 실측 grep 0건). 네트워크가 재생성되면 대역이 밀리고 **① MySQL `mk2_app@'172.18.%'` 인증 ② ufw `[36]`·`[37]` `172.18.0.0/16` 규칙**이 동시에 조용히 깨진다. 그래서 **Phase 4 전 구간에서 `docker compose down` 을 치지 않았다** — `up -d <서비스>` 만. `ipam` 고정은 네트워크 정의 변경이라 전체 스택 재기동을 부르므로 **별도 유지보수 창** | 기록 — 별도 창 |
 | `prometheus.yml` | `conntest` 잡 라벨이 들어오는데 **출처 미상**(scrape 잡이 아니라 pushgateway로 밀어 넣는 쪽). 분류 ③ | 기록 (ⓕ) |
-| Collector 4316 | Phase 3 검증(8-7) 뒤 되돌렸던 **Tailscale 바인딩(`<서버 tailscale IP>:4316:4317`) + ufw(엣지 `/32`)를 Phase 4 단계 5-1(2026-09-19)에서 되살렸다** — 컴퓨터 임시 엣지 2계층 실측(단계 7)용이며 **단계 8에서 다시 주석·규칙 삭제**. 절차는 ① `tailscale ip -4` 확인 ② compose 주석 해제 ③ `up -d otel-collector`(재생성 1회) ④ ufw 엣지 `/32`. **OTLP 인증은 (i) 터널 + ufw `/32` + 평문** — 토큰 확장 조사는 ⏭ Phase 6(BE-Q-04 와 함께): receiver 가 `otlp/grpc` 하나라 auth 를 걸면 loopback 백엔드 3개도 토큰을 보내야 하고, 나누려면 receiver 신설 = 범위 확대. 이 수신단에는 인증이 없다 — `Anywhere` 금지. **✅ 단계 8(2026-09-19) 되돌림 완료** — Loki `service_name=hw-sensor-node`(구조화 메타데이터)·Tempo 태그값·인덱스 라벨 3종 그대로 확인 뒤 compose 주석 + ufw 삭제, `otel_collector` 재생성 1회 | ✅ Phase 4(임시) → ✅ 단계 8 되돌림 |
+| Collector 4316 | Phase 3 검증(8-7) 뒤 되돌렸던 **Tailscale 바인딩(`<서버 tailscale IP>:4316:4317`) + ufw(엣지 `/32`)를 Phase 4 단계 5-1(2026-09-19)에서 되살렸다** — 컴퓨터 임시 엣지 2계층 실측(단계 7)용이며 **단계 8에서 다시 주석·규칙 삭제** → 🔄 **2026-09-22 실측 단계 1-a 에서 되살렸다**(ufw HW PC — 문서용, 09-29). 절차는 ① `tailscale ip -4` 확인 ② compose 주석 해제 ③ `up -d otel-collector`(재생성 1회) ④ ufw 엣지 `/32`. **OTLP 인증은 (i) 터널 + ufw `/32` + 평문** — 토큰 확장 조사는 ⏭ Phase 6(BE-Q-04 와 함께): receiver 가 `otlp/grpc` 하나라 auth 를 걸면 loopback 백엔드 3개도 토큰을 보내야 하고, 나누려면 receiver 신설 = 범위 확대. 이 수신단에는 인증이 없다 — `Anywhere` 금지. **✅ 단계 8(2026-09-19) 되돌림 완료** — Loki `service_name=hw-sensor-node`(구조화 메타데이터)·Tempo 태그값·인덱스 라벨 3종 그대로 확인 뒤 compose 주석 + ufw 삭제, `otel_collector` 재생성 1회 | ✅ Phase 4(임시) → ✅ 단계 8 되돌림 |
 | `mosquitto.conf` | `allow_anonymous true`, ACL 없음. 개발 단계라 의도된 상태이며 **Phase 1 브릿지 연결에는 오히려 유리하다** | 운영 전환 시 |
 | `mosquitto.conf` | `persistence` 미설정 → 브로커 재시작 시 retained 소실 | Phase 1/5 |
 | (요구사항) | **가용성 판정 파라미터** — 하트비트 1초 1회, **4회 연속 미수신(약 4초)** 시 장애 판정. 기준은 조병현 HW-S-05·HW-A-05이며 김현우 VZ-U-01도 4초 판정을 전제한다. **Phase 1 실측 5초는 테스트 편의값이지 요구사항이 아니다** | Phase 5 |
@@ -671,6 +685,6 @@ Phase 3 뒤: 셋 다 흐른다 — `be_*` 21종(A 9 + C 12)·`{service_name="be-
 
 | 신호 | 기준 경로 | 현재 실제 |
 |---|---|---|
-| metric | Collector → Prometheus | ✅ (백엔드 A·C층 + `batch`). 엣지 raw는 페더레이션 요약만(`edge_federate`, 지금은 주석) |
+| metric | Collector → Prometheus | ✅ (백엔드 A·C층 + `batch`). 엣지 raw는 페더레이션 요약만(`edge_federate`, 지금은 주석 — 🔄 실측 단계 1-b 가 HW 엣지로 되살린다) |
 | trace | Collector → Tempo | ✅ Collector `otlp_grpc` → `tempo:4317`(도커 망). 실 생산자는 아직 없음(백엔드 span Phase 6, HW span 미수신) — pytest 가짜 span으로 경로만 확인 |
 | log | Collector → Loki | ✅ Collector `otlp_http` → `http://loki:3100/otlp`. 백엔드 3개가 OTel Logs SDK로 낸다(journald 병존) |

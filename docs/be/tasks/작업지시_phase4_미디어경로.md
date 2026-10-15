@@ -2,6 +2,9 @@
 
 > 저장 위치: `docs/be/tasks/작업지시_phase4_미디어경로.md` — 끝난 뒤에도 제자리(일회용 인수인계 문서, 파일 이름으로 구별).
 > ✅ **2026-09-19 Phase 4 완료.** 결과는 `reports/2026-09-19_0600_phase4_미디어경로.md`. 아래 본문의 실주소는 자리표시자로 바꿨다(제약 11).
+> 📌 **2026-10-13 통합데이터규약 v2 — 이 지시서의 헤더 모양(`frame_ref{source_id, capture_timestamp, sequence_id}`) · 쿼리 `source_id` ·
+> `bbox_space`·`boxes` 는 v1 이력이다.** 지난 지시서라 본문은 고치지 않는다. 현행은 [`contracts/common/README.md`](../../../contracts/common/README.md) ·
+> [`02-media-path.md`](../02-media-path.md) 맨 위 안내 · `reports/2026-10-13_1850_통합데이터규약_v3_적용.md`.
 
 ---
 

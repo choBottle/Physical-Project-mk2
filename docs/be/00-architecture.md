@@ -119,7 +119,7 @@ JPEG 한 장 50~150KB × 30fps = 초당 수 MB). 대안이 애초에 안 선다.
    (native 코덱) │       │                           │       │  실시간 WS 푸시
                 │       │  ══ Tailscale 터널 위 ════│       ├──────────────────▶ 관제 화면
                 │       └─영상 WS(방식 B)───────────▶│  중계(drop-old) ─ws+토큰─▶ 뷰어(디코드+오버레이)
-                  (AU 재조립·frame_ref 부착)          │  질의 프록시 ◀── 조회(지표·감사·레지스트리)
+                  (AU 재조립·번호·시각 부착)          │  질의 프록시 ◀── 조회(지표·감사·레지스트리)
 ```
 
 **핵심 성질:**
@@ -806,7 +806,7 @@ BE-T-05(사설 IP 라우팅).
 
 **어떤 항목을 실제로 뽑을지는 여기서 정하지 않는다.** 채널 본문 규격이 확정된 뒤(Phase 2),
 Phase 3에서 대상을 골랐다. → **규격 파일의 `$comment`가 기준이다** — `contracts/common/payload/`
-6종에 힌트가 붙은 곳 27, 항목 이름으로 접으면 **gauge 9 · counter 3 · log/event 10 = 22**.
+6종(🔄 2026-09-29 `state.drone` 이 더해져 7종 — 드론은 힌트 0이라 숫자는 그대로)에 힌트가 붙은 곳 27, 항목 이름으로 접으면 **gauge 9 · counter 3 · log/event 10 = 22**.
 `backend/contracts.py::observation_hints()`가 읽으며 파이썬에 목록을 다시 적지 않는다.
 Phase 3은 그중 **gauge 9 + counter 3 = 12개**를 계측했고, log/event 10개는 전부 상태 어휘라
 "언제 바뀌었나" 판정이 가용성의 일이므로 **Phase 5로 이월**했다.
@@ -836,7 +836,7 @@ Phase 3은 그중 **gauge 9 + counter 3 = 12개**를 계측했고, log/event 10�
 - **C층(업무 값의 관측 표현)** — `source_id`·`zone_id`·`entity_type`·`channel`. 장치별이어야
   의미가 있다.
 - **어느 층에도 넣지 않는다:** `session_id`·`internal_seq`·`sequence_id`·시각(`timestamp`·`ts`·
-  `capture_timestamp`)·프레임 식별자(`frame_id`). `backend/observability.py`가 `ValueError`로
+  `capture_timestamp` · 🔄 v2 `sent_at`·`received_at`·`emitted_at`)·프레임 식별자(`frame_id`·`frame_ref`). `backend/observability.py`가 `ValueError`로
   막는다. 전수는 [`contracts/common/README.md`](../../contracts/common/README.md).
 
 **A층은 새로 만드는 결정이 아니라 빠져 있던 서술을 채우는 것이다.** 이 구조는 이미 A층을
@@ -887,10 +887,10 @@ Phase를 병기한다.
 | 미디어 저장(BE-S-09) — **촬영본(정지 촬영 세션, HW #15)** | **유예 해제 → 구현됨(Phase 4 4b, 2026-09-19)** — `backend/gateway/capture.py`(별도 유닛 `mk2-capture`, 8767) + MySQL `media_capture` 세션 1행(`infra/sql/mk2_media_capture.sql`, DELETE 없음). PUT 두 번(매니페스트 먼저), 최종 경로는 매니페스트가 정한다, `INSERT`→rename→`COMMIT`, 멱등. 서버 실측 통과, pytest 28건 | (발동됨 — HW `capture_upload.py`가 목적지를 물었다) | 남은 것: 실제 HW 적재·운영(입구 개통 통지), 실제 삭제 경로(Phase 4는 dry-run 선정만 — 행은 남기고 `purged_at`), AI 저장본·VZ `mission-history/images/robot/`와의 중복 정리(Phase 5/6), 다중 소스 병합(HW #14 뒤). **MongoDB 발동 조건("프레임 낱장 증거+메타 동시 보관")은 파일시스템 + 매니페스트 원본 JSON 한 행으로 충분해 미충족** |
 | 저레이트 상시 프리뷰 | 미결 — Phase 4 결정 10으로 홉2가 길 A·B 동시 지원이라 "저레이트 상시 소스"라는 프로파일로 표현할 수 있게 됐다(경로 추가 없음) | 온디맨드 공백(선택 전 빈 화면)이 실제 문제로 확인될 때 | 썸네일 서브경로 대역·주기 |
 | 재난 구간 장기 보존(BE-S-04) | 미착수 | 재난 데이터가 실제로 쌓이기 시작할 때 | 아카이브 위치·선별 트리거·보존 기간 |
-| 관측 페더레이션 2계층(BE-S-03) | **구조 확정·임시 엣지로 두 번 실증**(Phase 3 2026-09-16 · Phase 4 2026-09-19 — 엣지 Prometheus raw 보관 + 중앙 `edge_federate` 요약 pull, 경계 표기 `agg_layer="edge"`). 검증 뒤 잡을 주석으로 내렸고 중앙은 다시 단일 Prometheus(digest 고정) | 구역이 2개 이상이 될 때 (또는 전용 엣지 장비 확보 시) | 주석 잡의 타깃을 엣지 실물 주소로 교체 · 다구역 `zone_id` 확장 · 엣지 OTLP 수신단 인증(4316 토큰 확장 조사 — Phase 6, BE-T-08) |
+| 관측 페더레이션 2계층(BE-S-03) | **구조 확정·임시 엣지로 두 번 실증**(Phase 3 2026-09-16 · Phase 4 2026-09-19 — 엣지 Prometheus raw 보관 + 중앙 `edge_federate` 요약 pull, 경계 표기 `agg_layer="edge"`). 검증 뒤 잡을 주석으로 내렸고 중앙은 다시 단일 Prometheus(digest 고정). 🔄 2026-09-29 HW 가 팀 tailnet 에 합류해 실 엣지 타깃(실측 단계 1-b)이 가능해졌다 — HW 엣지 `9090` 인바운드가 전제 | 구역이 2개 이상이 될 때 (또는 전용 엣지 장비 확보 시) | 주석 잡의 타깃을 엣지 실물 주소로 교체 · 다구역 `zone_id` 확장 · 엣지 OTLP 수신단 인증(4316 토큰 확장 조사 — Phase 6, BE-T-08) |
 | RBAC 구역 범위 강제(BE-Q-04) | 역할 강제까지, 범위는 전 범위 간주 | 다지점(다구역) 운영 시. 캡스톤에서도 가능하면 적용 | Zone 계층 기반 scope 검증 (Phase 6에 배정됨) |
 | 엣지 자율 운용 | 연구실 단일 환경 | 원격 구역 배포 시 | 단절 중 구역 로컬 기능 범위, 재연결 후 상태 재정합 |
-| Kafka 원격 노출 | **EDGE 리스너로 처리됨(Phase 4 결정 6, 2026-09-19)** — PLAINTEXT `localhost:9092`는 그대로 두고 `EDGE://…:9095`(advertised = 서버 tailscale 주소, 평문)를 하나 더 두어 컴퓨터 임시 엣지에서 produce/consume 왕복 + TSDB 적재 확인. 실측 뒤 compose에서 **주석으로 되돌림**(실 엣지가 서면 주소만 바꿔 되살린다). 도커 발행 포트라 통제는 ufw가 아니라 **바인딩 주소**다 | 서버 밖 엣지 클라이언트 **상시** 연결 시 | 주석 4자리(ports 1 + env 3) 되살림 · SASL/TLS(Phase 6, BE-Q-04와 함께) · `DOCKER-USER`로 tailnet 안 특정 기기로 좁히기 |
+| Kafka 원격 노출 | **EDGE 리스너로 처리됨(Phase 4 결정 6, 2026-09-19)** — PLAINTEXT `localhost:9092`는 그대로 두고 `EDGE://…:9095`(advertised = 서버 tailscale 주소, 평문)를 하나 더 두어 컴퓨터 임시 엣지에서 produce/consume 왕복 + TSDB 적재 확인. 실측 뒤 compose에서 **주석으로 되돌림**(실 엣지가 서면 주소만 바꿔 되살린다). 🔄 **2026-09-22 실측 단계 1-c 에서 되살렸다**(서버 tailnet 주소 바인딩 · advertised 가 서버 주소로 돌아오는 것 확인 — 상시 엣지 클라이언트는 아직이다). 도커 발행 포트라 통제는 ufw가 아니라 **바인딩 주소**다 | 서버 밖 엣지 클라이언트 **상시** 연결 시 | 주석 4자리(ports 1 + env 3) 되살림 · SASL/TLS(Phase 6, BE-Q-04와 함께) · `DOCKER-USER`로 tailnet 안 특정 기기로 좁히기 |
 | K3s 실행 관리(BE-X-06) | 접점만 | 실행 배포 자동화가 필요할 때 | 실행 요청 수신·이력·상태 확인 인터페이스 |
 | 명령 서버→엣지 Kafka(A안) | 미구현 | 명령 경로 구현 시 (Phase 6에 배정됨) | `mk2.command.*` 토픽과 protobuf 규격 정합 |
 | MongoDB 채택 | 채택 없음 | 문서형이 실제로 유리한 사례가 나올 때(예: 프레임 낱장 증거+메타 동시 보관) | 채택 근거를 §6-2에 기록 |

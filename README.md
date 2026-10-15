@@ -49,6 +49,9 @@
 **BE-T-08**·BE-C-02·**BE-C-03**·BE-S-02·BE-S-03·BE-S-05·BE-S-06·BE-S-07·BE-S-08·**BE-S-09**이다(굵은 넷이
 Phase 4에서 미착수 → 부분). 각 행의 남은 범위와 gap은 [추적표](docs/be/requirement-traceability.md).
 
+> 🔄 **2026-10-15:** 실측 단계 1·2(2026-09-22 ~ 09-30)와 통합데이터규약 v3 적용(2026-10-14 BE 서버 배포)은
+> **상태 총계를 바꾸지 않았다** — 바뀐 것은 각 행의 구현 위치·시험·gap 이다(추적표 「요약」).
+
 ## 저장소 구조
 
 ```text
@@ -61,11 +64,12 @@ Physical-Project-mk2/            (ldg_BE 브랜치)
 │   └── twin/                    디지털 트윈 (좌표 융합·커버리지·시의성)
 ├── contracts/common/           파트 간 JSON Schema 규격 (백엔드 소유)
 │   ├── message.schema.json      공통 헤더
-│   ├── frame-reference.schema.json  frame_ref
-│   ├── media-header.schema.json  미디어 헤더(방식 B, Phase 4) — frame_ref 를 $ref 로 품는다
-│   ├── detections.schema.json   탐지 좌표·정합 선언(초안 — AI·VZ 회신 뒤 payload/ 로)
+│   ├── frame-reference.schema.json  frame_ref {camera_id, sequence_id, timestamp} (v2, 2026-10-13)
+│   ├── media-header.schema.json  프레임 헤더(방식 B) — v2 평평한 헤더(공통 머리 + camera_id·encoding·width·height)
+│   ├── *.v1.schema.json         과도기 사본 둘(v1 frame_ref·미디어 헤더 — 단계 5 에서 지운다)
+│   ├── detections.schema.json   비전 결과(초안 — v2: bbox 픽셀·producer)
 │   ├── object-reference.schema.json  지속 객체 참조(object_id)
-│   ├── payload/                 채널 본문 규격 6종
+│   ├── payload/                 채널 본문 규격 7종(2026-09-29 drone 추가)
 │   └── examples/                정상·음성 예제
 ├── infra/                      docker-compose · OTel Collector · Grafana 등 설정
 ├── docs/be/                    아키텍처 · 구현 계획 · 요구사항 추적
@@ -87,7 +91,7 @@ Physical-Project-mk2/            (ldg_BE 브랜치)
   ├─OTLP────▶│      ├─Kafka──────────────▶│  = Kafka 소비자 + WebSocket 서버 ─▶ 화면
   │  영상    │      ├─페더레이션 요약─────▶│  질의 프록시 ◀── 조회
   └─RTP/UDP─▶│      └─영상 WS(방식 B)─────▶│  중계(drop-old) ─ws+토큰─▶ 뷰어(디코드+오버레이)
-   (native 코덱) AU 재조립·frame_ref        헤더만 읽음        (tailnet 안. 밖이면 WSS — Phase 6)
+   (native 코덱) AU 재조립·번호·시각        헤더만 읽음        (tailnet 안. 밖이면 WSS — Phase 6)
 ```
 
 - **엣지↔서버는 단일 Tailscale 터널**을 업무·관측·영상이 공유한다(논리 채널은 분리). **Phase 4
@@ -131,7 +135,10 @@ Phase 4 미디어 경로 → Phase 5 가용성 판정기 → Phase 6 상관·감
 파이프라인(Phase 3, 완료 2026-09-16 — A층 9종·C층 12종·Collector 분배·2계층 페더레이션
 실증) → ⑥ 미디어 경로(Phase 4, 완료 2026-09-19 — 엣지→서버→뷰어 방식 B 중계(native 코덱·GOP
 인지 drop-old·터널 위 `ws`+토큰)와 frame_ref 바이트 관통이 서버 pytest + 컴퓨터 임시 엣지 실측으로
-닫혔고, 회신·통지 3건(HW·VZ·AI)과 4b 촬영본 저장소(8767) 개통) → **⑦ 가용성 판정기(Phase 5) ← 다음**.
+닫혔고, 회신·통지 3건(HW·VZ·AI)과 4b 촬영본 저장소(8767) 개통) → ⑦ 실측 단계 1·2(2026-09-22 ~ 09-30 — 서버 입구 넷
+(8766·9095·4316·4318) 개통, 합성 프레임 서버 관통 600 = 600) → ⑧ 통합데이터규약 v3 적용(2026-10-14 서버 배포 —
+v2 프레임 헤더·입구 쿼리 `camera_id`·비전 결과 v2. 옛 v1 헤더는 과도기 동안 계속 받는다. BE-08 은 VZ 화면 배포 뒤) →
+**⑨ 실측 단계 4(관문 B — VZ 앱이 뷰어 자리에) → 가용성 판정기(Phase 5) ← 다음**.
 
 ## 설치와 실행
 
@@ -169,10 +176,11 @@ Phase 4 미디어 경로 → Phase 5 가용성 판정기 → Phase 6 상관·감
 | Grafana | 7862 | 3000 |
 | Loki | 3100 | 3100 |
 | Tempo | 3200 · 4317(OTLP) | 3200 · 4317 |
-| OTel Collector | 4316 *(로컬 바인딩)* | 4317 · 8889(exporter, 미공개) |
+| OTel Collector | 4316 *(로컬 바인딩 + 2026-09-22 부터 tailscale 주소 — 엣지 Agent 입구)* | 4317 · 8889(exporter, 미공개) |
+| OTel Collector OTLP/HTTP | **4318** *(tailscale 주소 — 2026-09-29 개통. VZ 브라우저 관측 입구 · CORS · ufw VZ 기기 둘)* | 4318 |
 | **WS 게이트웨이**(호스트 python) | **8765** `/state`·`/media` *(loopback + 서버 tailscale 주소, 토큰)* | — |
-| 엣지 미디어 입구(호스트 python) | 8766 `/ingest` *(tailscale 주소 — Phase 4 실측 뒤 `MK2_MEDIA_INGEST_PORT=0`으로 닫아 둠)* | — |
-| Kafka EDGE 리스너 | 9095 *(tailscale 주소 — 실측 뒤 compose 주석, 실 엣지 시 되살림)* | 9095 |
+| 엣지 미디어 입구(호스트 python) | **8766** `/ingest` *(tailscale 주소, 토큰 — 2026-09-22 실측 단계 1-d 에서 다시 열었다)* | — |
+| Kafka EDGE 리스너 | 9095 *(tailscale 주소 — 2026-09-22 실측 단계 1-c 에서 되살렸다. 평문, SASL 은 Phase 6)* | 9095 |
 | **촬영본 PUT 입구**(호스트 python, 4b) | **8767** `/capture` *(tailscale 주소, ufw pi7 `/32`, 토큰)* | — |
 
 > **4316 / 4317** — OTLP gRPC 표준 포트는 4317인데 Tempo가 그 포트를 직접 받고 있어, OTel
@@ -218,13 +226,18 @@ docker compose ps
 
 파트가 나뉘는 지점의 단일 기준은 내부 타입이 아니라 [공통 규격](contracts/common/README.md)이다.
 
-- **하드웨어(조병현):** 공통 헤더(BE-C-01/02)·frame_ref(BE-C-03)를 따르는 발행자. `source_id`
+- **데이터 이름·형식:** 2026-10-13 **통합데이터규약 v3**(데이터 판 `2.0`)이 다섯 파트(BE·HW·드론·VZ·AI) 공통
+  기준이다 — 공통 머리 · 프레임 헤더(처음 손에 넣은 기기가 `sequence_id`·`timestamp` 를 붙인다) ·
+  `frame_ref{camera_id, sequence_id, timestamp}` · 비전 결과. BE 적용 기록은
+  [`reports/2026-10-13_1850_통합데이터규약_v3_적용.md`](reports/2026-10-13_1850_통합데이터규약_v3_적용.md).
+- **하드웨어(조병현):** 공통 헤더(BE-C-01/02)·프레임 헤더(BE-C-03)를 따르는 발행자. `source_id`
   기준 확정으로 `LEGACY_DEVICE_ID` 과도기 종료.
 - **AI(진나영):** 공통 헤더·식별자·시간 규약을 따른다(AI-C-01). AI 쪽 `contracts/ai/` 공통
   헤더는 이 규격에 정렬. 가용성 최종 판정은 백엔드(진나영 `simulation/backend.py` mock을 실물로 교체).
 - **가시화(김현우):** 뷰어가 프레임을 디코드해 canvas 표시·탐지 오버레이(frame_ref 정합). 미디어 뷰어
   출력 담당은 백엔드 중계 / 가시화 표시로 확정(VZ-I-06 해소). 방식 B 형식·`frame_ref` 객체·`/media`
-  연결 규약은 Phase 4 통지(`docs/be/vz-media-interface.md`)로 전달.
+  연결 규약은 Phase 4 통지(`docs/be/vz-media-interface.md`)로 전달했고, v2 이름(평평한 프레임 헤더·쿼리
+  `camera_id`)은 통합데이터규약으로 바뀌었다.
 
 ## 남은 검증 (실 하드웨어·현장 필요 — Tier C)
 

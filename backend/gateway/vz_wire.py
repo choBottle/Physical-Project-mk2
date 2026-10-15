@@ -48,6 +48,15 @@ Kafka 에 무엇이 들어 있든 **변환은 성공해야 한다.** 그래서 �
 - `coordinate_frame=None` — 로봇 `state` 에 위치(`position`)가 실리므로 **엄밀히는 정확하지 않다**
   (BE-C-04 좌표계가 아직 정의되지 않았다). VZ 에 「지금 null 로 보낸다」를 알렸다.
 
+## 봉투 다섯 칸 이름 (2026-10-14 통합데이터규약 BE-08 · R2)
+
+`zone`·`node`·`entity`·`ts`·`seq` → **`zone_id`·`node_id`·`source_id`·`timestamp`·`sequence_id`** — 우리 공통 머리와
+같은 이름이다(같은 뜻에 이름이 둘이던 것을 하나로). 값은 그대로다(`source_id` 값 = 예전 `entity` = `entity_of()`).
+`channel`·`payload`·`quality`·`aggregation`·`scope`·`coordinate_frame` 은 그대로, **구독 선택자 `{entity, node, channel}`
+도 그대로다**(N12 — VZ 가 보내는 쪽 이름이다).
+⚠ **VZ 화면이 새 이름을 읽게 된 뒤(VZ-01 화면 배포)에만 서버에 올린다.** 먼저 올리면 VZ 화면이 장비 카드를
+**오류 없이** 비운다(규약 §6-2 묶음 B). 바꾸기 전 판은 git `bc0b7b7` 에 있다.
+
 implements: BE-T-03 (가시화 클라이언트 실시간 채널 게이트웨이 — 실측대비 최소 어댑터)
 tests: tests/test_vz_wire.py — 매칭 표 전수 · 변환 11칸 · 음성 대조(필드가 빠져도 죽지 않는다)
 """
@@ -139,14 +148,16 @@ def selector_matches(selector: Any, message: Dict[str, Any], channel: str) -> bo
 def to_vz_envelope(channel: str, message: Dict[str, Any], scope: Any = DEFAULT_SCOPE) -> Dict[str, Any]:
     """우리 봉투 → VZ `Envelope` 11칸. **절대 예외를 던지지 않는다**(모듈 독스트링 🔴).
 
+    다섯 칸 이름은 2026-10-14 BE-08 로 공통 머리 이름이 됐다(옛 이름은 괄호).
+
     | VZ 칸 | 우리 값 | 비고 |
     |---|---|---|
-    | `zone` | `zone_id` | 없으면 `None`(VZ 타입이 `string \\| null`) |
-    | `node` | `node_id` | |
-    | `entity` | `entity_id` → `source_id` | `entity_of()` |
+    | `zone_id` (옛 `zone`) | `zone_id` | 없으면 `None`(VZ 타입이 `string \\| null`) |
+    | `node_id` (옛 `node`) | `node_id` | |
+    | `source_id` (옛 `entity`) | `entity_id` → `source_id` | `entity_of()` — 값은 예전 `entity` 와 같다 |
     | `channel` | Kafka 토픽 마지막 칸 | `VZ_CHANNELS` 로 이미 걸렀다 |
-    | `ts` | `timestamp` | ⚠ VZ 정의는 *"서버 시각"* 인데 우리 값은 **생산 시각**이다. 실측엔 지장 없고 Phase 5 에서 정리 |
-    | `seq` | `sequence_id` | **선택 필드**라 없으면 0 |
+    | `timestamp` (옛 `ts`) | `timestamp` | 데이터 시각(통합데이터규약 D3 — 측정한 순간) |
+    | `sequence_id` (옛 `seq`) | `sequence_id` | **선택 필드**라 없으면 0 |
     | `payload` | `message` **통째로** | 봉투 칸을 걷어내지 않는다 — 걷어내면 VZ 화면이 무엇을 읽는지 몰라 빈 화면이 날 수 있다 |
     | `quality` | 잠정 `"good"` | |
     | `aggregation` | 잠정 `"raw"` | |
@@ -158,12 +169,12 @@ def to_vz_envelope(channel: str, message: Dict[str, Any], scope: Any = DEFAULT_S
         seq = 0
 
     return {
-        "zone": _as_str(message.get("zone_id")),
-        "node": _as_str(message.get("node_id")) or "",
-        "entity": entity_of(message) or "",
+        "zone_id": _as_str(message.get("zone_id")),
+        "node_id": _as_str(message.get("node_id")) or "",
+        "source_id": entity_of(message) or "",
         "channel": channel,
-        "ts": _as_str(message.get("timestamp")) or "",
-        "seq": seq,
+        "timestamp": _as_str(message.get("timestamp")) or "",
+        "sequence_id": seq,
         "payload": message,
         "quality": PROVISIONAL_QUALITY,
         "aggregation": PROVISIONAL_AGGREGATION,
