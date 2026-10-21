@@ -250,9 +250,13 @@ export function ConnectionsPanel({ onClose, physical }: { onClose(): void; physi
           const shown = [...rows, ''];
           const write = (next: readonly string[]) =>
             setDraft((prev) => ({ ...prev, [key]: joinAddressList(next) }));
-          return <div key={key} className="conn-list">
+          // 261021 — 줄마다 이름이 있는 목록(카메라)은 저장할 줄마다 「카메라 n」을 적고, 빈 줄만 칸 이름을 둔다.
+          const rowLabel = (index: number) => field.rowLabelKey !== undefined && index < rows.length
+            ? t(field.rowLabelKey, { n: index + 1 })
+            : index === 0 ? t(field.labelKey) : '';
+          return <div key={key} className={`conn-list${field.rowLabelKey !== undefined ? ' conn-list--named' : ''}`}>
             {shown.map((row, index) => <label key={index}>
-              <span>{index === 0 ? t(field.labelKey) : ''}</span>
+              <span>{rowLabel(index)}</span>
               {choice !== undefined && <select
                 className="conn-preset"
                 value={selectedPresetId(choice.presets, row, manual[`${key}.${index}`] === true)}

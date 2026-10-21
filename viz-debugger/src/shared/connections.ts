@@ -97,6 +97,12 @@ export type ConnectionField = {
    * 주소가 아니라 포트 번호를 받는 목록(객체 탐지 추론 스트림)이 다른 말을 해야 해서 생겼다.
    */
   addKey?: string;
+  /**
+   * 목록 칸의 **줄마다 붙일 이름** — 사전 키, `{n}` 에 줄 번호(1부터)가 들어간다 (261021 — 카메라 여러 대).
+   * 줄 번호가 곧 장비 id 의 번호(`fixed-cam-n`)라, 하드웨어 카드 · 확인 줄의 이름과 연결 관리의 줄이 맞대어진다.
+   * 없으면 첫 줄에만 칸 이름을 적는다(로봇).
+   */
+  rowLabelKey?: string;
 };
 
 /**
@@ -159,12 +165,15 @@ export const CONNECTION_TARGETS: readonly ConnectionTarget[] = [
     /**
      * 261002 — **고정 카메라** (360 카메라). 로봇 바로 아래다(지시). 브로커 — 단말이 아니라 **서버 링크 주소로 이미지를
      * 받는** 상대라, 이미지가 받아지면 연결된 것으로 본다(`src/fixedcam/fixedCamera.ts`). 줄 하나가 카메라 한 대다.
+     *
+     * 261021 — 이름을 「카메라」로 (지시). 360 카메라 말고 다른 카메라도 같이 붙인다. 저장 키(`fixed-camera.url`) ·
+     * 장비 id(`fixed-cam-n`)는 그대로다 — 바꾸면 저장된 주소와 배정이 버려진다. 줄마다 「카메라 n」을 적는다.
      */
     id: 'fixed-camera',
     labelKey: 'conn.target.fixedCamera',
     whatKey: 'conn.target.fixedCamera.what',
     live: true,
-    fields: [{ key: 'url', labelKey: 'conn.field.imageLink', fallback: '', list: true, addKey: 'conn.addCamera' }],
+    fields: [{ key: 'url', labelKey: 'conn.field.imageLink', fallback: '', list: true, addKey: 'conn.addCamera', rowLabelKey: 'conn.cameraRow' }],
   },
   {
     id: 'detect',

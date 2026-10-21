@@ -455,6 +455,8 @@ b.follow-live{cursor:default}
    줄 전체를 쓴다(`label` 이 격자라 안 그러면 78px 칸에 끼어 세로로 무너진다). */
 /* 주소 여러 줄 (260922 — 로봇 N대). 줄마다 이름 칸을 반복하지 않는다 — 첫 줄만 적는다. */
 .conn-list label:not(:first-child) span{visibility:hidden}
+/* 줄마다 이름이 있는 목록 (261021 — 카메라 n). 그 이름은 줄마다 적는다. */
+.conn-list--named label:not(:first-child) span{visibility:visible}
 .conn-list label:has(.conn-row-drop){grid-template-columns:78px auto 1fr auto}
 /* 고르는 칸이 없는 목록(260929) — 없으면 입력이 auto 칸에 들어가 × 가 넓은 칸을 먹었다. */
 .conn-list label:has(.conn-row-drop):not(:has(.conn-preset)){grid-template-columns:78px 1fr auto}
