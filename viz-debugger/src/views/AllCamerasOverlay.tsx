@@ -31,9 +31,9 @@ import { useConnections } from '../shared/connections.ts';
 import { connectedDevice, useConnectedDevices } from '../shared/connectedDevices.ts';
 import { useDeviceCardIds } from '../shared/registry.ts';
 import { useReplayTarget } from '../record/replayMode.ts';
-import { DirectCamera } from '../media/views/DeviceCamera.tsx';
+import { DirectCamera, DirectCameras } from '../media/views/DeviceCamera.tsx';
 import { CAMERA_POSITIONS, type CameraPosition } from '../media/cameraChoice.ts';
-import { directCameraUrl } from '../physical/cameraView.ts';
+import { directCameraUrl, useDirectCameraSources } from '../physical/cameraView.ts';
 import { feedKindOf, fixedCameraUrl, isFixedCamera, type FeedKind } from '../fixedcam/fixedCamera.ts';
 import { VisionDeviceSection } from '../vision/views/VisionViews.tsx';
 import { Virtual3D } from '../virtualmap/Virtual3D.tsx';
@@ -56,6 +56,8 @@ function DirectFeed({ entityId }: { entityId: string }) {
   useLang();
   const [position, setPosition] = useState<CameraPosition>('front');
   const [kind, setKind] = useState<FeedKind | null>(null);
+  // 드론 말단에 카메라가 둘 이상이면 칸 안에 나란히 선다(261019). 훅이라 갈래보다 먼저 부른다.
+  const sources = useDirectCameraSources(entityId, position);
   // 261007 — 3D 가상환경 PC. 노드 확대와 같은 화면이다(상공 카메라마다 녹화 버튼이 선다).
   if (isTwinDevice(entityId)) return <section className="all-cams__feed">
     <header><b>{t('v3d.title')}</b></header>
@@ -77,7 +79,7 @@ function DirectFeed({ entityId }: { entityId: string }) {
       <DirectCamera key={shown} url={fixedUrl} frames={shown === 'frames'} live compact recordLabel={entityId} />
     </section>;
   }
-  const direct = directCameraUrl(entityId, position);
+  const direct = sources[0] ?? null;
   if (direct === null) return null;
   return <section className="all-cams__feed">
     <header>
@@ -89,7 +91,7 @@ function DirectFeed({ entityId }: { entityId: string }) {
         </select>
       </label>}
     </header>
-    <DirectCamera url={direct.url} frames={direct.kind === 'frames'} live compact recordLabel={`${entityId}_${position}`} />
+    <DirectCameras sources={sources} live compact recordLabel={`${entityId}_${position}`} />
   </section>;
 }
 

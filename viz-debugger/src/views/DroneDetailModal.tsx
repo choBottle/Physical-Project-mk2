@@ -30,8 +30,8 @@ import { useLang } from '../shared/language.ts';
 import { t } from '../i18n/dict.ts';
 import { deviceCandidates, subscribeDeviceIdentity } from '../physical/deviceIdentity.ts';
 import { useFcxReports } from '../shared/fcxStatus.ts';
-import { directCameraUrl } from '../physical/cameraView.ts';
-import { DirectCamera } from '../media/views/DeviceCamera.tsx';
+import { useDirectCameraSources } from '../physical/cameraView.ts';
+import { DirectCameras } from '../media/views/DeviceCamera.tsx';
 import { VisionDeviceSection } from '../vision/views/VisionViews.tsx';
 import { DroneDashZoom } from '../dronedash/DroneDash.tsx';
 import { RtkZoom } from '../sar/RtkView.tsx';
@@ -85,16 +85,16 @@ export function DroneDetailModal({ deviceId, source, onClose }: {
   </div>;
 }
 
-/** 기존 상세보기에서 떼어 온 두 칸 — 기체 카메라 원본 · 객체 탐지 추론. 드론 카메라는 한 대라 위치 칸이 없다. */
+/** 기존 상세보기에서 떼어 온 두 칸 — 기체 카메라 원본 · 객체 탐지 추론. 위치 칸은 없고, 말단에 카메라가 둘 이상 붙어 있으면 cam0 · cam1 을 나란히 띄운다(261019). */
 function DroneCameraTab({ deviceId }: { deviceId: string }) {
   useLang();
-  const direct = directCameraUrl(deviceId, 'front');
+  const sources = useDirectCameraSources(deviceId, 'front');
   return <>
     <section className="media-section device-cam device-cam--zoom">
       <header className="media-section__head"><h3>{t('dso.drone.camera')}</h3></header>
-      {direct === null
+      {sources.length === 0
         ? <p className="drone-modal__empty">{t('dso.drone.noCamera')}</p>
-        : <DirectCamera url={direct.url} frames={direct.kind === 'frames'} live recordLabel={deviceId} />}
+        : <DirectCameras sources={sources} live recordLabel={deviceId} />}
     </section>
     <VisionDeviceSection entityId={deviceId} />
   </>;

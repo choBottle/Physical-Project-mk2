@@ -146,7 +146,27 @@ function CameraCanvas({ cameraKey, live, nonce, recordLabel }: {
  * 장비에서 바로 받는 길 (260928). `stream` 은 끝나지 않는 MJPEG(Go1 뷰어), `frames` 는 한 번에 한 장(드론 영상 말단 —
  * 화면이 이어서 당긴다). 주소를 만드는 쪽(`physical/cameraView.ts`)과 **모양으로만** 맞춘다 — 이 폴더가 로봇 면을 import 하지 않게.
  */
-export type DirectSource = { url: string; kind: 'stream' | 'frames' };
+export type DirectSource = { url: string; kind: 'stream' | 'frames'; label?: string | null };
+
+/**
+ * **바로 받는 카메라 여러 대를 나란히** (261019 — 드론 cam0 · cam1). 한 대면 `DirectCamera` 하나와 같다. 여럿이면 칸마다
+ * 이름(`cam1`)을 붙여 가로로 나눈다 — 세로로 쌓으면 전체 카메라 판의 높이 맞추기가 「칸 하나에 영상 줄 하나」를 못 지킨다.
+ */
+export function DirectCameras({ sources, live, nonce, compact, recordLabel }: {
+  sources: readonly DirectSource[]; live: boolean; nonce?: number; compact?: boolean; recordLabel?: string;
+}) {
+  if (sources.length === 1) {
+    const [only] = sources;
+    return <DirectCamera url={only.url} frames={only.kind === 'frames'} live={live} nonce={nonce} compact={compact} recordLabel={recordLabel} />;
+  }
+  return <div className="device-cam__multi" style={{ gridTemplateColumns: `repeat(${sources.length}, minmax(0, 1fr))` }}>
+    {sources.map((source) => <figure key={source.url} className="device-cam__one">
+      {source.label != null && <figcaption>{source.label}</figcaption>}
+      <DirectCamera url={source.url} frames={source.kind === 'frames'} live={live} nonce={nonce} compact={compact}
+        recordLabel={recordLabel === undefined ? undefined : `${recordLabel}_${source.label ?? 'cam'}`} />
+    </figure>)}
+  </div>;
+}
 
 /** 한 장씩 받는 길에서 다음 장을 청하기까지 쉬는 시간. 말단 카메라가 8 fps 라 그보다 빨리 당겨도 같은 장이다. */
 const FRAME_GAP_MS = 100;
@@ -237,17 +257,21 @@ export function DirectCamera({ url, live, nonce = 0, compact = false, frames = f
   </div>;
 }
 
+const NO_DIRECT: readonly DirectSource[] = [];
+function noDirectSources(): readonly DirectSource[] { return NO_DIRECT; }
+
 /**
  * 카메라 노드의 본문. `taskDeviceId` 는 연결한 태스크의 대상(자리를 푼 값)이다.
  *
- * `directUrlOf` 가 주소를 주면 장비에서 **바로** 받고, 안 주면 백엔드 `/media` 로 받는다 (260928).
- * 주소를 만드는 것은 이 파일이 아니다 — 로봇 주소를 아는 면은 `src/physical/` 하나다.
+ * `useDirectSources` 가 주소를 주면 장비에서 **바로** 받고, 빈 배열이면 백엔드 `/media` 로 받는다 (260928).
+ * 주소를 만드는 것은 이 파일이 아니다 — 로봇 주소를 아는 면은 `src/physical/` 하나다. 훅인 것은 드론 카메라 수가
+ * 말단에 따라 바뀌어서다(261019 — cam0 · cam1). 모듈 함수 하나를 넘기므로 렌더마다 같은 훅이 같은 자리에서 불린다.
  */
-export function DeviceCamera({ nodeId, taskDeviceId, zoom = false, directUrlOf }: {
+export function DeviceCamera({ nodeId, taskDeviceId, zoom = false, useDirectSources = noDirectSources }: {
   nodeId: string;
   taskDeviceId: string | null;
   zoom?: boolean;
-  directUrlOf?: (deviceId: string, position: string) => DirectSource | null;
+  useDirectSources?: (deviceId: string | null, position: string) => readonly DirectSource[];
 }) {
   useLang();
   const choice = useCameraChoice(nodeId);
@@ -262,6 +286,7 @@ export function DeviceCamera({ nodeId, taskDeviceId, zoom = false, directUrlOf }
   const deviceId = choice.deviceId ?? fallback;
   const cameraKey = cameraKeyOf(choice, fallback);
   const chosenOffline = choice.deviceId !== null && !connectedIds.includes(choice.deviceId);
+  const directSources = useDirectSources(deviceId, choice.position);
 
   const picker = zoom && <div className="device-cam__pick" onPointerDown={(event) => event.stopPropagation()}>
     <label>{t('dcam.device')}
@@ -286,7 +311,7 @@ export function DeviceCamera({ nodeId, taskDeviceId, zoom = false, directUrlOf }
     body = <p className="vn-line vn-dim">{t('dcam.replay')}</p>;
   } else if (deviceId === null || cameraKey === null) {
     body = <p className="vn-line vn-dim">{t(zoom ? 'dcam.pickAbove' : 'dcam.pickDevice')}</p>;
-  } else if (directUrlOf?.(deviceId, choice.position) != null) {
+  } else if (directSources.length > 0) {
     /**
      * **로봇 노드에서 바로 받는 영상은 카드에서도 흐른다** (260928 지시 — 「확대하면 되는데 그래프에서는 안 움직인다」).
      *
@@ -296,7 +321,7 @@ export function DeviceCamera({ nodeId, taskDeviceId, zoom = false, directUrlOf }
      */
     body = <>
       {chosenOffline && <p className="vn-line vn-warn">{t('dcam.notConnectedNow', { device: deviceId })}</p>}
-      <DirectCamera url={directUrlOf(deviceId, choice.position)!.url} frames={directUrlOf(deviceId, choice.position)!.kind === 'frames'} live nonce={nonce} compact={!zoom}
+      <DirectCameras sources={directSources} live nonce={nonce} compact={!zoom}
         recordLabel={zoom ? `${deviceId}_${choice.position}` : undefined} />
     </>;
   } else if (mediaBaseUrl() === '') {

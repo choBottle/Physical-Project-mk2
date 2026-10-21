@@ -735,6 +735,9 @@ button.robot-stop:hover{background:#b8271f}
 .device-cam__pick{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:13px}
 .device-cam__pick label{display:flex;gap:5px;align-items:center}
 .device-cam__stage{display:grid;gap:3px}
+.device-cam__multi{display:grid;gap:6px}
+.device-cam__one{margin:0;display:grid;gap:2px;min-width:0}
+.device-cam__one>figcaption{font-size:12px;font-weight:600;color:#4a5666}
 .device-cam__canvas{width:100%;height:auto;display:block;border-radius:var(--radius-xs);background:#11161d;min-height:40px}
 .device-cam--zoom .device-cam__canvas{max-height:78vh;object-fit:contain}
 .device-cam:not(.device-cam--zoom) .device-cam__canvas{max-height:140px;object-fit:contain}

@@ -43,9 +43,9 @@ import type { Hardware } from '../model/types.ts';
 import { DeviceStrip } from './DeviceStrip.tsx';
 import { DeviceFacts } from '../physical/DeviceFacts.tsx';
 import { MediaSection } from '../media/views/MediaSection.tsx';
-import { DirectCamera } from '../media/views/DeviceCamera.tsx';
+import { DirectCameras } from '../media/views/DeviceCamera.tsx';
 import { CAMERA_POSITIONS, type CameraPosition } from '../media/cameraChoice.ts';
-import { directCameraUrl } from '../physical/cameraView.ts';
+import { useDirectCameraSources } from '../physical/cameraView.ts';
 import { VisionDeviceSection } from '../vision/views/VisionViews.tsx';
 import { FixedCameraSection } from '../fixedcam/FixedCameraSection.tsx';
 import { isFixedCamera } from '../fixedcam/fixedCamera.ts';
@@ -74,7 +74,8 @@ export function DeviceStatusOverlay({ deviceId, device, source, onClose }: {
    * 주소를 못 만드는 장비(드론 등)는 이 칸이 없고, 아래 `/media` 칸이 그대로 연다.
    */
   const [position, setPosition] = useState<CameraPosition>('front');
-  const directUrl = directCameraUrl(deviceId, position);
+  const directSources = useDirectCameraSources(deviceId, position);
+  const directUrl = directSources[0] ?? null;
   /**
    * **고정 카메라** (261002). 로봇이 아니라 서버 링크에서 이미지를 받는 상대라 장비 상태 · 로봇 카메라 · `/media` 칸이
    * 다 맞지 않는다 — 그 셋 대신 받는 이미지를 띄우고, 추론 스트림 칸은 로봇과 같은 것을 쓴다.
@@ -136,7 +137,7 @@ export function DeviceStatusOverlay({ deviceId, device, source, onClose }: {
           </label>}
         </header>
         {/* 닫으면 끊긴다 — 모달이 내려가면 `<img>` 가 사라지고 연결이 닫힌다. */}
-        <DirectCamera url={directUrl.url} frames={directUrl.kind === 'frames'} live recordLabel={`${deviceId}_${position}`} />
+        <DirectCameras sources={directSources} live recordLabel={`${deviceId}_${position}`} />
       </section>}
       {/* 261001 — 객체 탐지 추론 스트림. 포트를 고르고(자동 맞춤이 기본) 모델별 오버레이를 연다. 닫으면 끊긴다. */}
       {!twin && <VisionDeviceSection entityId={deviceId} />}
