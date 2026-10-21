@@ -18,7 +18,7 @@ Unity 맵에서 뽑는 것을 **셋으로 가른다.** 한 파일에 섞으면 �
 ## 지금 상태 — 채워져 있다
 
 장소 **54건** (방 20 · 문 26 · 복도 2 · 지물 5 · **자리표시 1**), 인접 76변.
-`npm run extract:places` 로 다시 뽑는다. 손으로 고치지 마라 — 원천은 씬이다.
+**원천이던 Unity 씬(`Unity_Map/`)과 추출 스크립트(`extract-places.mjs`)는 261021 에 지웠다.** 이제 이 폴더의 파일이 원천이다 — 고칠 때는 `places.json` · `places.geometry.json` 을 같이 고치고 `npm run verify:places` 로 확인한다.
 
 ## 좌표 기준 — `site-global` 은 Unity 가상환경 좌표다
 

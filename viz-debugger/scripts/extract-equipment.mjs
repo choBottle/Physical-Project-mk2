@@ -7,7 +7,7 @@
  * 같은 모델·같은 프롬프트·같은 디코딩·같은 응답 안에서 갈린 것이 하나뿐이다 —
  * **장소는 목록을 줬고 장비는 안 줬다.** 그래서 장비에도 목록을 준다.
  *
- *   places/places.json      ← extract-places.mjs   (Unity 씬)
+ *   places/places.json      ← Unity 씬에서 뽑아 둔 것 (뽑던 extract-places.mjs 는 261021 Unity_Map 과 함께 지웠다)
  *   equipment/equipment.json ← 이 스크립트          (레지스트리 + 정답셋)
  *
  * ## 원천이 둘인 이유 — 정답셋만 쓰면 축이 자기 자신을 채점한다

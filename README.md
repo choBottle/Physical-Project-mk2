@@ -152,8 +152,6 @@ py -3.10 -m venv .venv
 |---|---|
 | [`viz-debugger/`](viz-debugger/) | **현행 통합 가시화 앱.** 노드 캔버스 하나 + 뷰 노드 넷 |
 | [`web-dashboard/`](web-dashboard/) | 데이터 레이어와 목 게이트웨이의 기준선. 손대지 않고 살려 둔다 |
-| [`Unity_Map/`](Unity_Map/) | **Unity ↔ Pyjevsim 디지털 트윈.** Go1 로봇의 실내 맵과 경로계획 연동, 그리고 C1~C3 실험 결과 |
-| [`unity-twin/`](unity-twin/) | 전역 좌표를 받아 공간에 배치하는 Unity 뷰어 (`VZ-U-02`) |
 | [`stt-lab/`](stt-lab/) | STT 엔진·모델을 같은 오디오로 비교하는 실험 하네스 |
 | [`gen-lab/`](gen-lab/) | 발화에서 임무 객체를 만드는 생성 서비스 (`VZ-G-01`·`VZ-G-02`) |
 
@@ -162,7 +160,7 @@ py -3.10 -m venv .venv
 | 폴더 | 무엇이 있나 |
 |---|---|
 | [`contracts/`](contracts/) | 파트 간 JSON 스키마와 예제, 검증 스크립트 |
-| [`places/`](places/) | 장소 계약. Unity 맵에서 뽑되 좌표와 의미를 층으로 가른다 |
+| [`places/`](places/) | 장소 계약. Unity 맵에서 뽑아 둔 것이고 좌표와 의미를 층으로 가른다. 원천이던 씬은 261021 에 지웠다 |
 | `mission-history/` | **임무 기록** — 관제 웹이 판마다 남기는 기록과 받은 그림(날짜/시각_임무). git 에 안 올라간다. [viz-debugger/README.md](viz-debugger/README.md) 「임무 기록」 |
 
 ---
@@ -178,8 +176,8 @@ py -3.10 -m venv .venv
 처럼 가리키고 있다면 지금은 `문서/요구사항정의서.md` 다. 보고서 본문은 그 시점의 기록이라
 고치지 않았다.
 
-### Unity_Map 은 무엇을 추적하나
+### 지운 폴더 (261021)
 
-`Assets/` · `Packages/` · `ProjectSettings/` 와 실험 결과(`GO1_*`)를 추적한다.
-`Library/` 는 **4.1GB** 이고 에디터가 `Assets/` 에서 그대로 복원하므로 추적하지 않는다
-(`Temp/` · `Logs/` · `UserSettings/` · `.csproj` · `.sln` 도 같다).
+`Unity_Map/`(Unity ↔ Pyjevsim 디지털 트윈 · C1~C3 실험 결과)과 `unity-twin/`(Unity 뷰어, `VZ-U-02`)은 가시화 웹이
+참조하지 않아 지웠다. 장소 계약(`places/`)은 그 씬에서 뽑아 둔 것이라 그대로 남고, 뽑던 `extract-places.mjs` 는 함께 지웠다.
+필요하면 git 기록에서 꺼낸다 — 마지막으로 있던 커밋은 `0f34476` 이다.

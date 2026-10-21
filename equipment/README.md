@@ -7,12 +7,12 @@
 |---|---|---|
 | 계약 | `contracts/place.schema.json` | `contracts/equipment.schema.json` |
 | 데이터 | `places/places.json` | `equipment/equipment.json` |
-| 추출 | `npm run extract:places` | `npm run extract:equipment` |
+| 추출 | 없음 — 뽑아 둔 파일이 원천 (261021 Unity_Map 과 추출 스크립트를 지웠다) | `npm run extract:equipment` |
 | 원천 | Unity 씬 | 목 게이트웨이 레지스트리 + 정답셋 |
 
 ## 왜 만들었나 — 6단계가 대조를 하나 남겼다
 
-260906 실측(`reports/2026-09-06_마일스톤분리_6단계.md` §4 축 3)에서 이렇게 갈렸다.
+260906 실측(`documents/작업보고/2026-09-06_마일스톤분리_6단계.md` §4 축 3)에서 이렇게 갈렸다.
 
 | 어휘 축 | 목록을 줬나 | Qwen3 8B | EXAONE 7.8B | Qwen3 4B |
 |---|---|---|---|---|

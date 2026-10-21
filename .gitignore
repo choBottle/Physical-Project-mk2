@@ -37,24 +37,6 @@
 !/web-dashboard/
 !/문서/
 
-# Unity (Unity_Map/) — 에디터·IDE가 다시 만들어내는 것들은 열지 않는다.
-# Library/ 하나가 4.1GB다. 지우고 열어도 Unity가 Assets/ 와 ProjectSettings/ 에서
-# 그대로 복원한다. 추적하는 것은 Assets/·Packages/·ProjectSettings/ 와 실험 결과(GO1_*)다.
-!/Unity_Map/
-/Unity_Map/*
-!/Unity_Map/.vsconfig
-!/Unity_Map/Assets/
-!/Unity_Map/Packages/
-!/Unity_Map/ProjectSettings/
-!/Unity_Map/GO1_*/
-!/Unity_Map/DigitalTwin_테스트_실행가이드.md
-
-# Unity (unity-twin/) — 스크립트와 README만 추적한다
-!/unity-twin/
-/unity-twin/*
-!/unity-twin/Assets/
-!/unity-twin/README.md
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 연 폴더 안에서 막는 것
 # ─────────────────────────────────────────────────────────────────────────────
