@@ -95,7 +95,7 @@ NODE_KINDS = ["감지", "판단", "실행", "검증", "보고"]
 #:
 #: **지우지 않고 꺼 둔다.** 대조군은 남아 있어야 다시 물을 수 있다
 #: (`--no-grammar`·`--no-equipment`·`--no-examples` 와 같은 성질).
-#: 자세한 것은 `reports/2026-09-07_마일스톤분리_8단계.md`.
+#: 자세한 것은 `documents/작업보고/2026-09-07_마일스톤분리_8단계.md`.
 NODE_KIND_RULE = (
     "임무는 보통 "
     + " · ".join(NODE_KINDS)

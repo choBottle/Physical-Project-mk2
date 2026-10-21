@@ -23,19 +23,15 @@
 !/web-integration.md
 
 # 루트 폴더
-!/_archive/
 !/contracts/
-!/docs/
+!/documents/
 !/door_example/
 !/equipment/
 !/gen-lab/
-!/meeting/
 !/places/
-!/reports/
 !/stt-lab/
 !/viz-debugger/
 !/web-dashboard/
-!/문서/
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 연 폴더 안에서 막는 것

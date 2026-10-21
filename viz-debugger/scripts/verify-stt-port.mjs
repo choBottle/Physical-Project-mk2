@@ -57,7 +57,7 @@ if (actual.length) {
 
 // 음성 대조군 — 한 글자만 바꿔도 반드시 잡혀야 한다.
 // (verify:standalone 이 경로 구분자 때문에 아무것도 못 잡은 채 통과하던 일이 실제로 있었다.
-//  reports/2026-08-28_1036_통합구현_검토.md B항)
+//  documents/작업보고/2026-08-28_1036_통합구현_검토.md B항)
 const oneChar = compare((body, name) => (name === files[0] ? body.replace('=', '≠') : body));
 if (oneChar.length === 0) {
   console.error('❌ 한 글자를 바꾼 음성 대조군을 검출하지 못했다 — 이 검사는 무의미하다');
