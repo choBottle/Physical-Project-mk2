@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """OsmoCam: use a DJI Osmo camera as a webcam over Wi-Fi (unofficial).
 
-    osmocam.bat / ./osmocam.sh             # the virtual camera + a preview page at http://127.0.0.1:38090
+    osmocam.bat / ./osmocam.sh             # the virtual camera + the MJPEG stream on every adapter, port 38090
     osmocam.bat / ./osmocam.sh --no-vcam   # preview page only (no virtual camera needed)
     osmocam.bat / ./osmocam.sh --scan      # list the DJI Osmo cameras nearby and exit
-    osmocam.bat / ./osmocam.sh --bind 0.0.0.0   # also serve the MJPEG stream to other machines on the LAN
+    osmocam.bat / ./osmocam.sh --bind 127.0.0.1 # this computer only, nothing on the LAN
 
 The camera's live view (H.264, 1280x720 at 30 fps) arrives over the camera's own Wi-Fi access point and
 is sent to a virtual camera, which Zoom, Teams, Meet and others can select: "OBS Virtual Camera" on
@@ -91,6 +91,15 @@ class Outputs:
         self._jpeg_lock = threading.Lock()
         self._jpeg_seq = -1
         self._jpeg: bytes = b""
+        self.stream_clients = 0          # MJPEG clients connected right now
+        self.stream_parts = 0            # JPEGs sent to all of them so far
+        self.stream_bytes = 0
+        self._stream_lock = threading.Lock()
+
+    def count_sent(self, size: int) -> None:
+        with self._stream_lock:
+            self.stream_parts += 1
+            self.stream_bytes += size
 
     def jpeg(self, frame: av.VideoFrame, seq: int) -> bytes:
         """The frame as JPEG, encoded once per frame however many clients are watching. Encoding only
@@ -249,7 +258,7 @@ def announce_urls(host: str, port: int) -> None:
         log(f"  This PC     http://127.0.0.1:{port}/stream")
         others = local_addresses()
         if others:
-            log("  LAN/Tailscale are OFF (bound to 127.0.0.1). Start with --bind 0.0.0.0 to serve:")
+            log("  LAN/Tailscale are OFF (--bind 127.0.0.1). Start without it to serve:")
             for address, alias in others:
                 log(f"  {_label(address, alias):<11} http://{address}:{port}/stream")
     else:
@@ -264,9 +273,10 @@ def announce_urls(host: str, port: int) -> None:
     log(line)
 
 
-def start_preview(outputs: Outputs, port: int, host: str = "127.0.0.1", max_fps: float = 0.0) -> None:
-    """The preview page plus an MJPEG stream. Bound to 127.0.0.1 by default; --bind 0.0.0.0 serves it to
-    other machines as well (through Ethernet or a second adapter: the Wi-Fi one is on the camera).
+def start_preview(outputs: Outputs, port: int, host: str = "0.0.0.0", max_fps: float = 0.0) -> None:
+    """The preview page plus an MJPEG stream. Bound to every adapter (0.0.0.0) by default; --bind 127.0.0.1 keeps it
+    on this computer, a single address keeps it on that adapter. Other machines reach it through Ethernet,
+    a second adapter or Tailscale (the Wi-Fi adapter is on the camera).
 
     /              preview page
     /stream        MJPEG (multipart/x-mixed-replace), for <img>, OpenCV, ffmpeg, VLC, Unity
@@ -276,8 +286,6 @@ def start_preview(outputs: Outputs, port: int, host: str = "127.0.0.1", max_fps:
     page = (b"<!doctype html><title>OsmoCam</title><body style='margin:0;background:#111;display:grid;"
             b"place-items:center;height:100vh'><img src='/stream' style='max-width:100%;max-height:100vh'>")
     min_interval = 1 / max_fps if max_fps > 0 else 0.0
-    clients = [0]
-    clients_lock = threading.Lock()
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_args) -> None:
@@ -306,7 +314,7 @@ def start_preview(outputs: Outputs, port: int, host: str = "127.0.0.1", max_fps:
                     "age_ms": round((time.monotonic() - stamp) * 1000) if stamp else None,
                     "width": frame.width if frame is not None else None,
                     "height": frame.height if frame is not None else None,
-                    "stream_clients": clients[0],
+                    "stream_clients": outputs.stream_clients,
                 }).encode()
                 self._headers(200, "application/json", len(body))
                 self.wfile.write(body)
@@ -317,8 +325,8 @@ def start_preview(outputs: Outputs, port: int, host: str = "127.0.0.1", max_fps:
             single = path == "/snapshot.jpg"
             if not single:
                 self._headers(200, "multipart/x-mixed-replace; boundary=frame")
-                with clients_lock:
-                    clients[0] += 1
+                with outputs._stream_lock:
+                    outputs.stream_clients += 1
             last, sent_at = -1, 0.0
             try:
                 while True:
@@ -337,6 +345,7 @@ def start_preview(outputs: Outputs, port: int, host: str = "127.0.0.1", max_fps:
                         return
                     self.wfile.write(b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\n\r\n"
                                      % len(jpeg) + jpeg + b"\r\n")
+                    outputs.count_sent(len(jpeg))
                     if min_interval:
                         wait = min_interval - (time.monotonic() - sent_at)
                         if wait > 0:
@@ -346,8 +355,8 @@ def start_preview(outputs: Outputs, port: int, host: str = "127.0.0.1", max_fps:
                 return
             finally:
                 if not single:
-                    with clients_lock:
-                        clients[0] -= 1
+                    with outputs._stream_lock:
+                        outputs.stream_clients -= 1
 
     server = ThreadingHTTPServer((host, port), Handler)
     server.daemon_threads = True
@@ -424,6 +433,7 @@ async def run(args: argparse.Namespace) -> None:
             task = asyncio.ensure_future(asyncio.to_thread(session.run))
             started = time.monotonic()
             report = (started, 0, 0)
+            stream_report = (outputs.stream_parts, outputs.stream_bytes)
             while not task.done():
                 await asyncio.sleep(0.5)
                 now = time.monotonic()
@@ -441,6 +451,13 @@ async def run(args: argparse.Namespace) -> None:
                         f"latency {median:3.0f}/{p95:3.0f} ms (median/p95)  dropped={decoder.dropped} "
                         f"errors={decoder.errors} session={sessions}")
                     report = (now, frames, video_bytes)
+                    parts, sent = outputs.stream_parts, outputs.stream_bytes
+                    watching = outputs.stream_clients
+                    if watching:
+                        per_client = (parts - stream_report[0]) / span / watching
+                        log(f"  stream: {per_client:5.1f} fps per client  {(sent - stream_report[1]) * 8 / span / 1e6:4.1f} Mbit/s total  "
+                            f"{(sent - stream_report[1]) / max(1, parts - stream_report[0]) / 1024:4.0f} KB/frame  clients={watching}")
+                    stream_report = (parts, sent)
             try:
                 await task
             except RuntimeError as error:
@@ -479,8 +496,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--no-vcam", action="store_true", help="don't send the picture to the virtual camera")
     parser.add_argument("--preview-port", type=int, default=38090, help="port of the preview page and stream (0 = off)")
-    parser.add_argument("--bind", default="127.0.0.1",
-                        help="address the preview/stream server listens on (0.0.0.0 = every adapter, for the LAN)")
+    parser.add_argument("--bind", default="0.0.0.0",
+                        help="address the preview/stream server listens on (default 0.0.0.0 = every adapter; "
+                             "127.0.0.1 = this computer only; or one adapter's IP)")
     parser.add_argument("--stream-fps", type=float, default=0,
                         help="cap the MJPEG stream per client (0 = every frame, up to 30)")
     parser.add_argument("--jpeg-quality", type=int, default=80, help="JPEG quality of the stream, 1-95")
