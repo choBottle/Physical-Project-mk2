@@ -13,11 +13,11 @@
  *   남기는 법   `restrictTo`(요소 캡처) 가 있으면 그것 — 그 요소만 찍혀 위에 얹힌 녹화 버튼 · 알림이 안 찍힌다.
  *               없으면 `cropTo`(영역 캡처) — 그 칸의 네모만큼 자른다. 위에 얹힌 것도 같이 찍힌다.
  *   확인 창     Chrome 이 「이 탭 공유」를 묻는다. 웹 페이지가 끌 수 없다 — 그대로 띄운다(261007 결정).
- *               공유는 녹화가 하나라도 도는 동안 한 벌을 같이 쓰고, 다 멈추면 놓는다(공유 중 표시줄이 사라진다).
- *               그래서 동시에 여럿을 녹화하면 확인은 처음 한 번이다.
+ *               공유는 녹화마다 따로 받고 멈추면 놓는다 — 한 벌을 복제해 나누면 Chrome 이 잘라내기를 거절한다
+ *               (261022 수정). 그래서 동시에 여럿을 녹화하면 확인도 녹화마다 뜬다.
  *   저장        1초 조각을 개발 서버 창구로 보내 저장소 루트 `video/` 에 이어 쓴다(`scripts/video-records.mjs`).
  *   닫으면      녹화 버튼이 내려가면(창을 닫음) 그 녹화를 멈추고 저장한다(261007 결정). Chrome 의 「공유 중지」를
- *               누르면 도는 녹화가 전부 멈추고 저장된다.
+ *               누르면 그 녹화가 멈추고 저장된다.
  *
  * Chrome 전용이다(사용자 환경 · 261007). 요소 캡처 · 영역 캡처가 둘 다 없는 브라우저면 버튼이 사유를 적는다.
  */
@@ -110,30 +110,30 @@ export function unsupportedReason(): string | null {
   return null;
 }
 
-/** 크롬이 되는 것부터 고른다. mp4(H.264) 가 되면 mp4, 아니면 webm. */
+/**
+ * 크롬이 되는 것부터 고른다. **webm(VP9) 이 먼저다** (261022 수정). 칸을 잘라 찍으면 칸 크기가 1px 만 흔들려도
+ * 인코더가 새 크기로 다시 서는데, 크롬의 mp4 는 그때 나온 새 설정(SPS · PPS)을 버리고 첫 설정만 파일 머리에 남겨
+ * 두 번째 조각부터 영상이 깨졌다. VP9 · VP8 은 크기를 기준 프레임마다 실어서 도중에 바뀌어도 그대로 풀린다.
+ */
 function pickFormat(): { mimeType: string; ext: 'mp4' | 'webm' } {
   const candidates: Array<[string, 'mp4' | 'webm']> = [
-    ['video/mp4;codecs=avc1.42E01F', 'mp4'],
-    ['video/mp4;codecs=avc1', 'mp4'],
-    ['video/mp4', 'mp4'],
     ['video/webm;codecs=vp9', 'webm'],
     ['video/webm;codecs=vp8', 'webm'],
     ['video/webm', 'webm'],
+    ['video/mp4;codecs=avc1.42E01F', 'mp4'],
+    ['video/mp4;codecs=avc1', 'mp4'],
+    ['video/mp4', 'mp4'],
   ];
   for (const [mimeType, ext] of candidates) if (MediaRecorder.isTypeSupported(mimeType)) return { mimeType, ext };
   return { mimeType: '', ext: 'webm' };
 }
 
 /**
- * **탭 공유 한 벌.** 녹화가 여럿이어도 공유는 하나다 — 녹화마다 이것을 복제(`clone`)해 각자 다른 칸으로 남긴다.
- * 확인 창이 떠 있는 동안 버튼을 또 누르면 같은 약속을 기다린다(창이 둘 뜨지 않게).
+ * **녹화마다 탭 공유를 따로 받는다.** 한 벌을 받아 `clone()` 해 나눠 쓰면 Chrome 이 복제본이 딸린 트랙의
+ * `restrictTo` · `cropTo` 를 거절한다(잘라내기는 트랙이 아니라 공유 원본에 걸리기 때문). 그래서 녹화는 제 공유의
+ * 원본 트랙을 그대로 잘라 쓰고, 멈추면 그 공유를 놓는다. 대신 동시에 여럿을 녹화하면 확인 창도 녹화마다 뜬다.
  */
-let shared: MediaStream | null = null;
-let asking: Promise<MediaStream> | null = null;
-
 function shareTab(): Promise<MediaStream> {
-  if (shared !== null && shared.getVideoTracks().some((track) => track.readyState === 'live')) return Promise.resolve(shared);
-  if (asking !== null) return asking;
   const options = {
     video: { frameRate: 30, displaySurface: 'browser' },
     audio: false,
@@ -143,23 +143,21 @@ function shareTab(): Promise<MediaStream> {
     surfaceSwitching: 'exclude',
     monitorTypeSurfaces: 'exclude',
   } as unknown as DisplayMediaStreamOptions;
-  asking = navigator.mediaDevices.getDisplayMedia(options).then((stream) => {
-    shared = stream;
-    // Chrome 의 「공유 중지」 — 도는 녹화를 전부 멈추고 저장한다.
-    stream.getVideoTracks()[0]?.addEventListener('ended', () => {
-      shared = null;
-      for (const id of [...live.keys()]) void stopRecording(id);
-    });
-    return stream;
-  }).finally(() => { asking = null; });
-  return asking;
+  return navigator.mediaDevices.getDisplayMedia(options);
 }
 
-/** 도는 녹화가 없으면 공유를 놓는다 — 공유 중 표시줄이 남아 있으면 「아직 찍고 있나」로 읽힌다. */
-function releaseIfIdle(): void {
-  if (live.size > 0 || shared === null) return;
-  for (const track of shared.getTracks()) track.stop();
-  shared = null;
+/** 그 칸만 남긴다. 요소 캡처가 거절되면 영역 캡처로 한 번 더 해 본다. 둘 다 안 되면 브라우저가 준 사유를 붙여 알린다. */
+async function narrowTo(track: TrackWith, element: Element): Promise<void> {
+  const scope = globalThis as unknown as { RestrictionTarget?: ElementTarget; CropTarget?: ElementTarget };
+  let lastError: unknown = null;
+  if (scope.RestrictionTarget !== undefined && track.restrictTo !== undefined) {
+    try { await track.restrictTo(await scope.RestrictionTarget.fromElement(element)); return; } catch (error) { lastError = error; }
+  }
+  if (scope.CropTarget !== undefined && track.cropTo !== undefined) {
+    try { await track.cropTo(await scope.CropTarget.fromElement(element)); return; } catch (error) { lastError = error; }
+  }
+  const detail = lastError instanceof Error ? `${lastError.name}: ${lastError.message}` : String(lastError);
+  throw new Error(t('rec.narrowFailed', { detail }));
 }
 
 async function post(path: string, body?: BodyInit, json = false): Promise<Record<string, unknown>> {
@@ -203,35 +201,25 @@ export function startRecording(element: Element, label: string): string {
     state.track?.stop();
     live.delete(id);
     patch(id, { phase: 'failed', error: errorText(error) });
-    releaseIfIdle();
   };
 
-  const target = targetApi();
-  if (target === null) { fail(new Error(t('rec.noElementCapture'))); return id; }
-  // 확인 창을 먼저 띄운다 — 누름 직후여야 뜬다. 저장 창구 확인 · 요소 표지는 그 뒤에 한다.
+  if (targetApi() === null) { fail(new Error(t('rec.noElementCapture'))); return id; }
+  // 확인 창을 먼저 띄운다 — 누름 직후여야 뜬다. 저장 창구 확인 · 칸 잘라내기는 그 뒤에 한다.
   const sharing = shareTab();
   void (async () => {
     try {
-      const marker = await target.api.fromElement(element);
       const stream = await sharing;
-      // 확인 창을 기다리는 사이에 창을 닫았다 — 방금 받은 공유를 쓸 녹화가 없으면 놓는다(공유 중 표시줄이 남지 않게).
-      if (!live.has(id)) { releaseIfIdle(); return; }
-      const base = stream.getVideoTracks()[0];
-      if (base === undefined) throw new Error(t('rec.noTrack'));
-      const surface = (base.getSettings() as { displaySurface?: string }).displaySurface;
+      const track = stream.getVideoTracks()[0] as TrackWith | undefined;
+      state.track = track ?? null;
+      if (track === undefined) { for (const other of stream.getTracks()) other.stop(); throw new Error(t('rec.noTrack')); }
+      // 확인 창을 기다리는 사이에 창을 닫았다 — 방금 받은 공유를 놓는다(공유 중 표시줄이 남지 않게).
+      if (!live.has(id)) { track.stop(); return; }
+      const surface = (track.getSettings() as { displaySurface?: string }).displaySurface;
       if (surface !== undefined && surface !== 'browser') throw new Error(t('rec.notThisTab'));
-      const track = base.clone() as TrackWith;
-      state.track = track;
-      try {
-        if (target.kind === 'restrict') await track.restrictTo!(marker);
-        else await track.cropTo!(marker);
-      } catch {
-        // 다른 탭을 골랐으면 여기서 거절된다 — 잘라낼 칸이 그 탭에 없다.
-        throw new Error(t('rec.notThisTab'));
-      }
+      await narrowTo(track, element);
       const opened = await post('open', JSON.stringify({ label, ext: pickFormat().ext }), true);
       state.saveId = String(opened.id);
-      if (!live.has(id)) { track.stop(); await post(`close?id=${encodeURIComponent(state.saveId)}`); drop(id); releaseIfIdle(); return; }
+      if (!live.has(id)) { track.stop(); await post(`close?id=${encodeURIComponent(state.saveId)}`); drop(id); return; }
       const format = pickFormat();
       const recorder = new MediaRecorder(new MediaStream([track]), {
         ...(format.mimeType === '' ? {} : { mimeType: format.mimeType }),
@@ -247,7 +235,7 @@ export function startRecording(element: Element, label: string): string {
           patch(id, { bytes: Number(result.bytes) || 0 });
         }).catch((error) => { patch(id, { error: errorText(error) }); });
       };
-      // 칸이 사라져 트랙이 끝나면(요소가 지워짐) 저장으로 넘어간다.
+      // Chrome 의 「공유 중지」를 누르거나 칸이 사라져 트랙이 끝나면 저장으로 넘어간다.
       track.addEventListener('ended', () => { void stopRecording(id); });
       recorder.start(SLICE_MS);
       patch(id, { phase: 'recording', startedAtMs: Date.now(), path: String(opened.path ?? '') || null });
@@ -268,7 +256,6 @@ export async function stopRecording(id: string): Promise<void> {
     // 아직 확인 창 · 준비 중이었다 — 찍은 것이 없다.
     state.track?.stop();
     drop(id);
-    releaseIfIdle();
     return;
   }
   patch(id, { phase: 'saving' });
@@ -279,7 +266,6 @@ export async function stopRecording(id: string): Promise<void> {
     });
   }
   state.track?.stop();
-  releaseIfIdle();
   try {
     await state.chain;
     const closed = await post(`close?id=${encodeURIComponent(state.saveId ?? '')}`);
