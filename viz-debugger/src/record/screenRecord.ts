@@ -111,19 +111,20 @@ export function unsupportedReason(): string | null {
 }
 
 /**
- * 크롬이 되는 것부터 고른다. **webm(VP9) 이 먼저다** (261022). 칸을 잘라 찍으면 칸 크기가 1px 만 흔들려도
- * 인코더가 새 크기로 다시 서는데, 크롬의 mp4 는 그때 나온 새 설정(SPS · PPS)을 버리고 첫 설정만 파일 머리에 남겨
- * 그 뒤 영상이 깨진다. VP9 · VP8 은 크기를 기준 프레임마다 실어서 도중에 바뀌어도 그대로 풀린다. 녹화 중에는 칸이
- * 움직이지 않게 막기도 하지만(`lockView.ts`) 창 크기 조절처럼 못 막는 것이 남아 webm 을 지킨다.
+ * 크롬이 되는 것부터 고른다. **mp4(H.264) 가 먼저다** (261022 사용자 결정 — 저장 형식은 mp4).
+ *
+ * 주의: 칸을 잘라 찍으면 칸 크기가 바뀔 때 인코더가 새 크기로 다시 서는데, 크롬의 mp4 는 그때 나온 새 설정
+ * (SPS · PPS)을 버리고 첫 설정만 파일 머리에 남겨 그 뒤 영상이 깨진다. 그래서 녹화 중에는 칸이 움직이지 않게
+ * 막는다(`lockView.ts`). 창 크기 조절처럼 못 막는 변화가 생기면 그 뒤가 깨질 수 있다 — webm(VP9) 은 견딘다.
  */
 function pickFormat(): { mimeType: string; ext: 'mp4' | 'webm' } {
   const candidates: Array<[string, 'mp4' | 'webm']> = [
-    ['video/webm;codecs=vp9', 'webm'],
-    ['video/webm;codecs=vp8', 'webm'],
-    ['video/webm', 'webm'],
     ['video/mp4;codecs=avc1.42E01F', 'mp4'],
     ['video/mp4;codecs=avc1', 'mp4'],
     ['video/mp4', 'mp4'],
+    ['video/webm;codecs=vp9', 'webm'],
+    ['video/webm;codecs=vp8', 'webm'],
+    ['video/webm', 'webm'],
   ];
   for (const [mimeType, ext] of candidates) if (MediaRecorder.isTypeSupported(mimeType)) return { mimeType, ext };
   return { mimeType: '', ext: 'webm' };
