@@ -24,13 +24,14 @@ import { subscribeDeviceIdentity, deviceCandidates } from '../physical/deviceIde
 import { isFcxStale, useFcxReports, type FcxReport } from '../shared/fcxStatus.ts';
 import {
   ABORTS, argvPreview, EMERGENCY_MODES, estimateSec, FLIGHT_DEFAULTS, FLIGHT_LIMITS, PATTERNS, planProblems, relativeBearing,
-  SIDES_OF, timeoutSec, withPattern, type EmergencyMode, type FlightPlan, type PlanProblem,
+  SCRIPT_PLAIN, SCRIPT_RTK, SIDES_OF, timeoutSec, withPattern, type EmergencyMode, type FlightPlan, type PlanProblem,
 } from '../physical/flightPlan.ts';
 import {
   isFlightRunStale, lineTone, PHASES, readProgress, runOutcome, stripTime, useFlightRuns, type FlightProcess, type Phase,
 } from '../physical/flightRunFeed.ts';
 import {
-  dryRunPassed, dryRunPending, flightLink, issueFlightEmergency, issueFlightStart, issueFlightStop, type FlightSupport,
+  dryRunPassed, dryRunPending, flightLink, issueFlightEmergency, issueFlightStart, issueFlightStop, scriptGuess, scriptOf,
+  type FlightSupport, type ScriptGuess,
 } from '../physical/flightRunCommands.ts';
 import { NumberField } from './ManualControlTab.tsx';
 import { useEverySec } from './ManualControlBadge.tsx';
@@ -172,7 +173,8 @@ const FLY_STEPS: readonly Phase[] = PHASES;
 function Steps({ process }: { process: FlightProcess }) {
   useLang();
   const progress = readProgress(process.lines);
-  const steps = process.dryRun === true ? DRY_STEPS : FLY_STEPS;
+  // `test_sar.py`(RTK 없는 판)는 RTK 대기 단계를 지나지 않는다.
+  const steps = (process.dryRun === true ? DRY_STEPS : FLY_STEPS).filter((step) => step !== 'rtk' || process.script !== SCRIPT_PLAIN);
   const at = steps.indexOf(progress.phase);
   const outcome = runOutcome(process);
   return <div className="flight-steps">
@@ -206,6 +208,20 @@ function RunLog({ process }: { process: FlightProcess }) {
   </div>;
 }
 
+/**
+ * 이번에 실행기가 띄울 스크립트 (261022). RTK 보정이 FC 로 들어오면 `test_sar_rtk.py`, 아니면 `test_sar.py` —
+ * 고르는 것은 실행기이고 여기는 지금 보이는 보정 상태로 미리 알린다(`scriptGuess`).
+ */
+function ScriptLine({ guess }: { guess: ScriptGuess }) {
+  useLang();
+  const tone = guess.corrections === null ? 'unknown' : guess.corrections ? 'yes' : 'warn';
+  const key = guess.corrections === null ? 'flight.script.unknown' : guess.corrections ? 'flight.script.rtk' : 'flight.script.plain';
+  return <p className={`flight-script flight-script--${tone}`}>
+    <span className={`manual-support manual-support--${tone === 'warn' ? 'unknown' : tone}`}>{guess.script ?? `${SCRIPT_RTK} / ${SCRIPT_PLAIN}`}</span>
+    {' '}{t(key)}
+  </p>;
+}
+
 // ── 탭 ──────────────────────────────────────────────────────────────────
 
 export function FlightControlTab({ deviceId }: { deviceId: string }) {
@@ -224,6 +240,11 @@ export function FlightControlTab({ deviceId }: { deviceId: string }) {
   const passed = dryRunPassed(deviceId, plan, entry);
   const pending = dryRunPending(deviceId, plan, entry);
   const moving = plan.pattern !== 'rotate';
+  const guess = scriptGuess(deviceId);
+  // dry-run 을 한 스크립트와 지금 날 스크립트가 다르면(그 사이 보정이 켜지거나 꺼졌다) 그 dry-run 은 이 비행의 점검이 아니다.
+  const dryScript = passed ? scriptOf(run) : null;
+  const scriptChanged = passed && guess.script !== null && dryScript !== guess.script;
+  const gateOpen = passed && !scriptChanged;
 
   const [confirming, setConfirming] = useState(false);
   const [typed, setTyped] = useState('');
@@ -325,6 +346,7 @@ export function FlightControlTab({ deviceId }: { deviceId: string }) {
                 <NumberField value={plan.rtkTimeoutS} {...FLIGHT_LIMITS.rtkTimeoutS} step={10} onCommit={(value) => update({ rtkTimeoutS: value })} /> s
               </label>
             </div>
+            {guess.corrections !== true && <p className="manual-note">{t('flight.field.rtkUnused', { script: SCRIPT_PLAIN })}</p>}
             <div className="flight-row"><span>{t('flight.field.abort')}</span>
               <Radio items={ABORTS} value={plan.abort} label={t('flight.field.abort')} name={(item) => t(`flight.abort.${item}`)}
                 onPick={(item) => update({ abort: item })} />
@@ -352,7 +374,8 @@ export function FlightControlTab({ deviceId }: { deviceId: string }) {
         {plan.headingDeg === null && <p className="manual-note">{t('flight.route.headingWhy')}</p>}
         <details className="flight-advanced">
           <summary>{t('flight.route.argv')}</summary>
-          <code className="flight-argv">test_sar_rtk.py {argvPreview(plan, false).join(' ')}</code>
+          <code className="flight-argv">{guess.script ?? SCRIPT_RTK} {argvPreview(plan, false, guess.script ?? SCRIPT_RTK).join(' ')}</code>
+          {guess.script === null && <p className="manual-note">{t('flight.route.argvUnknown', { script: SCRIPT_PLAIN })}</p>}
         </details>
       </section>
     </div>
@@ -364,12 +387,15 @@ export function FlightControlTab({ deviceId }: { deviceId: string }) {
 
     <section className="manual-tab__section">
       <header><h3>{t('flight.run.title')}</h3></header>
+      <ScriptLine guess={guess} />
       <div className="flight-actions">
         <button type="button" className="manual-switch" disabled={busy || startBlock !== null}
           onClick={(event) => { event.currentTarget.blur(); void send(true); }}>{t('flight.btn.dry')}</button>
-        <button type="button" className="manual-switch flight-go" disabled={busy || startBlock !== null || !passed || confirming}
+        <button type="button" className="manual-switch flight-go" disabled={busy || startBlock !== null || !gateOpen || confirming}
           onClick={(event) => { event.currentTarget.blur(); setConfirming(true); }}>{t('flight.btn.fly')}</button>
-        <span className="flight-actions__state">{startBlock ?? (passed ? t('flight.gate.passed') : pending ? t('flight.gate.pending') : t('flight.gate.needDry'))}</span>
+        <span className="flight-actions__state">{startBlock ?? (scriptChanged
+          ? t('flight.gate.scriptChanged', { was: dryScript ?? '?', now: guess.script ?? '?' })
+          : passed ? t('flight.gate.passed', { script: dryScript ?? '?' }) : pending ? t('flight.gate.pending') : t('flight.gate.needDry'))}</span>
       </div>
 
       {confirming && <div className="flight-confirm" role="alertdialog" aria-label={t('flight.confirm.title')}>
@@ -389,6 +415,8 @@ export function FlightControlTab({ deviceId }: { deviceId: string }) {
           <li>{moving
             ? t('flight.confirm.timingLine', { speed: plan.speedMps, gap: plan.gapS, min: (est / 60).toFixed(1) })
             : t('flight.confirm.timingRotate', { gap: plan.gapS, min: (est / 60).toFixed(1) })}</li>
+          <li>{t(guess.corrections === null ? 'flight.confirm.scriptUnknown' : guess.corrections ? 'flight.confirm.scriptRtk' : 'flight.confirm.scriptPlain',
+            { script: guess.script ?? dryScript ?? '?', min: plan.rtkMinS })}</li>
           <li>{t('flight.confirm.mission')}</li>
           <li>{t(plan.abort === 'rtl' ? 'flight.confirm.abortRtl' : 'flight.confirm.abort', { how: t(`flight.abort.${plan.abort}`) })}</li>
         </ul>
@@ -397,7 +425,7 @@ export function FlightControlTab({ deviceId }: { deviceId: string }) {
             onKeyDown={(event) => { if (event.key === 'Enter' && typed.trim().toLowerCase() === 'yes' && !busy) void send(false); }} />
         </label>
         <div className="flight-actions">
-          <button type="button" className="manual-switch flight-go" disabled={busy || typed.trim().toLowerCase() !== 'yes' || startBlock !== null}
+          <button type="button" className="manual-switch flight-go" disabled={busy || typed.trim().toLowerCase() !== 'yes' || startBlock !== null || !gateOpen}
             onClick={(event) => { event.currentTarget.blur(); void send(false); }}>{t('flight.confirm.send')}</button>
           <button type="button" className="manual-unbind" onClick={() => { setConfirming(false); setTyped(''); }}>{t('flight.confirm.cancel')}</button>
         </div>
@@ -421,7 +449,7 @@ export function FlightControlTab({ deviceId }: { deviceId: string }) {
 
     <section className="manual-tab__section">
       <header><h3>{t('flight.progress.title')}</h3>
-        {run !== null && <small className="flight-run-id">{runSummary(run)} · {run.runId}</small>}
+        {run !== null && <small className="flight-run-id">{runSummary(run)} · {scriptOf(run)} · {run.runId}</small>}
         {entry !== undefined && running && isFlightRunStale(entry) && <span className="manual-support manual-support--unknown">{t('flight.progress.stale', { sec: Math.round((Date.now() - entry.receivedAtMs) / 1000) })}</span>}
       </header>
       {run === null

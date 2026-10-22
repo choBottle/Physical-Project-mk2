@@ -7,6 +7,8 @@
 //  2. 파라미터 — 규약(요청 문서 §2-1)의 키 · 번호로 바뀌는가. 회전이면 쪽 · 거리 · 속도를 안 싣는가
 //  3. 출력 읽기 — 스크립트가 실제로 찍는 줄 모양에서 단계 · 미션 항목 · 패스 · 착륙을 읽는가
 //  4. dry-run 짝 — 같은 설정 · 내 command_id · 종료 코드 0 일 때만 비행이 열리는가
+//  5. 스크립트 고르기 (261022) — RTK 보정이 없으면 실행기가 `test_sar.py` 를 띄운다. 화면이 보정 상태로 그것을
+//     짐작하고, 돌아온 `run.script` 를 읽고, `test_sar.py` 명령줄에서 RTK 옵션을 빼는가
 //
 // 대조군 — 모양이 틀린 보고는 버려야 하고, 남이 보낸 dry-run 은 내 것으로 치면 안 된다.
 
@@ -201,9 +203,43 @@ const report = (lines, extra = {}) => ({
   if (noStop.sent) failures.push('중단을 선언하지 않았다고 밝힌 장비에 보냈다');
 }
 
+// ── 5. 스크립트 고르기 ──────────────────────────────────────────────────
+{
+  const tele = await load('src', 'shared', 'deviceTelemetry.ts');
+  const d = plan.FLIGHT_DEFAULTS;
+  const plainArgv = plan.argvPreview(d, true, plan.SCRIPT_PLAIN).join(' ');
+  if (plainArgv.includes('--rtk-')) failures.push(`test_sar.py 명령줄에 RTK 옵션이 남았다: ${plainArgv}`);
+  if (!plan.argvPreview(d, true).join(' ').includes('--rtk-min 30 --rtk-timeout 120')) failures.push('RTK 판 명령줄에서 RTK 옵션이 빠졌다');
+  if (plan.scriptFor(true) !== 'test_sar_rtk.py' || plan.scriptFor(false) !== 'test_sar.py' || plan.scriptFor(null) !== null) failures.push('scriptFor 가 틀렸다');
+
+  // 실물 pi3 의 state 모양(261022 실측) — rtk.corrections 가 false 면 test_sar.py.
+  const g0 = commands.scriptGuess('x500-sg');
+  if (g0.script !== null) failures.push(`보고가 없는데 스크립트를 짐작했다: ${g0.script}`);
+  else controls.push('보정 보고가 없으면 스크립트를 짐작하지 않는다');
+  tele.noteDeviceTelemetry('x500-sg', [{ path: 'rtk.fix' }], { body: { rtk: { corrections: false, fix: 'NONE' } } });
+  if (commands.scriptGuess('x500-sg').script !== 'test_sar.py') failures.push(`보정이 없는데 ${commands.scriptGuess('x500-sg').script}`);
+  tele.noteDeviceTelemetry('x500-sg', [{ path: 'rtk.fix' }], { body: { rtk: { corrections: true, fix: 'NONE' } } });
+  if (commands.scriptGuess('x500-sg').script !== 'test_sar_rtk.py') failures.push('보정이 들어오는데 RTK 판으로 안 본다');
+  // 실행기 판정: 보정이 끊겼어도 FC 가 이미 RTK_FLOAT/FIXED 면 RTK 판(REPORT_pi3_261022 §6).
+  tele.noteDeviceTelemetry('x500-sg', [{ path: 'rtk.fix' }], { body: { rtk: { corrections: false, fix: 'RTK_FLOAT' } } });
+  if (commands.scriptGuess('x500-sg').script !== 'test_sar_rtk.py') failures.push('보정은 끊겼지만 FC 가 RTK_FLOAT 인데 RTK 판으로 안 본다');
+  tele.noteDeviceTelemetry('x500-sg', [{ path: 'rtk.fix' }], { body: { rtk: { corrections: true } }, atMs: Date.now() - 60_000 });
+  if (commands.scriptGuess('x500-sg').script !== null) failures.push('낡은 보고로 스크립트를 짐작했다');
+
+  // 돌아온 run.script — 있으면 그대로, 없던 실행기(261017 판)는 test_sar_rtk.py.
+  const body = (extra) => ({ source_id: 'x500-sg', run: { run_id: 'r9', command_id: 'c9', state: 'exited', exit_code: 0, dry_run: true, lines: [], ...extra }, emergency: null });
+  // 실물 모양(REPORT_pi3_261022 §6) — run.rtk 는 bool 이다.
+  const withScript = feed.parseFlightRun(body({ script: 'test_sar.py', rtk: false }));
+  if (withScript?.run?.script !== 'test_sar.py' || withScript.run.rtk !== false) failures.push(`run.script · run.rtk 를 못 읽었다: ${JSON.stringify(withScript?.run)}`);
+  if (feed.parseFlightRun(body({ script: 'test_sar_rtk.py', rtk: true }))?.run?.rtk !== true) failures.push('run.rtk=true 를 못 읽었다');
+  if (feed.parseFlightRun(body({ rtk: { corrections: true } }))?.run?.rtk !== null) failures.push('bool 이 아닌 run.rtk 에서 값을 지어냈다');
+  if (commands.scriptOf(feed.parseFlightRun(body({}))?.run ?? null) !== 'test_sar_rtk.py') failures.push('script 칸이 없는 옛 보고를 test_sar_rtk.py 로 안 본다');
+  if (feed.parseFlightRun(body({ rtk: null }))?.run?.rtk !== null) failures.push('run.rtk 가 null 인데 값을 지어냈다');
+}
+
 if (failures.length > 0) {
   console.error('❌ verify:flight-run');
   for (const failure of failures) console.error('  - ' + failure);
   process.exit(1);
 }
-console.log(`✅ 통과 — 예상 시간 · 파라미터 · 출력 읽기 · dry-run 짝 (대조군 ${controls.length}개: ${controls.join(' / ')})`);
+console.log(`✅ 통과 — 예상 시간 · 파라미터 · 출력 읽기 · dry-run 짝 · 스크립트 고르기 (대조군 ${controls.length}개: ${controls.join(' / ')})`);

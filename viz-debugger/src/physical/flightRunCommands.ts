@@ -28,11 +28,13 @@ import { commandTracker } from '../shared/commandCenter.ts';
 import type { CommandAck, CommandRequest } from '../transport/index.ts';
 import { deviceCandidates } from './deviceIdentity.ts';
 import type { PhysicalAction } from './encode.ts';
-import { EMERGENCY_CODE, planSignature, startParams, type EmergencyMode, type FlightPlan } from './flightPlan.ts';
+import { EMERGENCY_CODE, planSignature, scriptFor, startParams, type EmergencyMode, type FlightPlan } from './flightPlan.ts';
 import type { FlightRunEntry } from './flightRunFeed.ts';
 import type { PhysicalClient } from './PhysicalClient.ts';
 import { clientForDevice } from './robotClient.ts';
 import { robotSession } from './robotSession.ts';
+import { deviceTelemetry, isTelemetryStale, telemetryValue } from '../shared/deviceTelemetry.ts';
+import { isRtcmReportStale, rtcmReports } from '../shared/rtcmStatus.ts';
 import type { UplinkMessage } from './uplink.ts';
 
 export const RTK_TEST_START: PhysicalAction = 'rtk_test_start';
@@ -71,6 +73,46 @@ export function flightLink(deviceId: string): FlightLink {
     emergency: supportOf(actions, RTK_TEST_EMERGENCY),
     reason: '',
   };
+}
+
+// ── 어느 스크립트로 날까 (261022) ────────────────────────────────────────
+
+export type ScriptGuess = {
+  /** 실행기 기준으로 RTK 인가(보정 유입 또는 FC 가 이미 RTK). 모르면 `null`. */
+  corrections: boolean | null;
+  /** 그러면 실행기가 띄울 스크립트. 모르면 `null`. */
+  script: string | null;
+};
+
+/** 실행기 `rtk_connected()` 가 RTK 로 치는 FC fix (REPORT_pi3_261022 §6). */
+const RTK_FIXES = new Set(['RTK_FLOAT', 'RTK_FIXED']);
+
+/**
+ * **실행기가 고를 스크립트를 미리 짐작한다.** 실행기 판정(`rtk_connected()`)을 그대로 옮겼다 — 드론 `state.rtk` 는
+ * 실행기가 보는 것과 같은 `DroneLink.snapshot()` 이고, `corrections` 이거나 `fix` 가 RTK_FLOAT/FIXED 면 RTK 판이다.
+ * `state.rtk` 가 없으면 보정 전달기의 `rtcm` 보고(`receiving`)로 물러선다. 둘 다 낡았거나 없으면 모른다.
+ * 정하는 것은 실행기이고(시작 명령을 받은 순간), 실제로 띄운 것은 `flight_run.run.script` 로 돌아온다.
+ */
+export function scriptGuess(deviceId: string, nowMs = Date.now()): ScriptGuess {
+  const report = deviceTelemetry(deviceId);
+  const rtk = telemetryValue(deviceId, 'rtk');
+  let corrections: boolean | null = null;
+  if (report !== null && !isTelemetryStale(report, nowMs) && rtk !== null && typeof rtk === 'object' && !Array.isArray(rtk)) {
+    const { corrections: flowing, fix } = rtk as Record<string, unknown>;
+    corrections = flowing === true || (typeof fix === 'string' && RTK_FIXES.has(fix));
+  } else if (report !== null && !isTelemetryStale(report, nowMs) && rtk === null && telemetryValue(deviceId, 'fc_link') === false) {
+    corrections = false; // FC 링크가 없으면 실행기는 `test_sar.py` 로 간다
+  } else {
+    const rtcm = rtcmReports()[deviceId];
+    if (rtcm !== undefined && !isRtcmReportStale(rtcm, nowMs)) corrections = rtcm.receiving;
+  }
+  return { corrections, script: scriptFor(corrections) };
+}
+
+/** 실행이 실제로 쓴 스크립트. 이 칸이 없던 실행기는 늘 `test_sar_rtk.py` 였다. */
+export function scriptOf(run: FlightRunEntry['run']): string | null {
+  if (run === null) return null;
+  return run.script ?? 'test_sar_rtk.py';
 }
 
 export type FlightIssueOutcome = {

@@ -1319,3 +1319,6 @@ button.flight-armed:not(:disabled){color:#fff!important;border-color:#8f1d22!imp
 .rec-badge__row--failed{border-color:#f0c27a;background:#fff8ec}
 .rec-badge__row--failed .rec-badge__dot{background:#e0a33a}
 @keyframes rec-blink{to{visibility:hidden}}
+/* 비행 제어 — 이번 실행 스크립트 한 줄 (261022) */
+.flight-script{margin:0 0 8px;font-size:13px;line-height:1.5}
+.flight-script--warn{color:#7a5c12}

@@ -453,7 +453,8 @@ class FakeDrone extends FakeDevice {
     return {
       run_id: process.runId, command_id: process.commandId, state: process.state, dry_run: process.dryRun, argv: process.argv,
       started_at: process.startedAt, ended_at: process.endedAt, exit_code: process.exitCode, out_path: process.outPath,
-      ...(process.mode !== undefined ? { mode: process.mode } : {}),
+      // 비상 명령이 아니면 실물 실행기(261022)처럼 띄운 스크립트와 그때 본 보정 여부를 싣는다. 가짜는 늘 보정이 있다.
+      ...(process.mode !== undefined ? { mode: process.mode } : { script: 'test_sar_rtk.py', rtk: true }),
       lines: process.lines.slice(-200),
     };
   }
@@ -486,6 +487,7 @@ class FakeDrone extends FakeDevice {
       battery: { voltage_v: round(14.8 + this.battery * 0.017, 2), current_a: this.inAir() ? 14.5 : 0.8, remaining_pct: Math.round(this.battery), consumed_mah: Math.round((92 - this.battery) * 50), source: 'SYS_STATUS', age_s: 0.2 },
       flight: { armed: this.armed, mode: this.mode, landed_state: this.landedState(), age_s: 0.1 },
       gps: { fix_type: 6, fix: 'RTK_FIXED', satellites: 22, lat: round(this.lat, 7), lon: round(this.lon, 7), eph_m: 0.02, age_s: 0.1 },
+      rtk: { corrections: true, rtcm_age_s: 0.4, rtcm_msgs_per_s: 3, rtcm_bytes_per_s: 1100, rtcm_source: 'fake', fix: 'RTK_FIXED' },
       attitude: { roll_deg: 0.3, pitch_deg: Math.hypot(this.vn, this.ve) > 0.1 ? -3 : 0.8, yaw_deg: round(this.heading, 1), age_s: 0.01 },
       altitude: { relative_m: round(this.alt, 2) }, warnings: [],
     });

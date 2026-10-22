@@ -34,6 +34,16 @@ export type FlightProcess = {
   outPath: string | null;
   /** 비상 명령만 — `land` · `rtl` · `hold`. */
   mode: string | null;
+  /**
+   * 실행기가 실제로 띄운 스크립트 (261022). RTK 보정이 FC 로 들어오면 `test_sar_rtk.py`, 아니면 `test_sar.py`.
+   * 이 칸이 없던 실행기(261017 판)는 `null` — 그때는 늘 `test_sar_rtk.py` 였다.
+   */
+  script: string | null;
+  /**
+   * 시작 명령을 받은 순간 실행기가 판정한 RTK 여부 (`run.rtk`, **bool**) — 보정이 3초 안에 들어왔거나 FC 가 이미
+   * RTK_FLOAT/FIXED 이면 `true`(REPORT_pi3_261022 §6). 비행 중에는 안 바뀐다. 옛 실행 · 비상 명령은 `null`.
+   */
+  rtk: boolean | null;
   lines: readonly RunLine[];
 };
 
@@ -72,6 +82,8 @@ function parseProcess(value: unknown): FlightProcess | null | undefined {
     exitCode: num(body.exit_code),
     outPath: str(body.out_path),
     mode: str(body.mode),
+    script: str(body.script),
+    rtk: typeof body.rtk === 'boolean' ? body.rtk : null,
     lines,
   };
 }

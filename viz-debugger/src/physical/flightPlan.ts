@@ -186,7 +186,21 @@ export function planSignature(plan: FlightPlan): string {
  * pi3 실행기가 만들 명령줄(옵션 부분) — **화면에 보여 주는 용도**다. 실제로 띄우는 것은 실행기이고,
  * 실행기가 낸 `argv` 가 상태 토픽으로 돌아오면 화면은 그것을 따로 보여 준다.
  */
-export function argvPreview(plan: FlightPlan, dryRun: boolean): string[] {
+/**
+ * 실행기가 고르는 두 스크립트 (261022 — `SAR_FLIGHT_SCRIPTS.md` §3-3). 그때 RTK 보정이 FC 로 들어오고 있으면
+ * `test_sar_rtk.py`, 아니면 RTK 확인만 뺀 `test_sar.py` 다. **고르는 것은 실행기**이고 화면은 미리 짐작만 한다.
+ */
+export const SCRIPT_RTK = 'test_sar_rtk.py';
+export const SCRIPT_PLAIN = 'test_sar.py';
+
+/** 보정이 들어오나 → 실행기가 띄울 스크립트. 모르면 `null`. */
+export function scriptFor(corrections: boolean | null): string | null {
+  if (corrections === null) return null;
+  return corrections ? SCRIPT_RTK : SCRIPT_PLAIN;
+}
+
+/** `test_sar.py` 에는 `--rtk-min` · `--rtk-timeout` 이 없다. */
+export function argvPreview(plan: FlightPlan, dryRun: boolean, script: string = SCRIPT_RTK): string[] {
   const argv = ['--yes', '--pattern', plan.pattern];
   if (plan.pattern !== 'rotate') argv.push('--side', plan.side);
   argv.push('--altitude', fmt(plan.altitudeM));
@@ -194,7 +208,8 @@ export function argvPreview(plan: FlightPlan, dryRun: boolean): string[] {
   argv.push('--passes', String(plan.passes), '--gap', fmt(plan.gapS));
   if (plan.headingDeg !== null) argv.push('--heading', fmt(plan.headingDeg));
   argv.push('--accept-radius', fmt(plan.acceptRadiusM), '--align-hold', fmt(plan.alignHoldS), '--settle', fmt(plan.settleS),
-    '--abort', plan.abort, '--rtk-min', fmt(plan.rtkMinS), '--rtk-timeout', fmt(plan.rtkTimeoutS));
+    '--abort', plan.abort);
+  if (script !== SCRIPT_PLAIN) argv.push('--rtk-min', fmt(plan.rtkMinS), '--rtk-timeout', fmt(plan.rtkTimeoutS));
   if (dryRun) argv.push('--dry-run');
   return argv;
 }
