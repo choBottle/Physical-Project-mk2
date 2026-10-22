@@ -7,12 +7,16 @@
  * **이 칸이 내려가면(창을 닫음 · 탭을 옮김) 녹화를 멈추고 저장한다** (261007 결정). 보고 있는 것을 찍는 방식이라 칸이
  * 사라지면 찍을 것이 없다.
  *
+ * **녹화하는 동안 그 칸을 고정한다** (261022) — 스크롤 · 카드 끌기 · 확대를 막고, 막으면 버튼 밑에 잠깐 알린다
+ * (`lockView.ts`).
+ *
  * 저장 창구가 없는 서버(단독 빌드 · 정적 서버)면 버튼을 그리지 않는다 — 눌러도 저장할 곳이 없다.
  */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { t } from '../i18n/dict.ts';
 import { useLang } from '../shared/language.ts';
+import { lockView, subscribeBlocked } from './lockView.ts';
 import { isActive, saverAvailable, startRecording, stopRecording, unsupportedReason, useRecordings } from './screenRecord.ts';
 
 export function formatElapsed(ms: number): string {
@@ -55,6 +59,20 @@ export function RecordFrame({ label, children, className }: {
     const timer = setInterval(() => setTick((value) => value + 1), 1000);
     return () => clearInterval(timer);
   }, [running]);
+  // 도는 동안 칸을 고정한다. 막은 동작이 있으면 2초 알린다.
+  const [hint, setHint] = useState(false);
+  useEffect(() => {
+    const target = hostRef.current?.firstElementChild;
+    if (!running || mine === null || target == null) return undefined;
+    const unlock = lockView(mine, target);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = subscribeBlocked(() => {
+      setHint(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setHint(false), 2000);
+    });
+    return () => { unlock(); unsubscribe(); clearTimeout(timer); setHint(false); };
+  }, [running, mine]);
   // 칸이 내려가면 멈추고 저장한다.
   useEffect(() => () => { if (mineRef.current !== null) void stopRecording(mineRef.current); }, []);
 
@@ -84,5 +102,6 @@ export function RecordFrame({ label, children, className }: {
         : running ? t('rec.stop', { elapsed: formatElapsed(Date.now() - current!.startedAtMs) })
         : t('rec.start')}
     </button>}
+    {hint && <span className="rec-hint" role="status">{t('rec.locked')}</span>}
   </div>;
 }

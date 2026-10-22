@@ -1306,6 +1306,7 @@ button.flight-armed:not(:disabled){color:#fff!important;border-color:#8f1d22!imp
 .rec-btn i{width:9px;height:9px;border-radius:50%;background:#e5484d}
 .rec-btn--on{background:#c62f35e6;border-color:#c62f35}
 .rec-btn--on i{border-radius:2px;background:#fff}
+.rec-hint{position:absolute;top:40px;left:8px;z-index:2;max-width:calc(100% - 16px);padding:4px 10px;border-radius:6px;background:#11161de6;color:#fff;font-size:12px;line-height:1.4;pointer-events:none}
 .rec-badge{display:grid;gap:6px}
 .rec-badge__row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:9px;padding:8px 10px;border:1px solid #efb2b2;border-radius:var(--radius-md);background:#fff3f3;box-shadow:0 6px 18px #17202b22}
 .rec-badge__row b{display:block;font-size:13px;overflow-wrap:anywhere}

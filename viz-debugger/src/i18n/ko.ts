@@ -3061,6 +3061,7 @@ export const ko: Record<string, string> = {
   'rec.noTrack': '공유된 화면에 영상이 없습니다',
   'rec.notThisTab': '이 탭이 아닌 다른 화면을 골랐습니다 — 「이 탭」을 골라야 영상 칸을 잘라낼 수 있습니다',
   'rec.narrowFailed': '영상 칸만 잘라내지 못했습니다 — 브라우저 사유: {detail}',
+  'rec.locked': '녹화 중에는 화면을 옮기거나 확대할 수 없습니다 — 정지하면 풀립니다',
   'rec.empty': '녹화된 내용이 없습니다 (영상 조각을 하나도 못 받았습니다)',
   'rec.badge.line': '녹화 중 · {label}',
   'rec.badge.saving': '저장 중 · {label}',

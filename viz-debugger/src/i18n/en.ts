@@ -3037,6 +3037,7 @@ export const en: Record<string, string> = {
   'rec.noTrack': 'The shared surface has no video',
   'rec.notThisTab': 'A different surface was chosen. Pick "this tab" so the video can be cut out',
   'rec.narrowFailed': 'Could not cut out just the video. Browser reason: {detail}',
+  'rec.locked': 'The view is locked while recording. Stop to move or zoom it',
   'rec.empty': 'Nothing was recorded (no video chunks arrived)',
   'rec.badge.line': 'Recording · {label}',
   'rec.badge.saving': 'Saving · {label}',
