@@ -75,4 +75,4 @@ docker compose up -d --wait
   `be-ingest` 를 돌리는 구성(`MK2_KAFKA_BOOTSTRAP=<중앙>:9095`)은 2026-09-19 컴퓨터 임시 엣지로 실증됐으나 엣지 compose 에는
   아직 넣지 않았다 — [RELEASE.md 로드맵](../RELEASE.md).
 - k3s 기반 엣지 오케스트레이션은 [`hardware/k3s/README.md`](../../hardware/k3s/README.md) 의 복구 기록 수준이다.
-- 장치 노드 유닛이 사용자 `physical`·`/home/physical` 을 가정한다 — [OPEN_SOURCE_READINESS.md](../OPEN_SOURCE_READINESS.md).
+- 장치 노드 systemd 유닛은 템플릿이다 — `hardware/pi/deploy/install-units.sh --user <사용자>` 로 설치한다(`sudo cp` 로 직접 복사하면 기동 실패).

@@ -204,7 +204,7 @@ const HEALTH_ROBOT1_LIVE = {
     const rel = relative(root, file).split(sep).join('/');
     const text = readFileSync(file, 'utf8');
     if (/from '\.\.\/(\.\.\/)?(autodrive|detect)\//.test(text)) failures.push(`${rel}: 장애물 탐지 · 문 찾기 경계를 import 한다`);
-    if (/210\.110\.250\.33/.test(text)) failures.push(`${rel}: 장애물 탐지 AI 서버 주소가 경계 밖에 있다`);
+    if (/\b210\.110\./.test(text)) failures.push(`${rel}: 장애물 탐지 AI 서버 주소가 경계 밖에 있다`);
   }
 }
 

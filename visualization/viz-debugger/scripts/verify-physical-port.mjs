@@ -48,8 +48,8 @@ const FORBIDDEN = [
   // **테일넷을 통째로 막지 않는다** — `src/detect/` 가 같은 테일넷의 다른 기계를 쓰고
   // 그것은 그 경계 안에 있는 것이 맞다(`verify:capability-source` 와 같은 규칙).
   { pattern: /pi3\.local/, what: '드론 MQTT 브로커 이름' },
-  { pattern: /pi3\.tailcb6bfb/, what: '드론 테일넷 이름' },
-  { pattern: /192\.168\.50\.254|100\.85\.243\.54/, what: '드론 브로커 IP' },
+  { pattern: /pi3\.tail[0-9a-z]+\.ts\.net/, what: '드론 테일넷 이름' },
+  { pattern: /192\.168\.50\.254/, what: '드론 브로커 IP' },
   { pattern: /terminal\/[^\s'"`]*\/(downlink|uplink)/, what: 'MQTT 명령 토픽' },
   // 장비 상태 토픽도 경계 안에 있어야 한다 (260910). 구역 이름이 바뀌면 한 곳만 고친다.
   { pattern: /zoneA\/\+\/\+\//, what: 'MQTT 장비 상태 토픽' },
