@@ -1,0 +1,350 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+이 파일은 **백엔드(BE) 파트를 구현하는 Claude Code를 위한 상시 규칙집**이다. 설계는 별도
+채팅방에서 하고, 그 결과(작업 지시서 + 이 규칙)를 근거로 VS Code에서 구현한다. 매 세션 이 파일을
+먼저 읽고 아래 규약을 따른다.
+
+---
+
+## 0. 코드베이스 작업 가이드
+
+### 프로젝트 개요
+
+국가 인프라 전제의 엣지-클라우드 관측 백엔드 + 디지털 트윈(담당: 이대규). 센서·이동체·엣지·AI가
+발행하는 데이터를 성격(업무·관측·영상)에 따라 저장·중계·번역하고, 구역 트윈을 종합한다.
+MQTT·Kafka·OpenTelemetry·K3s·Tailscale은 **지금 쓰는 구현(교체 가능)**이지 핵심에 하드코딩된
+필수가 아니다.
+
+- 아키텍처 기준 문서: [`docs/be/00-architecture.md`](docs/be/00-architecture.md) (5구간 구조·결정 근거)
+- 미디어 경로: [`docs/be/02-media-path.md`](docs/be/02-media-path.md)
+- 구현 순서·Tier 분류: [`docs/be/01-standalone-implementation-plan.md`](docs/be/01-standalone-implementation-plan.md)
+- 요구사항 상태: [`docs/be/requirement-traceability.md`](docs/be/requirement-traceability.md)
+- 파트 간 공통 규격: [`contracts/common/`](contracts/common/) (공통 헤더·frame_ref, 백엔드 소유)
+- 파트 간 데이터 이름·형식: **통합데이터규약**(2026-10-13 문서 v3 · 데이터 판 `2.0` — 저장소 밖
+  `Claude outputs/261013_통합데이터규약_v3.md`). 다섯 파트 공통 기준이고 `contracts/common/` 규격이 그것을 따른다.
+  BE 적용 기록: [`reports/2026-10-13_1850_통합데이터규약_v3_적용.md`](reports/2026-10-13_1850_통합데이터규약_v3_적용.md)
+
+### 명령
+
+> **아래는 Phase 1까지 실제로 확정된 명령이다**(2026-09-07). 실행 위치는 **서버**이며, 코드는
+> 컴퓨터에서 편집해 사람이 서버로 복사한다(아래 "서버 배포 워크플로" 참조).
+
+```bash
+# ── 인프라 (Phase 0) — 서버 compose 디렉터리(~/capstone-db)에서. 서비스 이름 필수 ──
+docker compose up -d kafka
+docker compose ps kafka
+docker exec capstone_kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+# ── 백엔드 상주 4개 (Phase 3부터 systemd — 손으로 띄우지 않는다. Phase 4 4b 에서 mk2-capture 추가) ──
+sudo systemctl status mk2-ingest mk2-storage-consumer mk2-ws-echo mk2-capture
+journalctl -u mk2-ingest -f
+# 코드를 고친 뒤:  서버 사본에 복사 → sudo systemctl restart mk2-ingest mk2-storage-consumer mk2-ws-echo mk2-capture
+#
+# ⚠ 손으로 띄워야 할 때(격리 실험 등)는 먼저 유닛을 내린다 —
+#   ingest 는 client_id=mk2-ingest 가 고정이라 둘이 붙으면 서로 밀어낸다.
+#   sudo systemctl stop mk2-ingest && set -a; . /home/dg/capstone-db/.env; set +a
+#   source ~/capstone-db/phase1_work/venv_phase1/bin/activate   # Python 3.14
+#   python -m backend.ingest.bridge        # MQTT 구독 → 2단 검증 → Kafka  (READY 로그 뒤에 발행)
+#   python -m backend.storage.consumer     # 저장 sink   (그룹 mk2-storage)
+#   python -m backend.gateway.ws_echo      # WS 게이트웨이 (그룹 mk2-ws, ws://127.0.0.1:8765 /state·/media + 8766 /ingest — Phase 4)
+#     READY 로그 두 줄("WS 게이트웨이" · "엣지 입구 …" 또는 "엣지 입구 닫힘")을 확인한다. 토큰이 없는데 loopback 밖에 바인딩하면 exit 2.
+#   python -m backend.gateway.capture      # 4b 촬영본 PUT 수신단 (8767, MySQL media_capture — 4b 뒤에도 남긴다)
+#   python -m backend.gateway.capture --retention-dry-run [--max-bytes N]   # 보존 상한 초과분 선정만(삭제 안 함)
+
+# ── 4b 합성 업로더 (HW capture_upload.py 모양 — PUT 두 번: <세션>.manifest.json → <세션>.tar.gz) ──
+python tests/capture_uploader.py --entity-id go1-001 [--kind scan_capture_session --frames 8] [--no-manifest]   # → MK2_CAPTURE_URL
+#   4b DDL 은 사람이 root 로 1회: infra/sql/mk2_media_capture.sql → 서버 ~/capstone-db/mk2_sql/ 로 복사 뒤 적용(DDL → GRANT 순서가 파일 안에 있다)
+
+# ── 테스트 (Phase 1부터 pytest. 상주 3개가 떠 있어야 한다 — Phase 3부터 systemd 가 띄운다) ──
+python -m pytest -q
+python -m pytest -q tests/test_pipeline.py::test_valid_roundtrip
+python -m pytest -q tests/test_pipeline.py::test_contract_fixtures   # 인프라 없이도 도는 공통 규격 검증
+python -m pytest -q tests/test_contract_media.py tests/test_media_frame.py tests/test_media_dropold.py   # 미디어 규격·프레이밍·drop-old (소켓 없음, 컴퓨터에서도)
+#   tests/test_media_relay.py 13건은 엣지 입구 8766 에 닿을 때만 돈다 — 2026-09-22(실측 단계 1-d)부터 서버에서 열려 있어 skip 0 이 정상.
+#   skip 13 이면 8766 이 닫혔거나 .env 에 MK2_MEDIA_INGEST_URL 이 없다(8766 은 단일 주소 바인딩이라 시험이 그 주소로 붙는다).
+python -m pytest -q tests/test_capture_upload.py   # 4b — 프로세스 안에 수신단을 띄운다. MySQL 이 닿으면 실제 media_capture, 아니면 가짜 저장소(컴퓨터)
+
+# ── 미디어 송신 fixture (Phase 4 — 홉2 방식 B 참조 구현. 엣지 실물이 없을 때 그 자리) ──
+python tests/media_publisher.py --camera-id go1-001_front --encoding h264 --fps 30 --loop   # → MK2_MEDIA_INGEST_URL (기본 ws://127.0.0.1:8766/ingest)
+python tests/media_publisher.py --encoding jpeg --fps 15 --count 45
+#   (v2 프레임 헤더 · 입구 쿼리 camera_id — 2026-10-13 통합데이터규약. 옛 인자 --source-id 도 받는다)
+#   뷰어 확인: backend/gateway/console.html 을 브라우저로 열고 ws://<서버>:8765 + 토큰 + camera_id (H.264 는 WebCodecs)
+```
+
+- 설치는 필요 없다 — 저장소 루트에서 `python -m ...`으로 실행하면 임포트가 잡힌다. 새 환경을
+  만들 때만 `pip install -e ".[dev]"`.
+- 접속 정보·경로는 전부 환경변수다. 단일 출처는 [`backend/settings.py`](backend/settings.py)의
+  환경변수 표(`MK2_MQTT_HOST`·`MK2_BROKER_HOST`·`MK2_KAFKA_BOOTSTRAP`·`MK2_WS_*`·
+  **`MK2_OTEL_ENDPOINT`·`MK2_OTEL_EXPORT_INTERVAL`·`MK2_OTEL_SERVICE_NAME`** 등).
+  `MK2_OTEL_ENDPOINT`가 비어 있으면 관측은 **no-op**이고 업무 경로는 그대로 돈다.
+  **Phase 4(미디어)에서 더해진 것:** `MK2_WS_HOST`는 **콤마 목록**(`127.0.0.1,<서버 tailscale IP>`) ·
+  `MK2_WS_TOKEN`·`MK2_EDGE_TOKEN`(URL 쿼리 토큰 — **loopback 이 아닌 바인딩에 토큰이 비어 있으면 기동 시
+  이름을 대며 죽는다**) · `MK2_WS_URL` · `MK2_MEDIA_INGEST_PORT`/`_HOST`(엣지 입구 8766, **`0`이면 닫힘** —
+  2026-09-22 실측 단계 1-d 부터 **열려 있다**) · `MK2_MEDIA_INGEST_URL`(서버 `.env` 에
+  `ws://<서버 tailscale IP>:8766/ingest` — 8766 은 **단일 주소** 바인딩이라 시험·송신기가 이 주소로 붙어야 한다) · `MK2_MEDIA_DROP_WINDOW_MS`·`MK2_MEDIA_BUFFER_MAX_BYTES`·
+  `MK2_MEDIA_MAX_FRAME_BYTES`·`MK2_MEDIA_WRITE_LIMIT`·`MK2_MEDIA_SNDBUF`(drop-old 매개변수 — 지연 바운드 =
+  `T_drop + write_limit + sndbuf`) · **4b** `MK2_CAPTURE_HOST/PORT/TOKEN/DIR/MAX_BYTES/URL`(PUT 입구 8767, `0`이면
+  닫힘, 저장 루트는 서버 `.env`로 저장소 밖 절대 경로).
+  ⚠ 토큰은 **영숫자만**(`.env`를 읽는 파서가 셋 — 셸 `source`·compose dotenv·systemd `EnvironmentFile`).
+- 최소 발행자(수동 확인용): `python tests/publisher.py [--channel state|status|heartbeat]
+  [--invalid missing-zone|timestamp]` — MQTT만 쓰므로 컴퓨터에서도 돈다.
+
+- **Phase 0(인프라 기동)은 헬스체크로 검증**하고 pytest를 쓰지 않는다.
+- **Phase 1 이후는 pytest**로 "가짜 발행자 → 파이프라인 → 예상 저장/중계" 회귀를 검증한다.
+
+### 구조와 흐름
+
+데이터가 성격에 따라 갈라져 흐르는 것이 핵심이다. 상위 로직은 특정 브로커·저장 제품 API를 직접
+호출하지 않는다.
+
+```
+backend/
+  observability.py  관측 어댑터 — opentelemetry 를 import 하는 유일한 파일(원칙 1). A층·C층 발신, 로그 경로
+  ingest/        MQTT 구독 → Kafka produce (엣지 소비자, 브릿지)
+  storage/       TSDB writer(계측) + MySQL writer(감사·레지스트리·임무 실행 기록) — 저장 축
+                 derive.py = C층(업무 값의 관측 표현 파생, 저장 소비자 안)
+  availability/  가용성 판정기 (업무 평면 MQTT 세션 우선 + 관측 평면 통합)
+  gateway/       WS 게이트웨이 — Kafka 소비자이면서 WebSocket 서버 (서버 내부 컴포넌트)
+                 ws_echo.py = /state(상태 push) · /media(뷰어 분기) · /ingest(엣지 입구, 별도 포트) — 파일 이름은 Phase 1 그대로
+                 media.py   = 방식 B 프레이밍 · 헤더 검증(필수·타입만, 페이로드 안 열음) · GOP 인지 drop-old · Relay (소켓 없음)
+                 console.html = 확인용 최소 뷰어(/state + /media, WebCodecs/createImageBitmap) — VZ 앱이 아니다
+                 capture.py = 4b 촬영본(정지 촬영 세션) PUT 수신단 — PUT 두 번(매니페스트→tar.gz), 파일시스템 + MySQL media_capture 한 행. 별도 유닛 mk2-capture(8767)
+  twin/          디지털 트윈 (위치·클래스 융합, 커버리지·사각지대, 시의성, 로봇 투입)
+contracts/common/  파트가 나뉘는 지점의 공통 규격 (JSON Schema). 이것이 기준이지 파이썬 타입이 아니다.
+                   message(공통 헤더) · frame-reference · media-header(Phase 4 — 2026-10-13 v2 평평한 프레임 헤더) ·
+                   detections(초안, v2 비전 결과) · payload/ 본문 7종(2026-09-29 drone 추가)
+                   *.v1.schema.json 둘 = 과도기 사본(v1 frame_ref·미디어 헤더 — 모든 생산자가 v2 로 바뀐 뒤 단계 5 에서 지운다)
+                   파일 간 $ref 는 backend/ingest/envelope.py 의 레지스트리($id → 로컬 파일)가 푼다 — 네트워크 0
+infra/             docker-compose · Collector · Grafana 등 배포 자산
+  systemd/         상주 4개 유닛(mk2-ingest · mk2-storage-consumer · mk2-ws-echo · mk2-capture). 커밋한다
+  sql/             MySQL·TSDB DDL — 서버 적용 경로는 아래 표(이름이 다르다). mk2_media_capture.sql = 4b DDL + GRANT(순서 강제)
+tests/             pytest + 가짜 발행자(publisher.py MQTT · media_publisher.py 홉2 방식 B · edge_probe_publisher.py B층)
+                   fixtures/ = 합성 H.264(464x400, IDR 15) · JPEG 3장 (커밋, *.h264 binary)
+```
+
+**저장소 ↔ 서버 경로 대응표(제약 30 — 이름이 다른 곳이 있다. 헷갈리면 엉뚱한 파일을 고친다):**
+
+| 저장소(컴퓨터 작업본) | 서버 |
+|---|---|
+| `infra/sql/` | **`/home/dg/capstone-db/mk2_sql/`** ← 이름이 다르다 |
+| `infra/docker-compose.yml`(gitignore 작업본 = 서버 파일 사본) | `/home/dg/capstone-db/docker-compose.yml` |
+| `infra/config/`(gitignore) | `/home/dg/capstone-db/config/` |
+| **없다**(`infra/.env`는 존재하지 않는다) | **`/home/dg/capstone-db/.env` 하나뿐**(`600 dg dg`) |
+| `infra/systemd/*.service` | `/etc/systemd/system/*.service`(사람이 복사 + `daemon-reload`) |
+| 저장소 루트 | `/home/dg/capstone-db/phase1_work/Physical-Project-mk2/`(저장소 **사본** — `git pull` 아님) |
+| — | venv `/home/dg/capstone-db/phase1_work/venv_phase1/`(시스템에 `python`이 없다) · 임시 대기 `phase1_work/phase4_new/` |
+
+서버 상태·실주소·토큰은 `_serverinfo/`(gitignore)와 서버 `.env`에만 둔다. 채팅으로 주는 **실행 명령에는 실값**을,
+**커밋되는 문서·주석에는 자리표시자**(`<서버 tailscale IP>`)를 쓴다.
+
+**흐름 요약(구간별):**
+1. **말단↔엣지** = 업무 MQTT / 관측 OTLP / 명령 하달 MQTT / 생사 LWT+하트비트.
+2. **엣지 내부** = Mosquitto + MQTT→Kafka 브릿지 + Collector(Agent) + 엣지 Prometheus + K3s.
+3. **엣지↔서버** = 업무 Kafka / 관측 페더레이션 요약 / log·trace 원본 / 명령 Kafka. 전부 단일
+   Tailscale 터널 공유.
+4. **서버 내부** = Kafka에서 여러 소비자가 같은 걸 읽어(다중 소비자 구조) AI·TSDB·트윈으로.
+   감사·레지스트리 MySQL. 가용성 통합
+   단일 지점(업무 평면 우선). Collector(Gateway)→Loki·Tempo.
+5. **서버↔사용자** = WS 게이트웨이(Kafka 소비자+WebSocket 서버)로 실시간 push, 조회 프록시로
+   pull, 백엔드 캐시로 재접속 스냅샷, 미디어는 별도 WS 중계.
+
+### 서버 배포 워크플로 — git pull 배포가 아니다
+
+인프라·서버 설정 작업은 아래 방식으로 흐른다. **서버에 저장소를 clone해서 `git pull`로
+배포하지 않는다.**
+
+- **편집은 컴퓨터(이 저장소), 실제 실행은 서버(sysai-server2).** 깃허브는 코드·문서 동기화용
+  이지 서버 배포 통로가 아니다.
+- 서버에는 이미 도는 compose가 있다(`~/capstone-db/docker-compose.yml`). **그 서버 파일을
+  수정**하는 것이 실제 배포다. `infra/docker-compose.yml`은 그 서버 파일의 **작업본(청사진)**
+  이며, 평문 비밀번호·내부망 주소를 담고 있어 **커밋하지 않는다**(`.gitignore`).
+- 흐름: 컴퓨터 `infra/`에서 편집 → **사람이** 서버에 복사·적용 → 결과·에러를 컴퓨터로 회수 →
+  수정. Claude Code는 서버 파일을 직접 수정하지 않고, 서버에 적용할 내용을 만들어 사람에게 준다.
+- **서버 상태가 필요하면 먼저 확인 명령을 제시하고 결과를 받은 뒤** 착수한다. 서버 상태 조회
+  결과·설정 사본은 `_serverinfo/`(gitignore)에 두고 참고한다 — 서버 포트·방화벽·내부 IP가
+  노출되면 안 되므로 커밋 금지.
+- 이미 서버에서 도는 서비스는 **지웠다 다시 깔지 않는다.** `docker compose up -d`에 반드시
+  서비스 이름을 명시한다(이름 없이 실행하면 `:latest` 서비스가 재생성될 수 있다).
+
+### 코드 작성 규약
+
+- **모든 모듈·테스트 docstring 상단에 `implements: BE-X-NN` 형식으로 요구사항 ID를 남긴다.**
+  구현 후 [`docs/be/requirement-traceability.md`](docs/be/requirement-traceability.md)의 해당
+  행(상태·구현 위치·테스트)을 함께 갱신한다.
+  ```python
+  """MQTT 구독 → Kafka produce 브릿지.
+
+  implements: BE-T-01, BE-T-02
+  tests: 봉투 검증 격리, 브릿지 왕복
+  """
+  ```
+- **변수·필드 이름은 [`contracts/common/`](contracts/common/)의 공통 헤더를 기준으로 통일한다.**
+  공통 헤더 항목(`source_id`·`entity_id`·`node_id`·`zone_id`·`timestamp`·`sequence_id`·`session_id`·
+  `sent_at`·`correlation_id`·`origin_kind`)는 이 이름 그대로 쓴다. 프레임·비전 칸 이름(`camera_id`·`frame_ref`·
+  `received_at`·`emitted_at` 등)은 통합데이터규약(데이터 판 2.0)을 따른다. 새 이름이 필요하면 먼저 공통 규격에
+  의미를 정의한다.
+- **작업 단위별 보고서는 `reports/YYYY-MM-DD_HHMM_주제.md` 형식으로 남긴다** — 배경 / 한 일 /
+  검증 / 다음. 이 보고서가 다음 설계 세션의 입력이 된다.
+- 주석·docstring은 한국어를 기본으로 하고, 요구사항 인용은 원문을 섞어 쓴다.
+- 파일 인코딩은 UTF-8, 줄바꿈은 LF(`.gitattributes`가 강제). 배포 대상이 리눅스라 CRLF 금지.
+
+---
+
+## 1. 절대 준수 원칙
+
+아키텍처 기준 문서에서 도출한 불변 원칙이다. 구현이 이를 어기면 재작업이다.
+
+1. **특정 기술을 핵심에 하드코딩하지 않는다.** MQTT·Kafka·OpenTelemetry·K3s·Tailscale·저장
+   제품(TSDB/MySQL)은 지금 쓰는 구현이며 교체 가능하다. 상위 로직은 목적 수준 인터페이스만 쓴다
+   (BE-C-05·AI-C-12 정합).
+2. **데이터 성격이 채널을 결정한다.** 업무=MQTT(말단)/Kafka(백본), 관측=OpenTelemetry, 영상=별개
+   미디어 경로, 브라우저=WebSocket. 개발자가 채널을 임의 선택하지 않는다(돌발 채널 금지).
+   **관측 평면이 담는 것은 시스템 지표만이 아니다** — 업무 수치·사건도 관측 신호로 파생해 관측
+   평면에 실을 수 있다([`docs/be/00-architecture.md`](docs/be/00-architecture.md) §8-3). 단 이것은
+   **파생이지 전송 대체가 아니다** — 업무 데이터의 전송은 그대로 MQTT(말단)·Kafka(백본)이고,
+   관측 평면에는 사본 성격의 신호가 추가로 흐를 뿐이다. **명령과 영상은 관측 평면에 싣지 않는다.**
+3. **영상 픽셀을 업무·관측 메시지에 싣지 않는다.** MQTT/Kafka/OTLP에 JPEG·H.264를 넣지 않는다. 영상은
+   별도 미디어 경로(RTP/UDP → WS 방식 B → WSS)로만 흐른다. **현재 프로파일(Phase 4 결정 5) — 뷰어는
+   tailnet 구성원이다. 서버→뷰어는 터널 위 `ws` + 토큰이며, tailnet 밖 뷰어용 WSS는 Phase 6.** 코덱은
+   소스 native 그대로 종단까지 간다(결정 1) — 중계 경로는 헤더만 읽고 페이로드를 열지 않는다(디코드·
+   재인코딩 금지). 시연의 `zoneA/robot/go1-001/frame` 토픽(JPEG-on-MQTT)은 구독하지 않는다.
+4. **성격별 저장 모델을 분리한다.** 계측 시계열=TSDB, 감사·레지스트리·임무 실행 기록=MySQL(테이블
+   분리), 관측=Prometheus/Loki/Tempo. **MongoDB는 현재 채택하지 않는다** — 영구 배제가 아니라
+   "타당한 근거 없이 도입하지 않는다"는 뜻이며, 필요해지면 근거와 함께 재검토한다. 트윈·명령
+   진행(중간 단계)·가용성은 저장하지 않고 WS push한다. **단, 명령의 최종 결과는 감사에 저장하고,
+   임무 실행 사건은 실행 기록으로 보존한다**(BE-S-08 — 되감기의 근거).
+   업무 데이터의 원본은 여기(계측=TSDB, 감사=MySQL, 임무 실행 기록=MySQL 별도 테이블)이며, 같은
+   값의 관측 표현은 파생이다 — [`docs/be/00-architecture.md`](docs/be/00-architecture.md)
+   §6-6·§8-1의 구분과 같다.
+5. **감사는 요약하지 않는다.** 명령·조작의 책임 기록은 요약·필터 없이 전량 MySQL로 직행한다.
+   actor는 토큰에서, 시각은 서버 시각으로 백엔드가 주입한다(위조 불가). 명령 이력(감사)과 기술
+   추적(Tempo)은 다른 목적이라 섞지 않는다.
+6. **관측 metric만 요약하고 log·trace는 원본을 유지한다.** metric은 엣지 raw 보관 + 페더레이션
+   요약(부하 구역 수 비례). 장치 생사·치명 오류는 요약에 섞지 않고 개별 신호로 유지한다.
+7. **장치 최종 가용성은 백엔드가 단일 지점에서 판정한다.** 두 평면(MQTT 세션 / 관측 up·absent)을
+   통합하되 **충돌 시 업무 평면 우선**(MQTT 세션 online이면 가용, offline이면 up=1이어도 불가용).
+   AI가 이를 중복 판정하지 않는다.
+8. **명령은 전달만으로 완료되지 않는다.** 수신 확인(ACK) → 수행 중 → 물리 상태 변화 → 완료/실패
+   4단계로 승격한다. 되돌리기 어려운 명령(수문·펌프·모터)은 ACK가 아니라 실제 수행 결과로 확정
+   표시한다. 전 파트 단일 상관키(command_id)는 백엔드가 발급한다. **수락/거부는 진행 단계가
+   아니라 별도의 수락 결과로 표현하고, 취소는 요청 수락과 실제 취소 완료를 구분한다. 긴급정지는
+   일반 취소와 구분한다. 동일 command_id가 재전달되면 물리 실행을 반복하지 않는다(멱등).**
+9. **파트가 나뉘는 지점의 기준은 JSON Schema다.** `contracts/common/`이 기준이며 파이썬 타입을
+   다른 파트에 노출·강제하지 않는다. 공통 헤더 필수 5항목(`schema_version`·`source_id`·
+   `node_id`·`zone_id`·`timestamp`)을 지킨다.
+10. **프레임을 처음 손에 넣은 기기(pi7 · pi3 · 360 노트북 · HW 엣지)가 번호(`sequence_id`)와 시각
+    (`timestamp`)을 한 번 붙인다.** 그 뒤 거치는 곳(엣지 · DS · 서버 · AI)은 다시 만들지 않고, 받은 시각
+    (`received_at`)만 더한다. 번호는 **손에 넣는 순간** 매긴다 — 보내는 순간에 매기면 버린 장이 불연속으로
+    보이지 않는다. 결과·상태는 그 프레임을 `frame_ref{camera_id, sequence_id, timestamp}`로 가리키고, 영상과
+    탐지가 뷰어에서 F==F(세 칸 모두 같음)로 합류해야 오버레이가 정합한다(2026-10-13 통합데이터규약 BE-10).
+11. **Kafka는 장기 저장소가 아니다.** 다중 소비자 독립 읽기·단기 버퍼·단기 replay 용도다. 재난
+    데이터 장기 보존은 TSDB 보존 사안이지 Kafka retention이 아니다. "재학습 위해 Kafka"라고
+    표현하지 않는다.
+12. **엣지↔서버는 사설망이라 터널이 강제다.** 업무·관측·영상이 단일 Tailscale 터널을 공유하되
+    논리 채널은 분리된다. Tailscale은 지금 쓰는 구현이며 교체 가능하다.
+13. **WS 게이트웨이는 서버 내부 컴포넌트다.** Kafka 소비자이면서 WebSocket 서버. 브라우저는
+    Kafka·MQTT에 직접 붙지 않고 이 게이트웨이만 통한다. 이는 단순 프로토콜 변환(브릿지)과 달리
+    구독·인증·캐시·명령 번역까지 하는 백엔드 로직이다.
+14. **부하를 구역 수에 비례하게 유지한다.** 엣지가 브로커·수집기·관측 raw를 1차 수용한다. 중앙에
+    모든 raw를 몰지 않는다.
+15. **국가 인프라급으로 설계하고 캡스톤은 특수 사례로 포함한다.** 각 결정을 "추상 요구 + 현재
+    배포 프로파일"로 서술한다. 캡스톤 규모로 축소해 설계하지 않는다.
+
+---
+
+## 1-A. 구현 규율 — 어떻게 일하는가
+
+원칙(§1)이 "무엇을 지키나"라면, 이건 "어떻게 진행하나"다. Phase 0에서 이 규율이 없어 작업이
+반복해서 헛돌았다. 매 구현 세션에서 지킨다.
+
+1. **시작 전에 CLAUDE.md와 작업 지시서를 처음부터 끝까지 정독한다.** 일부만 읽고 착수하지
+   않는다. 지시서의 "이번에 하지 않는 것"과 "완료 판정"을 먼저 확인한다.
+2. **사실을 다 받기 전에 해법을 제시하지 않는다.** 서버 상태·설정 원문 등 필요한 사실은 먼저
+   확인 명령으로 받고, 그 뒤에 판단한다.
+3. **지시서와 현실이 다르면, 차이를 먼저 보고하고 결정을 받는다.** 혼자 절충안을 만들지 않는다.
+4. **사용자가 결정을 말하면 그대로 한다.** 우려는 한 문장으로만, 반복하지 않는다. (예: 사용자가
+   "UFW 열겠다"고 하면 연다. 되묻지 않는다.)
+5. **지시서에 없는 것은 꺼내지 않는다.** 필요해 보이면 한 줄로 묻고 넘어간다. 범위를 임의로
+   넓히지 않는다(예: Phase 0에서 DB 스키마·인증·포트 정책을 임의로 만들지 않는다).
+6. **설정값에 선택지가 있으면 임의로 정하지 않고 표로 제시하고 결정을 받는다.** 특히 공통 규격·
+   채널·저장 모델·가용성 규칙·포트/주소/인증처럼 뒤 Phase나 다른 파트에 영향 주는 것.
+7. **막히거나 결정이 필요하면 `reports/`에 남기고 멈춘다.** 추측으로 진행하지 않는다.
+8. **작업 중 발견한 gap·이월사항은 반드시 두 곳에 흘려보낸다:** (a) 관련 요구사항 행을
+   `requirement-traceability.md`에 gap과 함께 기록, (b) **그 조치가 이뤄질 Phase가 있으면
+   `docs/be/01-standalone-implementation-plan.md`의 그 Phase 항목에 이월사항으로 적는다.**
+   보고서에만 적고 끝내지 않는다 — 보고서는 직전 세션만 읽으므로, 몇 Phase 뒤에 쓰일 발견은
+   plan·traceability에 적어야 그 시점에 살아난다.
+
+## 2. 구현 시 금지 사항
+
+- 인지·저장·중계 코드 안에서 특정 protocol client(MQTT/Kafka 등)를 직접 생성하지 않는다 —
+  어댑터/provider 지점 뒤에 둔다.
+- 영상 픽셀을 MQTT/Kafka/OTLP 메시지에 직접 싣지 않는다.
+- 감사·치명 오류·장치 생사를 일반 metric 요약에 섞어 개별 의미를 잃게 하지 않는다.
+- 장치 최종 availability를 백엔드 밖(또는 AI)에서 독자 재판정하지 않는다.
+- Kafka를 장기 데이터베이스처럼 쓰지 않는다.
+- MongoDB를 근거 없이 도입하지 않는다 — 현재 채택 없음이며 필요 시 근거와 함께 재검토한다.
+  (RBAC는 채택 결정되었으므로 금지 대상이 아니다 — `docs/be/00-architecture.md` §6-2 "인가(RBAC)"·
+  BE-Q-04 참조.)
+- 공통 헤더 항목 이름을 공통 규격과 다르게 임의로 짓지 않는다 — 먼저 `contracts/common/`에
+  정의한다.
+- 실제 `.env`·토큰·키·인증서·내부망 endpoint를 커밋하지 않는다(Public 저장소).
+- 업무 값의 관측 표현(파생)을 원본 저장 대신 쓰지 않는다 — 조회·감사·학습 재료를 관측
+  저장소에서 끌어오지 않는다.
+- **`opentelemetry`를 `backend/observability.py` 밖에서 import 하지 않는다** — 관측 SDK는 그
+  어댑터 뒤에 둔다(원칙 1). 호출부는 `setup`·`count`·`updown`·`gauge`·`observe`·`log_handler`·
+  `shutdown` 목적 인터페이스만 쓴다. 관측 저장소가 죽어도 업무 경로가 멈추면 안 된다.
+- **관측 라벨에 값이 계속 달라지는 것을 넣지 않는다** — `session_id`·`internal_seq`·`sequence_id`·
+  시각(`timestamp`·`ts`·`capture_timestamp`·`sent_at`·`received_at`·`emitted_at`)·프레임 식별자(`frame_id`·`frame_ref`)·상관키
+  (`correlation_id`·`command_id`·`mission_id`·`node_ref`·`client_request_id`·`plan_id`·`event_key` —
+  Phase 4 확장, `node_id`는 물리 노드라 허용). 어댑터가 `ValueError`로 막는다(조용히 버리지 않는다).
+  **A층(백엔드 자기 관측)에는 `source_id`·`zone_id`·`entity_type`도 넣지 않는다** — 장치 수만큼
+  시계열이 곱해진다. C층(업무 값)에서만 쓴다. 미디어 지표는 전부 `be.gateway.*`(A층)이며 카메라(`camera_id`)별
+  회계는 연결 종료 로그 한 줄로 Loki에 남긴다.
+- **미디어 헤더의 값 어휘를 `enum`으로 잠그지 않는다** — `encoding`·`codec`·`alignment`는 string +
+  `$comment`. 서버는 필수·타입만 검증한다(제약 10). 프레임 헤더의 번호·시각은 처음 손에 넣은 기기가
+  붙인 것을 바이트 그대로 전파하고 서버·AI가 재생성하지 않는다(원칙 10). 과도기에는 v1 헤더(`frame_ref`
+  묶음)도 받는다 — `frame_ref` 유무로 가른다(BE-07, 단계 5 에서 지운다).
+
+---
+
+## 3. 요구사항 추적 규칙
+
+각 구현 단위와 테스트에 관련 요구사항 ID를 남긴다.
+
+```text
+implements: BE-T-02, BE-C-01
+tests: 봉투 검증 격리, MQTT→Kafka 브릿지 왕복
+```
+
+- 코드를 추가하면 [`docs/be/requirement-traceability.md`](docs/be/requirement-traceability.md)의
+  해당 행 상태·구현 위치·테스트를 갱신한다.
+- 상태를 **완료**로 올릴 때는 반드시 동작과 허용 범위를 검증하는 테스트를 함께 명시한다(테스트
+  없는 완료 금지). 검증이 무력하지 않은지(무효 입력을 실제로 거부하는지) 음성 대조도 포함한다.
+- 완료 판정은 특정 모델 정확도나 특정 기술 사용 여부가 아니라 **해당 요구사항이 정의한 동작과
+  허용 범위가 실제로 보장되는지**로 한다.
+
+---
+
+## 4. 작업 방식 (설계 → 구현 루프)
+
+- **이 CLAUDE.md는 설계방·구현방 둘 다 읽는다.** 구현방(VS Code Claude Code)은 저장소를 열면
+  자동으로, 설계방은 고정 세트로 전달받아 읽는다. 따라서 §1-A 구현 규율은 설계방이 지시서를
+  만들 때도, 구현방이 코드를 짤 때도 같은 기준이다.
+- **채팅방 진입 규칙 (부트스트랩):** 새 설계방을 열 때는 설계방이 지켜야 할 규칙 문서
+  `docs/be/설계_규칙.md`와 `docs/be/작업지시_템플릿.md`를 이 CLAUDE.md와 **함께 올린다.**
+  이 둘에 "설계방이 지시서를 어떻게 만드는가"(골격·규율 반영·이월)가 있어, 빠지면 새 방이 규칙을
+  모른 채 시작한다. 무엇을 올릴지 전체 목록은 `docs/be/설계방_진입가이드.md` §1(고정 세트 11개
+  + Phase별 추가)에 있다 — 단 그 진입가이드 자체는 **사람용 운영 절차**라 설계방에 올리지 않는다
+  (AI가 읽으면 절차를 자기 행동으로 오해한다). **규칙이 문서에만 있고 방에 전달되지 않으면 없는
+  것과 같다.**
+- **설계는 별도 채팅방에서** 하고, 그 결과를 작업 지시서로 굳혀 이 저장소에 넣는다. 작업
+  지시서는 `docs/be/작업지시_템플릿.md`의 골격을 따른다.
+- **구현은 이 저장소에서** 하며 이 CLAUDE.md와 해당 작업 지시서를 읽고 진행한다. 계획이 이미
+  문서로 나와 있으므로 새로 설계하지 말고 지시서 범위대로 구현한다.
+- **막히면 임의로 정하지 말고** `reports/`에 남기고 멈춘다. 특히 공통 규격 변경·채널 추가·저장
+  모델 변경·가용성 판정 규칙은 프로젝트 전체가 걸린 결정이라 혼자 바꾸지 않는다.
+- 한 작업 단위가 끝나면 `reports/YYYY-MM-DD_HHMM_주제.md`(배경/한 일/검증/다음)를 남긴다 — 이
+  보고서가 다음 설계 세션으로 돌아간다.
