@@ -1,0 +1,18 @@
+**/__pycache__
+**/*.pyc
+.pytest_cache
+*.egg-info
+.venv
+venv*
+.env
+.env.*
+_serverinfo
+_hwsrc
+media_capture
+*.jsonl
+reports
+infra
+*.md
+docs
+# 저장 축 조회 SQL 은 코드·테스트가 읽는 실행 자산이다(문서가 아니다)
+!docs/be/queries
