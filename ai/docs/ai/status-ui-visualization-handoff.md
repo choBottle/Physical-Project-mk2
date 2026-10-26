@@ -34,10 +34,10 @@
 cd perception-framework
 python3 tools/status_ui/serve.py \
   --config config/status_ui.example.json \
-  --control local --host 127.0.0.1 --port 8765
+  --control local --host 127.0.0.1 --port 8775
 ```
 
-브라우저에서 `http://127.0.0.1:8765/`를 연다. 포트가 사용 중이면 `--port 8766` 또는 `--port 0`으로 바꾸고 터미널에 출력된 주소를 연다. 종료는 `Ctrl+C`다. 접속 주소는 서버가 실행되는 환경 기준이며 원격 개발 환경에서는 해당 포트를 전달해야 한다.
+브라우저에서 `http://127.0.0.1:8775/`를 연다. 포트가 사용 중이면 `--port 8776` 또는 `--port 0`으로 바꾸고 터미널에 출력된 주소를 연다. 종료는 `Ctrl+C`다. 접속 주소는 서버가 실행되는 환경 기준이며 원격 개발 환경에서는 해당 포트를 전달해야 한다.
 
 설정 파일:
 
@@ -66,8 +66,8 @@ python3 tools/status_ui/serve.py \
 | `POST /api/reset` | 검토 도구의 배치·이벤트·control 상태 초기화 |
 
 ```bash
-curl -s http://127.0.0.1:8765/api/functions
-curl -s -X POST http://127.0.0.1:8765/api/functions/whatif \
+curl -s http://127.0.0.1:8775/api/functions
+curl -s -X POST http://127.0.0.1:8775/api/functions/whatif \
   -H 'Content-Type: application/json' \
   -d '{"overrides":{"*":{"exclude_providers":["unidepth"]}}}'
 ```

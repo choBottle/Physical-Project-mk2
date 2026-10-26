@@ -9,14 +9,14 @@
 ```bash
 cd perception-framework
 .venv/bin/python tools/status_ui/serve.py --config config/status_ui.example.json
-# → http://127.0.0.1:8765  (브라우저에서 열기; WSL2면 Windows 브라우저에서 같은 주소)
+# → http://127.0.0.1:8775  (브라우저에서 열기; WSL2면 Windows 브라우저에서 같은 주소)
 ```
 
 | 항목 | 값 |
 |---|---|
 | 실행 파일 | `perception-framework/tools/status_ui/serve.py` (stdlib만 사용, 추가 설치 없음) |
 | 화면 | `perception-framework/tools/status_ui/index.html` (외부 리소스 0 — 폐쇄망에서도 렌더) |
-| 기본 주소 | `http://127.0.0.1:8765` — `--host`, `--port`로 변경. `--port 0`은 빈 포트 자동 선택 |
+| 기본 주소 | `http://127.0.0.1:8775` — `--host`, `--port`로 변경. `--port 0`은 빈 포트 자동 선택 |
 | 설정 파일 | `perception-framework/config/status_ui.example.json` (노드·배포 프로파일·capability 목록) |
 | provider 목록 | 설정 파일의 `providers_manifest`가 가리키는 manifest — 기본 `config/providers.status_ui.example.json` |
 | 배치 백엔드 | `--control local`(기본, `LocalControlSupervisor` 인메모리) / `--control k3s [--namespace default]` |
@@ -41,7 +41,7 @@ cd perception-framework
 ## 3. API (curl로 직접 확인)
 
 ```bash
-B=http://127.0.0.1:8765
+B=http://127.0.0.1:8775
 curl -s $B/api/config | python3 -m json.tool        # 노드·control 모드·manifest 경로
 curl -s $B/api/vocabulary                            # STATE_CHANGE_REASONS, 파생 등급 매핑
 curl -s "$B/api/resolve?node_id=pi6"                 # 기준선 해석 결과(+alternatives)

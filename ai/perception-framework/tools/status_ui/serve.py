@@ -85,7 +85,7 @@ from perception_framework.runtime.placement import PlacementReconciler, node_sel
 
 UI_DIR = Path(__file__).resolve().parent
 DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 8765
+DEFAULT_PORT = 8775  # 8765 는 중앙 백엔드 WS 게이트웨이 — docs/PORTS.md
 DEFAULT_LABELS_FILENAME = "status_ui.labels.json"
 # Placement commands the page can show; the labels file must name each.
 PLACEMENT_COMMANDS = ("start", "stop", "in_process")

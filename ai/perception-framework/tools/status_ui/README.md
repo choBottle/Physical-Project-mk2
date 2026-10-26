@@ -62,10 +62,10 @@
 ```bash
 cd perception-framework
 python tools/status_ui/serve.py --config config/status_ui.example.json
-# → status_ui: http://127.0.0.1:8765/  control=local
+# → status_ui: http://127.0.0.1:8775/  control=local
 ```
 
-옵션: `--host 127.0.0.1` `--port 8765`(0이면 빈 포트를 골라 출력) `--control local|k3s`
+옵션: `--host 127.0.0.1` `--port 8775`(0이면 빈 포트를 골라 출력) `--control local|k3s`
 `--namespace default` `--verbose`(access log).
 
 ## 엔드포인트
@@ -73,7 +73,7 @@ python tools/status_ui/serve.py --config config/status_ui.example.json
 전부 JSON(UTF-8, `Cache-Control: no-store`). 모르는 경로는 404 JSON. 응답은 언어 중립(id만).
 
 ```bash
-B=http://127.0.0.1:8765
+B=http://127.0.0.1:8775
 curl -s $B/api/labels                       # 라벨 파일 그대로 (languages/ui/capability_kinds/functions/states/grades/reasons/roles/commands)
 curl -s $B/api/functions                    # 기능 축: functions[] {state, derived_grade, required[], optional[], resources, supplement[]} + served + nodes
 curl -s $B/api/fleet                        # 모든 노드 resolve + served{kind: [{node_id, role, provider_id, priority, cost, ...}]}

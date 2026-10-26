@@ -69,6 +69,8 @@ jobs:
       - run: python -m pytest -q
         env:
           OTEL_SDK_DISABLED: "true"
+      # 이미지가 빌드되는지까지 본다 — 저장소에서 빠진 경로를 COPY 해 빌드가 깨진 적이 있다
+      - run: docker build -q -t mk2-ai-ci .
 
   secrets:
     name: 비밀값 스캔 (이번 변경분)
