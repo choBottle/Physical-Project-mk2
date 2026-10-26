@@ -3,6 +3,9 @@
 #
 # go1-front-upload 가 올린 프레임의 인지 결과를 되받는 것이라 둘은 한 쌍이다.
 # 업로더가 죽어 있으면 여기는 갱신 없는 같은 timestamp 만 보고 전송을 생략한다.
+#
+# 설치: pi/deploy/install-units.sh go1-detect-forward
+# 인지 서버 주소는 /etc/hw-robot.env 의 HW_DETECT_BASE 로 준다(hw-robot.env.example 참고).
 [Unit]
 Description=Go1 detection forwarder to Unity twin (HW-R-07)
 After=network-online.target go1-front-upload.service
@@ -11,10 +14,11 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-User=physical
-WorkingDirectory=/home/physical/hw/pi
+User=@MK2_USER@
+WorkingDirectory=@MK2_PI_DIR@
 StandardInput=null
 Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/hw-robot.env
 ExecStart=/usr/bin/python3 -m robot.go1_detect_forward --unity-ip 192.168.50.244 --hz 10
 Restart=always
 RestartSec=3

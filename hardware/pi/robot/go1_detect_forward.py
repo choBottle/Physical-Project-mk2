@@ -28,7 +28,7 @@ Unity `Go1ObstacleJsonReceiver.Go1ObstaclePacket` 의 필드가 서버 응답과
 timestamp 가 그대로면 보내지 않는다.
 
 사용:
-    cd ~/hw/pi && python3 -m robot.go1_detect_forward --unity-ip 192.168.50.244
+    cd ~/hw/pi && HW_DETECT_BASE=http://<server-ip>:7864 \n        python3 -m robot.go1_detect_forward --unity-ip <unity-ip>
 """
 import argparse
 import json
@@ -38,7 +38,9 @@ import sys
 import time
 import urllib.request
 
-DEFAULT_BASE = "http://210.110.250.33:7864"
+# 인지 서버 주소. 기관마다 다르므로 저장소에는 로컬 기본값만 둔다.
+# 실제 주소는 HW_DETECT_BASE(또는 --base)로 준다 — systemd 는 /etc/hw-robot.env.
+DEFAULT_BASE = "http://127.0.0.1:7864"
 UNITY_OBSTACLE_PORT = 5009
 
 

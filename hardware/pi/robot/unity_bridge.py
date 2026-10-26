@@ -136,7 +136,8 @@ class Go1Drive:
         파이는 이미 로봇에 무암호 ssh 키가 있다(워치독용). 로봇 IP 는 go1_link 호스트."""
         import subprocess
         host = os.environ.get("HW_GO1_SSH", "pi@192.168.123.161")
-        remote = os.environ.get("HW_GO1_DAEMON", "/home/pi/hw_highcmd_daemon")
+        # 원격 셸이 ~ 를 로봇 쪽 계정 홈으로 풀어 준다(Go1 기본 계정 pi 의 홈 — 기존 기본값과 같은 위치).
+        remote = os.environ.get("HW_GO1_DAEMON", "~/hw_highcmd_daemon")
         return subprocess.Popen(
             ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no",
              "-o", "ServerAliveInterval=2", host, remote],

@@ -27,7 +27,7 @@ JPEG 로 변환해 올린다. 엣지노드가 서면 media.py 경로로 돌아�
 최신 프레임만 들고 있다가 올리고, 올리는 동안 들어온 것은 버린다.
 
 사용:
-    cd ~/hw/pi && python3 -m robot.go1_front_upload
+    cd ~/hw/pi && HW_UPLOAD_URL=http://<server-ip>:7864/upload python3 -m robot.go1_front_upload
     cd ~/hw/pi && python3 -m robot.go1_front_upload --fps 15 --quality 4
 """
 import argparse
@@ -43,7 +43,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from robot.go1_camera import Go1CameraSource      # noqa: E402
 
-DEFAULT_URL = "http://210.110.250.33:7864/upload"
+# 인지 서버 업로드 주소. 기관마다 다르므로 저장소에는 로컬 기본값만 둔다.
+# 실제 주소는 HW_UPLOAD_URL(또는 --url)로 준다 — systemd 는 /etc/hw-robot.env.
+DEFAULT_URL = "http://127.0.0.1:7864/upload"
 
 
 def _multipart(jpeg, camera_id):

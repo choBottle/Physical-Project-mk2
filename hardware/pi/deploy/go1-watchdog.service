@@ -7,6 +7,6 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=physical
-WorkingDirectory=/home/physical/hw/pi
+User=@MK2_USER@
+WorkingDirectory=@MK2_PI_DIR@
 ExecStart=/usr/bin/python3 -m bench.go1_watchdog --once

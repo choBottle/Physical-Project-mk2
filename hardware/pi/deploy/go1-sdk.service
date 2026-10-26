@@ -30,10 +30,10 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-User=physical
-WorkingDirectory=/home/physical/go1sdk
+User=@MK2_USER@
+WorkingDirectory=@MK2_HOME@/go1sdk
 StandardInput=null
-ExecStart=/home/physical/go1sdk/go1_sdk_pc --robot_ip 192.168.123.161 --unity_ip 192.168.50.244 --ack_ip 127.0.0.1 --ack_port 15106 --light_ip 192.168.123.13 --light_port 7801 --state_dead_restart 30 --relay_ip 127.0.0.1 --relay_port 15200 --robot_id go1-1
+ExecStart=@MK2_HOME@/go1sdk/go1_sdk_pc --robot_ip 192.168.123.161 --unity_ip 192.168.50.244 --ack_ip 127.0.0.1 --ack_port 15106 --light_ip 192.168.123.13 --light_port 7801 --state_dead_restart 30 --relay_ip 127.0.0.1 --relay_port 15200 --robot_id go1-1
 Restart=always
 RestartSec=2
 

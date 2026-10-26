@@ -1,8 +1,8 @@
 # 스캔 → 객체탐지 연동 다리 (HW-R-05 / HW-R-07)
 #
 # 설치:
-#   sudo cp pi/deploy/detect-bridge.service /etc/systemd/system/
-#   echo 'HW_DETECT_URL=http://ubuntu3-15ug50p-gp55kn:8000' | sudo tee -a /etc/hw-robot.env
+#   pi/deploy/install-units.sh detect-bridge   # 계정·경로 치환 후 설치 (sudo cp 금지)
+#   echo 'HW_DETECT_URL=http://<detect-host>:8000' | sudo tee -a /etc/hw-robot.env
 #   sudo systemctl daemon-reload && sudo systemctl enable --now detect-bridge
 #
 # 로봇을 움직이지 않는다. 규약 uplink 를 구독해 스캔 임무를 따라가며 방향마다 사진을
@@ -15,9 +15,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=physical
-WorkingDirectory=/home/physical/hw/pi
-ExecStart=/home/physical/venv/bin/python3 -u -m robot.detect_bridge
+User=@MK2_USER@
+WorkingDirectory=@MK2_PI_DIR@
+ExecStart=@MK2_VENV@/bin/python3 -u -m robot.detect_bridge
 EnvironmentFile=-/etc/hw-node.env
 EnvironmentFile=-/etc/hw-robot.env
 Environment=PYTHONUNBUFFERED=1

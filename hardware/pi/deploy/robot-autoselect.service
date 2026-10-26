@@ -6,6 +6,6 @@ Requires=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/home/physical/hw/pi/deploy/robot-autoselect.sh
+ExecStart=@MK2_PI_DIR@/deploy/robot-autoselect.sh
 # 로봇이 없어 아무것도 안 해도 실패가 아니다.
 SuccessExitStatus=0
