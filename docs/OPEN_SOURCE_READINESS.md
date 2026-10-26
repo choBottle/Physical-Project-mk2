@@ -51,7 +51,7 @@
 - 🟢 CI 워크플로를 저장소 루트로 옮겼다(`.github/workflows/drone.yml` — 하위 폴더의 워크플로는 GitHub 가 실행하지 않는다)
 
 ### camera360
-- ❌ 배포 자산 없음(Docker · systemd · env 없음), 의존성은 231줄 `pip freeze`
+- 🟡 의존성 명세 추가(`requirements.txt` 촬영·전송·수신 / `requirements-vision.txt` GPU 추론). Docker · systemd 는 아직 없음
 - 🟡 `image backup/` · `360도 카메라 반영범위/` — 연구실 내부 사진. 책상에 앉은 사람이 작게(주로 뒷모습) 보인다 — 동의 또는 흐림 처리 검토
 - 🟡 `구버전(참고금지)/` — 공개 판에서 제외하거나 `archive/` 로
 - 🟢 이번에 스냅샷 zip(6.9MB, 폴더와 같은 내용)을 지웠다

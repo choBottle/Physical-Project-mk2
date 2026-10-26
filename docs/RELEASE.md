@@ -52,7 +52,7 @@
 - [ ] 사진·스크린샷·영상의 개인정보/정밀 위치 검토
 - [x] 레이더 팀 제공 코드 라이선스 확인 (2026-10-26 MIT 동의)
 - [ ] `drone/` ↔ `visualization/` 의 `viz-debugger` 중복 정리
-- [ ] AI `perception-framework` Dockerfile 수정(없는 `examples/` 참조) · 360 카메라 의존성 명세
+- [x] AI `perception-framework` Dockerfile 수정(없는 `examples/` 참조) · 360 카메라 의존성 명세
 - [ ] 실 하드웨어(센서 1 · 로봇 1)로 엣지 → 중앙 → 관제 화면 E2E 1회 기록
 
 ## 4. 1.x 로드맵

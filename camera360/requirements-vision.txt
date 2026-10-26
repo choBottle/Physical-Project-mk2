@@ -1,0 +1,17 @@
+# camera360 — 비전 추론 서버(GPU) 의존성: unidepth_dual_yolo.py · vision_infer.py
+#   pip install -r requirements.txt -r requirements-vision.txt
+# torch 는 CUDA 버전에 맞는 휠을 고른다 (운영 환경: CUDA 12.1)
+#   pip install torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cu121
+torch==2.4.1
+torchvision==0.19.1
+xformers==0.0.28.post1
+ultralytics==8.4.138
+timm==1.0.29
+einops==0.8.2
+huggingface_hub==0.36.2
+
+# PyPI 에 없는 것 — 소스에서 설치한다 (자세한 경로는 venv_image_requirements.txt)
+#   unidepth : https://github.com/lpiccinelli-eth/UniDepth      (pip install -e <clone>)
+#   moge     : https://github.com/microsoft/MoGe                 (vision_infer.py 만)
+#   peft     : vision_infer.py 의 선택 기능
+#   stitch_prostitcher : pro2_auto_bg.py 가 쓰는 별도 스티칭 모듈 — 이 저장소에 포함돼 있지 않다

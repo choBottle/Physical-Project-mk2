@@ -28,3 +28,13 @@ set -a && . ./.env && set +a  # 현재 셸에 올리기
 - 명령줄 인자(`--upload`, `--server` 등)는 그대로 쓸 수 있고 환경변수보다 우선한다.
 - `unidepth_dual_yolo_config.yaml` 의 모델 경로는 yaml 파일 폴더 기준 상대경로다. 절대경로·`~/` 로 바꿔도 된다.
 - 문서 속 `<server-ip>`, `<tailscale-ip-*>`, `<tailnet-host-*>`, `~/` 는 각자 환경의 값으로 바꿔 읽는다.
+
+## 설치
+
+```bash
+python -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt                          # 촬영 · 전송 · 수신
+pip install -r requirements.txt -r requirements-vision.txt   # + 비전 추론 서버(GPU)
+```
+
+`venv_image_requirements.txt` 는 운영 비전 서버의 `pip freeze` 전체 기록이다(재현 참고용).
