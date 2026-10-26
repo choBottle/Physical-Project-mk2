@@ -18,9 +18,9 @@
 --> 컴퓨터에선 C:\Users\asdfa\docx2026_code>python pro2_auto_bg.py --count 3 돌리고
 서버에서는 (venv_stitch) dg@sysai-server2:~/capstone-db/image_server$ python3 pano_receiver.py <- 이거 돌려서 사진 보내고 받고, 서버 저장 확인함.
 
-/home/dg/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_013411__20260711_123419/equirect.jpg
+~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_013411__20260711_123419/equirect.jpg
 
-/home/dg/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_012944__20260711_141532/equirect.jpg
+~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_012944__20260711_141532/equirect.jpg
 
 python3 ~/capstone-db/docx2026/e2p.py ~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_012944__20260711_141532/equirect.jpg ~/capstone-db/image_server/pano_captures/sliced_test/moved_u+150_v-35.jpg 150 -35
 --> 이게 E2P 돌려서 360도 사진 90도로 자르는 명령어. 음수 u값이 카메라 정면 기준 왼쪽이다. -180 ~ +180.
@@ -30,21 +30,21 @@ python3 ~/capstone-db/docx2026/e2p.py ~/capstone-db/image_server/pano_captures/p
 python3 ~/capstone-db/docx2026/e2p.py ~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_012956__20260803_224133/equirect.jpg ~/capstone-db/image_server/pano_captures/sliced_test/new1_u+230_v-35.jpg 230 -35
 
 conda activate unidepth
-cd /home/dg/capstone-db/docx2026 && python detect_send_3b2_timed.py <슬라이스경로> /home/dg/capstone-db/image_server/unidepth_dual_yolo_config.yaml 640 1.85 -35 127.0.0.1 5010 obstacles_now.json
+cd ~/capstone-db/docx2026 && python detect_send_3b2_timed.py <슬라이스경로> ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml 640 1.85 -35 127.0.0.1 5010 obstacles_now.json
 
 =============2. conda unidepth 키고 detect 돌리기
-source /home/jny/miniconda3/etc/profile.d/conda.sh && conda activate unidepth
+source ~/miniconda3/etc/profile.d/conda.sh && conda activate unidepth
 
 
 # u+230 (우측 — 소화기·박스·의자)
-python3 ~/capstone-db/docx2026/detect_ground_3b1.py /home/dg/capstone-db/image_server/pano_captures/sliced_test/new1_u+230_v-35.jpg /home/dg/capstone-db/image_server/unidepth_dual_yolo_config.yaml /home/dg/capstone-db/image_server/pano_captures/sliced_test/new_230.jpg 640 1.85 -35
+python3 ~/capstone-db/docx2026/detect_ground_3b1.py ~/capstone-db/image_server/pano_captures/sliced_test/new1_u+230_v-35.jpg ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml ~/capstone-db/image_server/pano_captures/sliced_test/new_230.jpg 640 1.85 -35
 
 # u+50 (좌측)
-python3 ~/capstone-db/docx2026/detect_ground_3b1.py /home/dg/capstone-db/image_server/pano_captures/sliced_test/new1_u+50_v-35.jpg /home/dg/capstone-db/image_server/unidepth_dual_yolo_config.yaml /home/dg/capstone-db/image_server/pano_captures/sliced_test/new_50.jpg 640 1.85 -35
+python3 ~/capstone-db/docx2026/detect_ground_3b1.py ~/capstone-db/image_server/pano_captures/sliced_test/new1_u+50_v-35.jpg ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml ~/capstone-db/image_server/pano_captures/sliced_test/new_50.jpg 640 1.85 -35
 
 
-/home/dg/capstone-db/image_server/pano_captures/sliced_test/new1_u+50_v-35.jpg
-/home/dg/capstone-db/image_server/pano_captures/sliced_test/new1_u+230_v-35.jpg
+~/capstone-db/image_server/pano_captures/sliced_test/new1_u+50_v-35.jpg
+~/capstone-db/image_server/pano_captures/sliced_test/new1_u+230_v-35.jpg
 
 PIC_20160212_012956__20260803_224133/equirect.jpg
 
@@ -56,10 +56,10 @@ for n in 1 2 3 4; do python3 crop_center.py b_${n}_left.jpg b_${n}_left_tight.jp
 
 2. B안 360도 이미지 perspective하기.
 (venv_match) dg@sysai-server2:~/capstone-db/docx2026$ for u in -90 -95 -100 -105; do python3 ~/capstone-db/docx2026/e2p.py ~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_013539/equirect.jpg ~/capstone-db/image_server/pano_captures/sliced_test/360cam_u${u}_v-35.jpg $u -35; done
-저장: /home/dg/capstone-db/image_server/pano_captures/sliced_test/360cam_u-90_v-35.jpg
-저장: /home/dg/capstone-db/image_server/pano_captures/sliced_test/360cam_u-95_v-35.jpg
-저장: /home/dg/capstone-db/image_server/pano_captures/sliced_test/360cam_u-100_v-35.jpg
-저장: /home/dg/capstone-db/image_server/pano_captures/sliced_test/360cam_u-105_v-35.jpg
+저장: ~/capstone-db/image_server/pano_captures/sliced_test/360cam_u-90_v-35.jpg
+저장: ~/capstone-db/image_server/pano_captures/sliced_test/360cam_u-95_v-35.jpg
+저장: ~/capstone-db/image_server/pano_captures/sliced_test/360cam_u-100_v-35.jpg
+저장: ~/capstone-db/image_server/pano_captures/sliced_test/360cam_u-105_v-35.jpg
 ==> 경로랑 각도 보기. u -90, -95, -100, 105. 이렇게 4장 뽑음.
 --> 360도 이미ㅣ지 perspective 자를때는 venv_match 켜기. 크롭도 마찬가지.
 =================================================
@@ -167,7 +167,7 @@ conda deactivate -> 비활성화 명령어
 
 설치 로그.
 (base) dg@sysai-server2:~$ which conda
-/home/dg/miniconda3/bin/conda
+~/miniconda3/bin/conda
 (base) dg@sysai-server2:~$ conda --version
 conda 26.3.2
 

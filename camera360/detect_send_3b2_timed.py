@@ -13,7 +13,7 @@ detect_send_3b2_timed.py — 3b-② + zeroshot 소요 시간 측정판
   python3 detect_send_3b2.py <슬라이스> <config.yaml> [imgsz] [cam_h] [pitch] [unity_ip] [port] [json_out]
 예:
   python3 detect_send_3b2.py ~/capstone-db/image_server/pano_captures/sliced_test/360cam_u-60_v-35.jpg \
-      /home/dg/capstone-db/image_server/unidepth_dual_yolo_config.yaml 640 1.85 -35 192.168.50.246 5010 obstacles_360.json
+      ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml 640 1.85 -35 192.168.50.246 5010 obstacles_360.json
 
 좌표 규약(anchor360, Unity 전달용):
   +x=오른쪽, +z=카메라 정면(=맵 GO1 주행방향, u-60 슬라이스 정면), y=0(바닥). 단위 m.

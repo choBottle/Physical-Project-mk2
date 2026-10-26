@@ -4,7 +4,8 @@ implements: 로봇(라즈베리파이 pi7) ↔ 탐지 연동 -- `mock_stream_rec
 프레임+회전각 스트림을 **실제 MQTT 수신**으로 바꾼 것이다.
 규약은 로봇 쪽에서 받은 `detection-protocol_0914.md`를 그대로 따른다(A안 확정).
 
-    브로커   ws://pi7.tailcb6bfb.ts.net:9001/mqtt  (또는 1883 생 TCP)
+    브로커   ws://<tailnet-host>:9001/mqtt  (또는 1883 생 TCP)
+             기본값은 환경변수 MK2_MQTT_BROKER_URL (없으면 ws://localhost:9001/mqtt), --broker 로 덮어씀
     프레임   zoneA/robot/go1-001/frame   QoS 1, 방향마다 1건(기본 8건)
     판 경계  zoneA/robot/go1-001/scan    QoS 1, scan_start / scan_end 각 1건
 
@@ -42,6 +43,7 @@ import base64
 import binascii
 import hashlib
 import json
+import os
 import queue
 import re
 import shutil
@@ -55,7 +57,8 @@ from urllib.parse import urlparse
 import paho.mqtt.client as mqtt
 
 # ── 브로커·토픽 (detection-protocol_0914.md §1) ─────────────────────────────
-BROKER_WS_URL = "ws://pi7.tailcb6bfb.ts.net:9001/mqtt"
+# 실제 브로커(로봇 Pi)는 환경변수 MK2_MQTT_BROKER_URL 또는 --broker 로 지정 (ai/demo/.env.example)
+BROKER_WS_URL = os.environ.get("MK2_MQTT_BROKER_URL", "ws://localhost:9001/mqtt")
 ROBOT_DEVICE_ID = "go1-001"
 FRAME_TOPIC = f"zoneA/robot/{ROBOT_DEVICE_ID}/frame"
 SCAN_TOPIC = f"zoneA/robot/{ROBOT_DEVICE_ID}/scan"

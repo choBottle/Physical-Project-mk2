@@ -51,8 +51,8 @@
   ps -eo user,pid,cmd | grep [p]ano_receiver
 
 umask 000
-source /home/dg/capstone-db/venv_image/bin/activate
-cd /home/dg/capstone-db/image_server
+source ~/capstone-db/venv_image/bin/activate
+cd ~/capstone-db/image_server
 python3 pano_receiver.py
 
 ※ 위의 명령어로도 보통 충분함. 그러나 SSH 세션이 끊기면 같이 죽어서 확실하게 오래 켜둘 거면 아래 명령어를 사용하기:
@@ -61,8 +61,8 @@ python3 pano_receiver.py
 
 2-2. 자르기+검출+JSON (서버 터미널 2)
 umask 000
-source /home/dg/capstone-db/venv_image/bin/activate
-cd /home/dg/capstone-db/docx2026
+source ~/capstone-db/venv_image/bin/activate
+cd ~/capstone-db/docx2026
 python3 anchor360_live.py --u 230 --v -36.35 --pitch -35 \
   --poll 0.1 --no-wait-stable --drop-clipped --max-dist 8 --debug-img
 
@@ -100,14 +100,14 @@ python anchor360_bridge.py --unity-ip <유니티 PC IP> --poll 0.3
 ※ 이때, 360도 카메라 영상을 받는 노트북과 유니티 돌리는 노트북은 같은 네트워크(와이파이)에 연결되어야 함.
 
 3-2. 스트림 공급 (노트북 터미널 2)
-python stream_to_server.py --fps 2 --upload http://210.110.250.33:10001/upload_pano
+python stream_to_server.py --fps 2 --upload http://<server-ip>:10001/upload_pano
 
 ★ 만약 360도 카메라가 data stream 돌리는 노트북과 같은 노트북에 연결되어 있으면 
 python stream_to_server.py --fps 3 --upload http://127.0.0.1:10001/upload_pano
 아래 명령어를 돌려야 함.
 
 ※ 팀원 핸드폰 핫스팟으로 해본 결과, 5fps 목표로 전송해도 2.3fps 정도가 실측되었음. 따라서 2fps로 하였음.
-※ 목적지가 서버가 아닌 엣지(노트북 내)일 경우, 'http://210.110.250.33:10001/upload_pano' 코드가 달라져야 함. 이건 server_stream_multi_source.py 참고해서 엣지(노트북)에서 server_stream_multi_source를 돌릴때, stream_to_server 변경 사항을 알아야 함.
+※ 목적지가 서버가 아닌 엣지(노트북 내)일 경우, 'http://<server-ip>:10001/upload_pano' 코드가 달라져야 함. 이건 server_stream_multi_source.py 참고해서 엣지(노트북)에서 server_stream_multi_source를 돌릴때, stream_to_server 변경 사항을 알아야 함.
 ※ bridge 파일 자체도 나중에 multi_source.py에서 360도 카메라 비전처리 결과(json)가 나오는 경로를 반영해야함. 지금은 수정 전.
 ※ (2026-10-15 추가) 위 ★ 명령은 '--upload' 가 빠져 있었다 — 빼면 'unrecognized arguments' 로 시작도 안 된다. 고쳐 두었다.
 ※ (2026-10-15 추가) 노트북 안에서 보내는 길(360 → 같은 노트북 data stream)은 WSL 안에서 돌리는 것으로 정리했다 —

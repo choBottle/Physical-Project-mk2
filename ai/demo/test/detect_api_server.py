@@ -27,7 +27,7 @@ HTTP 창구 8개. 문서의 핵심 전제 두 가지를 그대로 따른다.
     python3 detect_api_server.py --bind $(tailscale ip -4)   # 테일넷에서만 보이게
 
 관제 웹에 넣어 줄 주소(이 PC의 MagicDNS 이름):
-    http://<hostname>.<tailnet>.ts.net:8000
+    http://<tailnet-host>:8000
 """
 
 from __future__ import annotations

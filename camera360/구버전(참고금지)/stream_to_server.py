@@ -48,7 +48,7 @@ import cv2
 import requests
 
 DEF_IP         = "192.168.100.124"
-DEF_UPLOAD     = "http://210.110.250.33:7866/upload_pano"
+DEF_UPLOAD     = "http://<server-ip>:7866/upload_pano"
 DEF_CAPTURE_ID = "LIVE_STREAM"
 DEF_CAMERA_ID  = "pro2_anchor"
 

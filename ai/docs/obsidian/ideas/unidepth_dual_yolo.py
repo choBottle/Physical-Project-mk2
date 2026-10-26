@@ -18,6 +18,7 @@ UniDepth + Dual YOLO Image Server
 
 import os
 import time
+from pathlib import Path
 import traceback
 import queue
 import threading
@@ -38,20 +39,34 @@ from torchvision.ops import nms
 
 
 # ── 설정 로드 ──────────────────────────────────────────────────────────────
+# 기본값: 이 스크립트와 같은 폴더의 unidepth_dual_yolo_config.yaml
+# 다른 위치를 쓰려면 환경변수 CONFIG_PATH 로 지정
 CONFIG_PATH = os.getenv(
     "CONFIG_PATH",
-    "/home/dg/capstone-db/image_server/unidepth_dual_yolo_config.yaml",
+    str(Path(__file__).resolve().parent / "unidepth_dual_yolo_config.yaml"),
 )
+CONFIG_DIR = Path(CONFIG_PATH).expanduser().resolve().parent
 
 with open(CONFIG_PATH, "r", encoding="utf-8") as f:
     CFG = yaml.safe_load(f)
+
+
+def _resolve_model_path(p):
+    """config 의 모델 경로 해석.
+    절대경로·~ 는 그대로, 상대경로는 config 파일 폴더 기준으로 찾는다.
+    거기에 없으면 원래 문자열을 그대로 돌려준다 (HF 모델 ID·현재 폴더 기준 경로 허용)."""
+    p = os.path.expanduser(str(p))
+    if os.path.isabs(p):
+        return p
+    cand = CONFIG_DIR / p
+    return str(cand) if cand.exists() else p
 
 
 # ── Redis ──────────────────────────────────────────────────────────────────
 REDIS_HOST = CFG["redis"]["host"]
 REDIS_PORT = int(CFG["redis"]["port"])
 REDIS_DB   = int(CFG["redis"]["db"])
-REDIS_PASS = CFG["redis"]["password"]
+REDIS_PASS = os.environ.get("MK2_REDIS_PASSWORD") or CFG["redis"].get("password") or None
 
 # ── 스트림 ─────────────────────────────────────────────────────────────────
 CAMERA_ID        = CFG["streams"]["camera_id"]
@@ -76,14 +91,14 @@ NEAR_TH = float(CFG["risk"]["near_threshold"])
 MID_TH  = float(CFG["risk"]["mid_threshold"])
 
 # ── 모델 경로 ──────────────────────────────────────────────────────────────
-UNIDEPTH_MODEL_NAME  = CFG["models"]["unidepth"]["model_name"]
+UNIDEPTH_MODEL_NAME  = _resolve_model_path(CFG["models"]["unidepth"]["model_name"])
 UNIDEPTH_INFER_IMGSZ = CFG["models"]["unidepth"].get("infer_imgsz", None)
 
-FINETUNE_WEIGHT_PATH = CFG["models"]["finetune_detector"]["weight"]
+FINETUNE_WEIGHT_PATH = _resolve_model_path(CFG["models"]["finetune_detector"]["weight"])
 FINETUNE_CONF        = float(CFG["models"]["finetune_detector"]["conf"])
 FINETUNE_IMGSZ       = int(CFG["models"]["finetune_detector"]["imgsz"])
 
-ZEROSHOT_WEIGHT_PATH = CFG["models"]["zeroshot_detector"]["weight"]
+ZEROSHOT_WEIGHT_PATH = _resolve_model_path(CFG["models"]["zeroshot_detector"]["weight"])
 ZEROSHOT_CONF        = float(CFG["models"]["zeroshot_detector"]["conf"])
 ZEROSHOT_IMGSZ       = int(CFG["models"]["zeroshot_detector"].get("imgsz", FINETUNE_IMGSZ))
 
@@ -106,9 +121,11 @@ RISK_TO_COLOR = {
 }
 
 # ── HTTP control (경로 변경 없음) ──────────────────────────────────────────
+# 기본값은 localhost. 실제 제어 서버는 환경변수 CONTROL_URL 로 지정
+#   예) CONTROL_URL=http://<server-ip>:7864/command/go1
 CONTROL_URL = os.getenv(
     "CONTROL_URL",
-    "http://210.110.250.33:7864/command/go1",
+    "http://127.0.0.1:7864/command/go1",
 )
 
 # ── 프로파일러 설정 ────────────────────────────────────────────────────────

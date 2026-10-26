@@ -19,6 +19,8 @@ pro2_auto_bg.py — Pro2 연속 자동화 (백그라운드 stitch)
 
 [의존]
   같은 폴더에 stitch_prostitcher.py / 서버 pano_receiver.py(7866) 실행 중
+  서버 주소는 환경변수 MK2_SERVER_HOST (기본 127.0.0.1) 또는
+  MK2_UPLOAD_URL (업로드 URL 전체) 로 지정 (camera360/.env.example 참고)
 
 [TRT 캐시]
   실행 시 sync_trt_cache()가 %TEMP%의 ProStitcher 엔진 캐시를 백업 폴더와
@@ -45,9 +47,11 @@ from stitch_prostitcher import stitch_folder, DEFAULT_STITCHER
 
 # =========================================================
 CAMERA_IP = "192.168.100.124"
-SERVER_IP = "210.110.250.33"
+# 서버 주소는 환경변수로 받는다 (기본 localhost). 예: MK2_SERVER_HOST=<server-ip>
+SERVER_IP = os.environ.get("MK2_SERVER_HOST", "127.0.0.1")
 SERVER_PORT = 7866
-SERVER_UPLOAD_URL = f"http://{SERVER_IP}:{SERVER_PORT}/upload_pano"
+SERVER_UPLOAD_URL = os.environ.get(
+    "MK2_UPLOAD_URL", f"http://{SERVER_IP}:{SERVER_PORT}/upload_pano")
 CAMERA_ID = "pro2_anchor"
 
 CMD_URL = f"http://{CAMERA_IP}:20000/osc/commands/execute"

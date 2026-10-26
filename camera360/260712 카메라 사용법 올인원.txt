@@ -8,7 +8,7 @@
 -컴퓨터에선 C:\Users\asdfa\docx2026_code>python pro2_auto_bg.py --count 3 실행
 --> 서버에 360도 카메라 사진 들어올 것.
 
-/home/dg/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_012903__20260712_162240/equirect.jpg
+~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_012903__20260712_162240/equirect.jpg
 
 2. 사진 자르기
 python3 ~/capstone-db/docx2026/e2p.py ~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_012903__20260712_162240/equirect.jpg ~/capstone-db/image_server/pano_captures/sliced_test/20260712_f2_u+230_v-35.jpg 230 -35
@@ -18,10 +18,10 @@ python3 ~/capstone-db/docx2026/e2p.py ~/capstone-db/image_server/pano_captures/p
 
 python3 ~/capstone-db/docx2026/e2p.py ~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_012920__20260712_233711/equirect.jpg ~/capstone-db/image_server/pano_captures/sliced_test/20260712_f3_u+230_v-35.jpg 230 -35
 
-/home/dg/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_012928__20260712_145541/equirect.jpg
+~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_012928__20260712_145541/equirect.jpg
 
 
-==> 최신 : /home/dg/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_013201__20260712_155411/equirect.jpg
+==> 최신 : ~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_013201__20260712_155411/equirect.jpg
 
 python3 ~/capstone-db/docx2026/e2p.py ~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_013201__20260712_155411/equirect.jpg ~/capstone-db/image_server/pano_captures/sliced_test/20260712_f1_u-60_v-35.jpg -60 -35
 
@@ -30,18 +30,18 @@ for i in {1..4}; do u=$((225 + i * 5)); python3 ~/capstone-db/docx2026/e2p.py ~/
 
 
 3. zeroshot 명령어
-source /home/jny/miniconda3/etc/profile.d/conda.sh && conda activate unidepth && python3 ~/capstone-db/docx2026/detect_ground_3b1.py /home/dg/capstone-db/image_server/pano_captures/sliced_test/moved_u+150_v-35.jpg /home/dg/capstone-db/image_server/unidepth_dual_yolo_config.yaml /home/dg/capstone-db/image_server/pano_captures/sliced_test/new_test_1.jpg 640 1.85 -35
+source ~/miniconda3/etc/profile.d/conda.sh && conda activate unidepth && python3 ~/capstone-db/docx2026/detect_ground_3b1.py ~/capstone-db/image_server/pano_captures/sliced_test/moved_u+150_v-35.jpg ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml ~/capstone-db/image_server/pano_captures/sliced_test/new_test_1.jpg 640 1.85 -35
 --> 폴더 이름, 결과 사진 이름 변경 필요. 이게 zeroshot 돌리고 json 뽑고 제로샷 사진 저장하고, json 유니티로 전송하는것.
 
 ==================
 
 지금 왼쪽 복도 끝 가장 잘 보이는건 u+50, v -35도.
-/home/dg/capstone-db/image_server/pano_captures/sliced_test/20260712_t2_u+50_v-35.jpg
+~/capstone-db/image_server/pano_captures/sliced_test/20260712_t2_u+50_v-35.jpg
 중앙쪽은 u+150, v-35도. 
-/home/dg/capstone-db/image_server/pano_captures/sliced_test/20260712_t3_u+150_v-35.jpg
+~/capstone-db/image_server/pano_captures/sliced_test/20260712_t3_u+150_v-35.jpg
 
 오른쪽은 u+230, v-35도.
-/home/dg/capstone-db/image_server/pano_captures/sliced_test/20260712_t1_u+230_v-35.jpg
+~/capstone-db/image_server/pano_captures/sliced_test/20260712_t1_u+230_v-35.jpg
 
 
 사진찍고 경로 받아서 50, 150, 230. 시도해보기.
@@ -52,27 +52,27 @@ python3 ~/capstone-db/docx2026/e2p.py ~/capstone-db/image_server/pano_captures/p
 
 python3 ~/capstone-db/docx2026/e2p.py ~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_013201__20260712_155411/equirect.jpg ~/capstone-db/image_server/pano_captures/sliced_test/20260712_f1_u+230_v-35.jpg 230 -35
 
-/home/dg/capstone-db/image_server/pano_captures/sliced_test/20260712_f1_u+50_v-35.jpg
-/home/dg/capstone-db/image_server/pano_captures/sliced_test/20260712_f1_u+150_v-35.jpg
-/home/dg/capstone-db/image_server/pano_captures/sliced_test/20260712_f1_u+230_v-35.jpg
---> /home/dg/capstone-db/image_server/pano_captures/sliced_test/20260712_f2_u+230_v-35.jpg (230도만 이걸로 교체)
+~/capstone-db/image_server/pano_captures/sliced_test/20260712_f1_u+50_v-35.jpg
+~/capstone-db/image_server/pano_captures/sliced_test/20260712_f1_u+150_v-35.jpg
+~/capstone-db/image_server/pano_captures/sliced_test/20260712_f1_u+230_v-35.jpg
+--> ~/capstone-db/image_server/pano_captures/sliced_test/20260712_f2_u+230_v-35.jpg (230도만 이걸로 교체)
 
 ===========이제 제로샷.
 
-source /home/jny/miniconda3/etc/profile.d/conda.sh && conda activate unidepth && python3 ~/capstone-db/docx2026/detect_ground_3b1.py /home/dg/capstone-db/image_server/pano_captures/sliced_test/20260712_f2_u+230_v-35.jpg /home/dg/capstone-db/image_server/unidepth_dual_yolo_config.yaml /home/dg/capstone-db/image_server/pano_captures/sliced_test/f3_3_230.jpg 640 1.85 -35
+source ~/miniconda3/etc/profile.d/conda.sh && conda activate unidepth && python3 ~/capstone-db/docx2026/detect_ground_3b1.py ~/capstone-db/image_server/pano_captures/sliced_test/20260712_f2_u+230_v-35.jpg ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml ~/capstone-db/image_server/pano_captures/sliced_test/f3_3_230.jpg 640 1.85 -35
 
 20260712_f3_u+230_v-35.jpg
 
-source /home/jny/miniconda3/etc/profile.d/conda.sh && conda activate unidepth && python3 ~/capstone-db/docx2026/detect_ground_3b1.py /home/dg/capstone-db/image_server/pano_captures/sliced_test/20260712_f3_u+230_v-35.jpg /home/dg/capstone-db/image_server/unidepth_dual_yolo_config.yaml /home/dg/capstone-db/image_server/pano_captures/sliced_test/f_test_230.jpg 640 1.85 -35
+source ~/miniconda3/etc/profile.d/conda.sh && conda activate unidepth && python3 ~/capstone-db/docx2026/detect_ground_3b1.py ~/capstone-db/image_server/pano_captures/sliced_test/20260712_f3_u+230_v-35.jpg ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml ~/capstone-db/image_server/pano_captures/sliced_test/f_test_230.jpg 640 1.85 -35
 => 
 
 ===> 지금 소화기만 위치 옮겼음. 이거 확인 필요.
 이미지 까지 뽑고 
 
-dg@sysai-server2:~/capstone-db/image_server$ source /home/jny/miniconda3/etc/profile.d/conda.sh && conda activate unidepth && python3 ~/capstone-db/docx2026/detect_ground_3b1.py /home/dg/capstone-db/image_server/pano_captures/sliced_test/20260712_f3_u+230_v-35.jpg /home/dg/capstone-db/image_server/unidepth_dual_yolo_config.yaml /home/dg/capstone-db/image_server/pano_captures/sliced_test/f_test_230.jpg 640 1.85 -35
-WARNING: the configured environment variable(s) for prefix '/home/jny/miniconda3/envs/unidepth' are reserved and will be ignored: PATH.
+dg@sysai-server2:~/capstone-db/image_server$ source ~/miniconda3/etc/profile.d/conda.sh && conda activate unidepth && python3 ~/capstone-db/docx2026/detect_ground_3b1.py ~/capstone-db/image_server/pano_captures/sliced_test/20260712_f3_u+230_v-35.jpg ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml ~/capstone-db/image_server/pano_captures/sliced_test/f_test_230.jpg 640 1.85 -35
+WARNING: the configured environment variable(s) for prefix '~/miniconda3/envs/unidepth' are reserved and will be ignored: PATH.
 
-Remove the invalid configuration with `conda env config vars unset -p /home/jny/miniconda3/envs/unidepth PATH`.
+Remove the invalid configuration with `conda env config vars unset -p ~/miniconda3/envs/unidepth PATH`.
 
 슬라이스 720x720, fx=fy=360.0, cx=cy=360 | 높이=1.85m, 하향=-35.0deg
 필터 통과(HARD/AGENT+접지) 13개 (NMS 후)
@@ -90,7 +90,7 @@ storage box   HARD_OBSTACLE  0.21  (137,481)    -1.35   1.37        1.92     아
 cardboard box HARD_OBSTACLE  0.20  (503,339)     1.40   3.00        3.31     아니오   wy=-0.526
 cardboard box HARD_OBSTACLE  0.17  (214,326)    -1.51   3.26        3.59     아니오   wy=-0.496
 cardboard box HARD_OBSTACLE  0.15  ( 39,412)    -2.38   1.97        3.09     아니오   wy=-0.692
-저장: /home/dg/capstone-db/image_server/pano_captures/sliced_test/f_test_230.jpg
+저장: ~/capstone-db/image_server/pano_captures/sliced_test/f_test_230.jpg
 
 [검증] 슬라이스에서 그 큰 박스의 D 값을 실측 1.45m와 비교하세요.
 

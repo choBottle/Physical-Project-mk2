@@ -3,7 +3,7 @@ C:\Users\asdfa>cd "C:\Users\asdfa\physical mk2\360camera_work"
 
 C:\Users\asdfa\physical mk2\360camera_work>python stream_to_server.py --fps 5 --count 60
 ======================================================================
-stream_to_server — 카메라 192.168.100.124 → http://210.110.250.33:7866/upload_pano
+stream_to_server — 카메라 192.168.100.124 → http://<server-ip>:7866/upload_pano
   목표 5.0 fps | JPEG q92 | capture_id=LIVE_STREAM
 ======================================================================
 [연결] Fingerprint=9cKevnoIYRY=
@@ -90,12 +90,12 @@ anchor360_live — 360° 실시간 장애물 파이프라인
   카메라     : 높이 1.85m, 하향 -35.0deg
   Unity      : UDP 192.168.50.246:5010
   필터       : 접지잘림제외=ON, 최대거리=8m
-  감시 대상  : /home/dg/capstone-db/image_server/pano_captures/pro2_anchor
-  출력       : /home/dg/capstone-db/docx2026/live_out
-  작업 디렉터리: /home/dg/capstone-db/docx2026  (CLIP 캐시 기준)
+  감시 대상  : ~/capstone-db/image_server/pano_captures/pro2_anchor
+  출력       : ~/capstone-db/docx2026/live_out
+  작업 디렉터리: ~/capstone-db/docx2026  (CLIP 캐시 기준)
 ==============================================================
-[live] config : /home/dg/capstone-db/image_server/unidepth_dual_yolo_config.yaml
-[live] weight : /home/dg/capstone-db/image_server/yolov8s-world.pt
+[live] config : ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml
+[live] weight : ~/capstone-db/image_server/yolov8s-world.pt
 [live] classes: 59개, conf=0.12, iou=0.45
 [live] 모델 로드 8.54s + 워밍업 0.81s — 상주 완료
 
@@ -202,7 +202,7 @@ anchor360_live — 360° 실시간 장애물 파이프라인
 C:\Users\asdfa\docx2026_code>python anchor360_bridge.py --unity-ip 192.168.50.244 --poll 1
 ==============================================================
 anchor360_bridge — 서버 JSON → 유니티 UDP 중계
-  가져올 곳 : http://210.110.250.33:7866/anchor360_latest
+  가져올 곳 : http://<server-ip>:7866/anchor360_latest
   보낼 곳   : UDP 192.168.50.244:5010
   주기      : 1.0s  (하트비트 겸용)
   Ctrl+C 로 종료
