@@ -14,7 +14,7 @@
 | C2 | 학교 서버 공인 IP 하드코딩 | 🟡 | `server/` 는 이번에 `localhost` 기본값으로 교체. hardware(k3s·업로드 7864) · visualization · camera360 에 남음 |
 | C3 | Tailscale 주소(`100.x`) · tailnet 호스트명(`*.<tailnet>.ts.net`) | ❌ | visualization `viz-debugger/src` · ai `demo/test/mqtt_stream_receiver.py` · camera360 → 환경변수 |
 | C4 | `/home/<사용자>` 절대 경로 | ❌ | hardware systemd 유닛(`/home/physical`) · drone env 예시 · camera360(75곳) · ai 문서 → `${HOME}`/설치 경로 변수 |
-| C5 | 포트 충돌 8765 · 8766 · 8767 | ❌ | [PORTS.md](PORTS.md) |
+| C5 | 포트 충돌 8765 · 8766 · 8767 | ✅ | 8765 는 AI status UI 를 8775 로 옮겨 해결, 8766 · 8767 은 기기가 달라 실제 충돌 없음 — [PORTS.md](PORTS.md) |
 | C6 | 사람이 읽는 파트 문서의 실명 | 🟢 | 팀원 본인 동의 하에 유지 가능 — 원치 않으면 GitHub 계정명으로 |
 
 ## 2. 파트별
@@ -30,7 +30,7 @@
 - 🟢 의존성 명세 없음(`pi_base_setup.sh` 의 pip 목록) → `requirements.txt` 추가 권장
 
 ### ai
-- ❌ `perception-framework/Dockerfile` 이 없는 `examples/` 를 복사해 **빌드가 안 된다**
+- ✅ `perception-framework/Dockerfile` 빌드 복구(없는 `examples/` 대신 status UI 를 기본 명령으로) · CI 에서 이미지 빌드까지 확인
 - 🟡 `docs/obsidian/papers/` 논문 요약 약 70편 — 저작권(요약·인용 범위) 검토
 - 🟡 `CLAUDE.md`(115KB) · `AGENTS.md` · `.claude/skills/` — 공개 유지 여부
 

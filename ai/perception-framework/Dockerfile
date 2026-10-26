@@ -19,12 +19,14 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY perception_framework ./perception_framework
 
-RUN pip install --no-cache-dir -e ".[dev]" \
+RUN pip install --no-cache-dir -e ".[dev,mqtt,kafka,otel,sim]" \
     && pip install --no-cache-dir --force-reinstall opencv-python-headless
 
 COPY tests ./tests
 COPY profiles ./profiles
-COPY examples ./examples
+COPY config ./config
+COPY tools ./tools
+COPY simulator ./simulator
 COPY contracts ./contracts
 
 # 상태 확인 규약은 오케스트레이터와 분리돼 있어 K3s probe에도, standalone
@@ -32,4 +34,7 @@ COPY contracts ./contracts
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD python -c "from perception_framework.providers.compute import discover_node_tags; discover_node_tags()"
 
-CMD ["python", "examples/demo.py"]
+# 기본 명령은 기능 상태 패널(검토용, tools/status_ui). 예전 examples/demo.py 는 저장소에서 빠졌다.
+# 컨테이너 밖에서 보려면 -p 127.0.0.1:8775:8775 처럼 루프백에만 연다 — 운영 UI 가 아니다.
+EXPOSE 8775
+CMD ["python", "tools/status_ui/serve.py", "--config", "config/status_ui.example.json", "--host", "0.0.0.0", "--port", "8775"]

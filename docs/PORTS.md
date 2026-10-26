@@ -41,7 +41,7 @@
 | hardware | UDP 15200 → 15201 | 트윈 중계 → Unity |
 | hardware | 8090 · 8091 · 8443 | MJPEG 카메라 뷰 |
 | hardware | 9105 | 엣지 가용성 참조 구현 `/metrics` |
-| ai | **8765** | `perception-framework` status UI (`tools/status_ui/serve.py`) |
+| ai | 8775 | `perception-framework` status UI (`tools/status_ui/serve.py`, 이미지 기본 명령) |
 | ai | 8000 | 데모 탐지 API |
 | visualization | 5174 · 5175 | viz-debugger UI (dev · preview) |
 | visualization | 8790 | viz-debugger 게이트웨이 |
@@ -59,13 +59,23 @@
 | camera360 | 1935 | RTMP(카메라 → 노트북) |
 | osmocam | 38090 | MJPEG `/stream` |
 
-## ⚠ 충돌 — 같은 호스트에 올리면 부딪힌다
+## 충돌 정리 (2026-10-26)
 
-| 포트 | 충돌 | 제안 (각 파트 담당자 결정) |
+| 포트 | 충돌 | 상태 |
 |---|---|---|
-| **8765** | 중앙 be-gateway ↔ ai status UI | status UI 기본값을 8775 로 (`serve.py --port`) |
-| **8766** | 중앙 be-gateway `/ingest` ↔ drone SAR 데이터 서버 | SAR 데이터 서버를 8776 으로 (`SAR_DATA_PORT`) |
-| **8767** | 중앙 be-capture ↔ drone 역터널 | 역터널 로컬 포트를 8777 로 |
+| 8765 | 중앙 be-gateway ↔ ai status UI | ✅ 해결 — status UI 기본값을 **8775** 로 옮겼다 |
+| 8766 | 중앙 be-gateway `/ingest` ↔ drone SAR 데이터 서버 | 🟡 기기가 달라 실제로는 안 부딪힌다 — 아래 참고 |
+| 8767 | 중앙 be-capture ↔ drone 역터널(`-L`) | 🟡 기기가 달라 실제로는 안 부딪힌다 — 아래 참고 |
 
-지금은 서로 다른 기기(중앙 서버 / 연구원 노트북 / 드론 Pi)에서 돌아서 드러나지 않았다. 한 서버에 모으는 순간(전시·시연,
-다른 기관 배포) 바로 부딪힌다. **제안 규칙:** `8765~8769` 는 중앙 백엔드 예약, 파트별 보조 서비스는 `8770~8799`.
+드론의 8766 은 **Pi · 현장 노트북**에서, 8767 은 **현장 노트북**의 터널 입구다. 중앙 서버에서 도는 드론 구성
+(`deploy/server/sar-server.sh`)은 8768 · 18766 만 쓰므로 중앙 백엔드와 겹치지 않는다. 현장 장비에 이미 설치된 값이라
+기본값은 바꾸지 않았다.
+
+**한 기기에 다 올릴 때**(전시 시연용 노트북 한 대 등)만 드론 쪽을 환경변수로 옮긴다 — 코드 수정은 필요 없다.
+
+```bash
+PORT=8776 ./sar-laptop.sh                          # 노트북 SAR 데이터 서버 (Pi 는 SAR_DATA_PORT)
+LOCAL_DATA=8776 LOCAL_VIEW=8777 ./sar-tunnel.sh    # 터널 입구
+```
+
+**규칙(새 서비스):** `8765~8769` 는 중앙 백엔드 예약, 파트별 보조 서비스는 `8770~8799`.
