@@ -1,0 +1,17 @@
+# MK2 엣지 Prometheus — 구역 raw metric 보관. 중앙이 /federate 로 요약만 당겨 간다.
+global:
+  scrape_interval: 15s
+  external_labels:
+    agg_layer: edge
+
+scrape_configs:
+  - job_name: otel_collector
+    static_configs:
+      - targets: ["otel-collector:8889"]
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+  # 엣지 가용성 판정 참조 구현(hardware/edge/availability.py, :9105)을 띄웠다면:
+  # - job_name: hw_availability
+  #   static_configs:
+  #     - targets: ["host.docker.internal:9105"]

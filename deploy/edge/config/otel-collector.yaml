@@ -1,0 +1,54 @@
+# MK2 엣지 OTel Collector (Agent)
+#   metric      → 엣지 Prometheus 가 :8889 를 scrape (raw 보관). 중앙은 /federate 로 요약만 당긴다(원칙 6·14).
+#   log · trace → 원본 그대로 중앙 Collector 로 (요약하지 않는다)
+# 모든 신호에 agg_layer=edge · zone_id 를 붙인다 — 중앙에서 어느 구역에서 왔는지 가린다.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+  resource:
+    attributes:
+      - key: zone_id
+        value: ${env:MK2_ZONE_ID}
+        action: upsert
+      - key: agg_layer
+        value: edge
+        action: upsert
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    metric_expiration: 5m
+  otlp_grpc/central:
+    endpoint: ${env:MK2_CENTRAL_OTLP}
+    # 터널(Tailscale·WireGuard)이 암호화를 맡는다. 터널 밖으로 나가는 배치라면 TLS 를 켠다 — docs/deployment/security.md
+    tls:
+      insecure: true
+    sending_queue:
+      enabled: true
+    retry_on_failure:
+      enabled: true
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [resource, batch]
+      exporters: [prometheus]
+    traces:
+      receivers: [otlp]
+      processors: [resource, batch]
+      exporters: [otlp_grpc/central]
+    logs:
+      receivers: [otlp]
+      processors: [resource, batch]
+      exporters: [otlp_grpc/central]

@@ -1,0 +1,71 @@
+# MK2 중앙 OTel Collector (Gateway) — 관측 3종 수집·분배
+#
+#   metric → Prometheus 가 :8889 를 scrape
+#   trace  → Tempo  (도커 망 tempo:4317)
+#   log    → Loki   (도커 망 http://loki:3100/otlp — Loki 의 네이티브 OTLP 수집)
+#
+# ⚠ 컴포넌트 이름은 0.150 계열의 정식명(otlp_grpc · otlp_http)이다. 이미지를 올릴 때는 먼저
+#   `docker run --rm -v $PWD/otel-collector.yaml:/c.yaml otel/opentelemetry-collector-contrib:<새 버전> validate --config=/c.yaml`
+#   으로 판정한다(CI 도 같은 검사를 한다).
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          # 브라우저(가시화 화면)의 자체 지표 입구
+          allowed_origins:
+            - http://localhost:*
+            - http://127.0.0.1:*
+            - ${env:MK2_OTLP_CORS_EXTRA_ORIGIN}
+          max_age: 7200
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    # 5분 갱신이 없으면 내린다 — "장치가 안 보내면 시계열도 없다"(기본값을 명시)
+    metric_expiration: 5m
+    # resource_to_telemetry_conversion 은 켜지 않는다 — 켜면 service.instance.id(프로세스마다 새 값)가
+    # 라벨이 되어 재기동마다 시계열이 곱해진다(백엔드 원칙: 값이 계속 달라지는 라벨 금지).
+  otlp_grpc:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  otlp_http:
+    endpoint: http://loki:3100/otlp
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus]
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp_grpc]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp_http]
+  telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888

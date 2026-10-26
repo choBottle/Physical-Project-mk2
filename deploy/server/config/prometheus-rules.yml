@@ -1,0 +1,63 @@
+# MK2 알림 규칙 — Prometheus UI(Alerts)에서 상태를 본다. Alertmanager 연결은 docs/deployment/observability.md.
+#
+# 판정 원칙
+#   - counter 는 재기동마다 0 이 되므로 절대값이 아니라 rate()/increase() 로 본다.
+#   - "장치가 안 보낸다"와 "백엔드가 못 받는다"를 구분한다 — 수신 0 은 장치 문제일 수도 있어 warning,
+#     받았는데 Kafka·저장이 실패하는 것은 백엔드 문제라 critical.
+#   - 장치 최종 가용성 판정은 백엔드 단일 지점의 몫이다(원칙 7). 여기 규칙은 운영자 경보일 뿐이다.
+
+groups:
+  - name: mk2-stack
+    rules:
+      - alert: ScrapeTargetDown
+        expr: up == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.job }} 수집 실패 ({{ $labels.instance }})"
+          runbook: docs/deployment/operations.md#scrape-target-down
+
+      - alert: BackendSelfTelemetryAbsent
+        expr: absent(be_ingest_received_total) and absent(be_storage_consumed_total)
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "백엔드 지표가 10분째 없다 — 백엔드 컨테이너 또는 Collector 경로 확인"
+          runbook: docs/deployment/operations.md#backend-telemetry-absent
+
+  - name: mk2-pipeline
+    rules:
+      - alert: KafkaProduceFailing
+        expr: sum by (channel) (rate(be_kafka_produce_total{outcome!="ok"}[5m])) > 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "ingest → Kafka produce 실패 (channel={{ $labels.channel }})"
+          runbook: docs/deployment/operations.md#kafka-produce-failing
+
+      - alert: StorageWriteFailing
+        expr: sum by (channel) (rate(be_storage_write_total{outcome!="ok"}[5m])) > 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "TimescaleDB 적재 실패 (channel={{ $labels.channel }})"
+          runbook: docs/deployment/operations.md#storage-write-failing
+
+      - alert: IngestRejectRateHigh
+        expr: |
+          sum(rate(be_ingest_rejected_total[10m]))
+            / clamp_min(sum(rate(be_ingest_received_total[10m])) + sum(rate(be_ingest_rejected_total[10m])), 1e-9)
+          > 0.1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "수신 메시지의 10% 이상이 공통 규격 검증에서 격리된다 — 발행자 규격 판 확인"
+          runbook: docs/deployment/operations.md#ingest-reject-rate-high
+
+      - alert: PipelineLagHigh
+        expr: histogram_quantile(0.9, sum by (le) (rate(be_pipeline_lag_seconds_bucket[5m]))) > 5
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "발행 → 저장 지연 p90 이 5초를 넘는다"
+          runbook: docs/deployment/operations.md#pipeline-lag-high

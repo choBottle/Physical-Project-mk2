@@ -1,0 +1,29 @@
+# Grafana 데이터소스 — 관측 3종. uid 를 고정해 대시보드 JSON 이 환경과 무관하게 붙는다.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: mk2-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      timeInterval: 5s
+
+  - name: Loki
+    uid: mk2-loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+
+  - name: Tempo
+    uid: mk2-tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: mk2-loki
+      serviceMap:
+        datasourceUid: mk2-prometheus

@@ -1,0 +1,62 @@
+# =============================================================================
+# MK2 구역 엣지 노드 스택 — 구역(zone)마다 하나 (라즈베리파이 5 / 소형 x86)
+#
+#   cd deploy/edge
+#   cp .env.example .env    # MK2_CENTRAL_OTLP · MK2_ZONE_ID 를 채운다
+#   docker compose up -d --wait
+#
+# 역할(5구간 중 구간 2 — 엣지 내부): 말단 업무·관측을 1차 수용해 중앙 부하를 구역 수에 비례하게 묶는다.
+#   업무  말단 → 엣지 Mosquitto(1883)  [→ 중앙 Kafka 브릿지는 백엔드 ingest 가 맡는다 — docs/deployment/edge.md]
+#   관측  말단 → 엣지 Collector(4317) → metric: 엣지 Prometheus 가 raw 보관 → 중앙이 /federate 로 요약만 당김
+#                                     → log·trace: 원본 그대로 중앙 Collector 로 전달(요약하지 않는다)
+# 장치 노드 자체(센서·로봇·액추에이터)는 hardware/pi/deploy/ 의 systemd 유닛·이미지로 띄운다.
+# =============================================================================
+
+name: mk2-edge
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0.22
+    restart: unless-stopped
+    ports:
+      - "${MK2_EDGE_LAN_BIND:-0.0.0.0}:1883:1883"   # 구역 LAN 의 말단 장치가 붙는다
+      - "${MK2_EDGE_LAN_BIND:-0.0.0.0}:9001:9001"
+    volumes:
+      - ../server/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -t '$$SYS/broker/uptime' -C 1 -W 3"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.150.1
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    environment:
+      MK2_CENTRAL_OTLP: ${MK2_CENTRAL_OTLP:?deploy/edge/.env 에 MK2_CENTRAL_OTLP(중앙 Collector 주소:4317)가 없다}
+      MK2_ZONE_ID: ${MK2_ZONE_ID:?deploy/edge/.env 에 MK2_ZONE_ID 가 없다}
+    ports:
+      - "${MK2_EDGE_LAN_BIND:-0.0.0.0}:4317:4317"
+      - "${MK2_EDGE_LAN_BIND:-0.0.0.0}:4318:4318"
+    volumes:
+      - ./config/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+
+  prometheus:
+    image: prom/prometheus:v3.9.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${MK2_EDGE_PROMETHEUS_RETENTION:-7d}
+    ports:
+      # 중앙 Prometheus 의 edge_federate 가 터널로 당겨 가는 입구 — 터널 주소에만 바인딩한다
+      - "${MK2_EDGE_TUNNEL_BIND:-127.0.0.1}:9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+volumes:
+  mosquitto_data:
+  prometheus_data:

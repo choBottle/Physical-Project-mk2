@@ -1,0 +1,57 @@
+# MK2 중앙 Prometheus — 관측 metric 저장 + 엣지 페더레이션 중앙
+#
+# 수정 전에 반드시:  docker compose exec prometheus promtool check config /etc/prometheus/prometheus.yml
+# 설정만 바꾼 뒤 반영(재생성 불필요):  curl -X POST http://127.0.0.1:7861/-/reload
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    agg_layer: central
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  # 백엔드 A층(자기 관측) + C층(업무 값의 관측 표현) — Collector 의 prometheus exporter
+  # 백엔드 export 15초 × 표본 3 이 되도록 5s
+  - job_name: otel_collector
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["otel-collector:8889"]
+
+  # Collector 자신의 상태(수신·거부·전송 실패)
+  - job_name: otel_collector_self
+    static_configs:
+      - targets: ["otel-collector:8888"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: loki
+    static_configs:
+      - targets: ["loki:3100"]
+
+  - job_name: tempo
+    static_configs:
+      - targets: ["tempo:3200"]
+
+  # ── 엣지 페더레이션 (2계층) ─────────────────────────────────────────────
+  # 엣지가 raw 를 1차 보관하고 중앙은 요약만 당긴다(부하가 구역 수에 비례). 엣지가 생기면 주석을 풀고
+  # 타깃을 엣지의 터널 주소로 바꾼다. match[] 를 넓히지 않는다 — 엣지 raw 전량을 끌어오면 2계층의 의미가 없다.
+  # 엣지 쪽 스택: deploy/edge/  ·  문서: docs/deployment/edge.md
+  #
+  # - job_name: edge_federate
+  #   honor_labels: true
+  #   metrics_path: /federate
+  #   scrape_interval: 15s
+  #   params:
+  #     "match[]":
+  #       - '{__name__=~"hw_.*"}'
+  #       - '{__name__=~"system_cpu_.*|system_memory_.*"}'
+  #   static_configs:
+  #     - targets: ["<엣지 터널 주소>:9090"]
+  #       labels:
+  #         agg_layer: edge

@@ -1,0 +1,38 @@
+# MK2 Tempo — trace 저장 (Collector 가 도커 망 tempo:4317 로 넣는다)
+#
+# 보존 168h — 24h 면 "어제 그 명령"의 기술 추적을 못 본다. trace 는 명령 경로에만 붙어 양이 적다.
+
+server:
+  http_listen_port: 3200
+  log_level: warn
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+# 단일 바이너리 · 단일 인스턴스 — 링을 메모리로 두고 주소를 명시한다(없으면 /ready 가 503 에 머문다)
+ingester:
+  lifecycler:
+    address: 127.0.0.1
+    ring:
+      kvstore:
+        store: inmemory
+      replication_factor: 1
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /var/tempo/blocks
+    wal:
+      path: /var/tempo/wal
+
+compactor:
+  compaction:
+    block_retention: 168h
+
+usage_report:
+  reporting_enabled: false

@@ -1,0 +1,80 @@
+{
+  "uid": "mk2-backend-overview",
+  "title": "MK2 Backend Overview",
+  "description": "업무 파이프라인(MQTT → ingest → Kafka → storage)과 관측 스택 상태. counter 는 rate() 로 본다(재기동마다 0).",
+  "tags": ["mk2"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "수집 대상 상태 (up)",
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "mk2-prometheus" },
+      "targets": [{ "refId": "A", "expr": "up", "legendFormat": "{{job}}" }],
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "ingest 수신 / 격리 (msg/s)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "mk2-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum by (channel) (rate(be_ingest_received_total[1m]))", "legendFormat": "수신 {{channel}}" },
+        { "refId": "B", "expr": "sum by (stage) (rate(be_ingest_rejected_total[1m]))", "legendFormat": "격리 {{stage}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Kafka produce / TimescaleDB write (outcome)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "mk2-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum by (outcome) (rate(be_kafka_produce_total[1m]))", "legendFormat": "produce {{outcome}}" },
+        { "refId": "B", "expr": "sum by (outcome) (rate(be_storage_write_total[1m]))", "legendFormat": "write {{outcome}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "발행 → 저장 지연 (p50 / p90)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "mk2-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.5, sum by (le) (rate(be_pipeline_lag_seconds_bucket[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.9, sum by (le) (rate(be_pipeline_lag_seconds_bucket[5m])))", "legendFormat": "p90" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "WS 게이트웨이 · 미디어",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "mk2-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum(be_gateway_clients)", "legendFormat": "WS 접속 수" },
+        { "refId": "B", "expr": "sum(rate(be_gateway_media_frames_total[1m]))", "legendFormat": "미디어 프레임/s" },
+        { "refId": "C", "expr": "sum(rate(be_gateway_media_gop_cut_total[1m]))", "legendFormat": "drop-old GOP 절단/s" }
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "백엔드 로그 (Loki)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 21 },
+      "datasource": { "type": "loki", "uid": "mk2-loki" },
+      "targets": [{ "refId": "A", "expr": "{service_name=~\"be-.*\"}" }],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending" }
+    }
+  ]
+}
