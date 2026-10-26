@@ -26,7 +26,10 @@ const choice = await load('src', 'autodrive', 'sourceChoice.ts');
 {
   const target = connections.CONNECTION_TARGETS.find((item) => item.id === 'virtual-3d');
   if (target === undefined || !target.live) failures.push('연결 관리에 3D 가상환경 대상이 없다');
-  if (connections.connectionAddress('virtual-3d', 'base') !== 'http://100.68.72.33:8080/') failures.push(`3D 가상환경 기본 주소가 ${connections.connectionAddress('virtual-3d', 'base')} — 사용자가 준 주소여야 한다`);
+  // 공개 저장소 정리 — 사용자가 준 주소는 소스가 아니라 .env.local 의 VITE_VIRTUAL_3D_BASE 에 있다. 환경변수 없이 도는
+  // 이 검사에서는 기본이 비어 있어야 하고(소스에 주소가 박히지 않았다), 연결 저장소가 그 변수를 읽어야 한다.
+  if (connections.connectionAddress('virtual-3d', 'base') !== '') failures.push(`3D 가상환경 기본 주소가 ${connections.connectionAddress('virtual-3d', 'base')} — 환경변수 없이는 비어 있어야 한다(주소는 .env.local)`);
+  if (!/\.env\?\.VITE_VIRTUAL_3D_BASE/.test(read('src', 'shared', 'connections.ts'))) failures.push('3D 가상환경 주소를 환경변수(VITE_VIRTUAL_3D_BASE)에서 안 읽는다');
   const view = read('src', 'virtualmap', 'Virtual3D.tsx');
   if (!/connectionAddress\('virtual-3d', 'base'\)/.test(view)) failures.push('3D 가상환경 노드가 연결 관리의 주소를 안 읽는다');
 }
@@ -61,7 +64,9 @@ if (ko['viewnode.virtual3d'] !== '3D 가상환경') failures.push('3D 가상환�
   const field = connections.CONNECTION_TARGETS.find((item) => item.id === 'autodrive-ai')?.fields.find((f) => f.key === 'base');
   if (field?.list !== true) failures.push('장애물 탐지 주소 칸이 목록(여러 줄)이 아니다');
   // 260929 — 기본값 두 줄(Go1 · 드론). 첫 줄이 Go1 이어야 자율주행 편 판정이 전과 같은 주소를 본다.
-  if (JSON.stringify(client.aiBases()) !== '["http://210.110.250.33:7864","http://100.114.96.78:8891"]') failures.push(`기본 주소가 ${JSON.stringify(client.aiBases())} — Go1 · 드론 두 줄이어야 한다`);
+  // 공개 저장소 정리 — 두 주소는 환경변수(VITE_AUTODRIVE_AI_GO1 · _DRONE)에서 온다. 환경변수 없이는 빈 목록이고, 순서는 소스로 본다.
+  if (JSON.stringify(client.aiBases()) !== '[]') failures.push(`기본 주소가 ${JSON.stringify(client.aiBases())} — 환경변수 없이는 비어 있어야 한다(주소는 .env.local)`);
+  if (!/\[AI_GO1_BASE, AI_DRONE_BASE\]/.test(read('src', 'autodrive', 'aiClient.ts'))) failures.push('기본 목록이 Go1 · 드론 순서가 아니다');
   const panel = read('src', 'shell', 'ConnectionsPanel.tsx');
   if (!/'autodrive-ai': \{ presets: AI_PRESETS/.test(panel)) failures.push('장애물 탐지 영상 줄에 로봇처럼 고르는 칸이 없다');
   connections.registerConnectionDefault('autodrive-ai', 'base', 'http://a.test:7864/\nhttp://b.test:7864');
@@ -112,7 +117,7 @@ if (failures.length) {
   console.error(`❌ verify:obstacle-sources\n- ${failures.join('\n- ')}`);
   process.exit(1);
 }
-console.log('✅ 3D 가상환경 — 연결 관리 대상 · 기본 http://100.68.72.33:8080/ · 모든 임무 노드');
+console.log('✅ 3D 가상환경 — 연결 관리 대상 · 기본은 환경변수(VITE_VIRTUAL_3D_BASE) · 모든 임무 노드');
 console.log('✅ 탐지 영상 · 객체 탐지 로그 — 모든 임무 · 연결 관리 이름 「장애물 탐지 영상」 · 문 탐지 영상과 이름 안 겹침');
 console.log('✅ 주소 둘 이상 — 목록 칸 · 첫 줄이 기본 · 주소마다 폴링 · 값 따로 · 노드마다 고름 · 연결 확인도 주소마다');
 console.log(`✅ 대조군 ${controls.length}건 — ${controls.join(' · ')}`);

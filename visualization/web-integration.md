@@ -399,7 +399,7 @@ ACK 의 초록 점멸도 "문을 찾았다"는 신호가 아니라 `door_turn` �
 
 ```bash
 # pi7 에서
-cd /home/physical/hw/pi
+cd ~/hw/pi
 python3 -m bench.fake_go1_sdk --interval 0.8
 ```
 

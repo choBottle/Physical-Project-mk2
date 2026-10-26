@@ -311,14 +311,15 @@ export const CONNECTION_TARGETS: readonly ConnectionTarget[] = [
   {
     /**
      * 260929 — **3D 가상환경.** 3D 디지털트윈 가상환경 화면의 주소다. 모든 편의 「3D 가상환경」 노드가 이 칸을 읽는다.
-     * 기본값은 사용자가 준 주소이고, 환경변수(`VITE_VIRTUAL_3D_BASE`)가 있으면 그것이 이긴다.
+     * 기본값은 비어 있고, 환경변수(`VITE_VIRTUAL_3D_BASE`)가 있으면 그것이 이긴다 — 팀이 쓰는 주소는
+     * 소스가 아니라 `.env.local` 에 둔다(공개 저장소 정리 · `.env.example`).
      */
     id: 'virtual-3d',
     labelKey: 'conn.target.virtual3d',
     whatKey: 'conn.target.virtual3d.what',
     live: true,
     fields: [
-      { key: 'base', labelKey: 'conn.field.base', fallback: 'http://100.68.72.33:8080/' },
+      { key: 'base', labelKey: 'conn.field.base', fallback: '' },
       // 260929 — 영상 둘. 어느 노드가 시작될 때 틀지는 대본(`params.media_cues`)이 정하고, 칸 이름이 그것을 사람에게 말한다.
       { key: 'video', labelKey: 'conn.field.video3dMonitor', fallback: '', video: true },
       { key: 'video2', labelKey: 'conn.field.video3dMove', fallback: '', video: true },
@@ -387,16 +388,19 @@ export function connectionKey(target: ConnectionTargetId, field: string): string
  */
 const STORAGE_KEY = 'viz.connections.v1';
 
-const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
-
-/** 기본값 — 환경변수가 있으면 그것이 이긴다. 사용자가 덮어쓰기 전까지 이 값이 쓰인다. */
+/**
+ * 기본값 — 환경변수가 있으면 그것이 이긴다. 사용자가 덮어쓰기 전까지 이 값이 쓰인다.
+ *
+ * 환경변수는 **그 자리에서** `(import.meta …).env?.VITE_…` 로 읽는다. `import.meta.env` 를 변수에 담아 두고
+ * 나중에 키를 꺼내면 Vite 빌드 결과에서는 늘 빈 객체라(개발 서버에서만 값이 보인다) 빌드본이 환경변수를 못 받는다.
+ */
 const defaults = new Map<string, string>();
 for (const target of CONNECTION_TARGETS) {
   for (const field of target.fields) defaults.set(connectionKey(target.id, field.key), field.fallback);
 }
-defaults.set('gateway.ws', env.VITE_GATEWAY_WS ?? defaults.get('gateway.ws')!);
-defaults.set('gateway.http', env.VITE_GATEWAY_HTTP ?? defaults.get('gateway.http')!);
-defaults.set('virtual-3d.base', env.VITE_VIRTUAL_3D_BASE ?? defaults.get('virtual-3d.base')!);
+defaults.set('gateway.ws', (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_GATEWAY_WS ?? defaults.get('gateway.ws')!);
+defaults.set('gateway.http', (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_GATEWAY_HTTP ?? defaults.get('gateway.http')!);
+defaults.set('virtual-3d.base', (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_VIRTUAL_3D_BASE ?? defaults.get('virtual-3d.base')!);
 
 /**
  * 자기 환경변수를 읽는 모듈이 **기본값만** 심는다. 사용자가 덮어쓴 값은 건드리지 않는다.

@@ -29,10 +29,10 @@ offset_pi_minus_fc_s 로 FC GPS 시각으로 바꾼다. Pi 시계는 `install.sh
 
 Pi 에서 쓰기 (패스마다 거리 압축으로 줄여 노트북에 보낸다 — events.csv 가 Pi 에 있으므로 Pi 에서 줄이는 게 맞다):
 
-    python -m sar_data --flights /home/physical/sar_logs --radar /home/physical/flight --radar-glob 'iq_*.bin' \\
-        --reduce-adapter sar_image.cansar:load --radar-json /home/physical/radar.json
+    python -m sar_data --flights ~/sar_logs --radar ~/flight --radar-glob 'iq_*.bin' \\
+        --reduce-adapter sar_image.cansar:load --radar-json ~/radar.json
 
-로그 폴더는 `CANSAR_LOGS`(환경 변수, `:` 로 여럿) → 원시 옆 · 위 폴더의 cansar_logs → /home/physical/cansar_logs 순으로 찾는다.
+로그 폴더는 `CANSAR_LOGS`(환경 변수, `:` 로 여럿) → 원시 옆 · 위 폴더의 cansar_logs → ~/cansar_logs(실행 계정의 홈) 순으로 찾는다.
 안테나 케이블 · 내부 지연 `CANSAR_ROFF_M`(기본 0.4 m, 팀 값) 은 거리에서 뺀다.
 """
 
@@ -61,7 +61,7 @@ N_SUB = 8
 W0, W1 = 8, 53        # 표지 기준 자료 행
 MARK = 0x5A5A
 ROFF_M = 0.4          # 내부 지연(거리로) — 팀 기본값
-DEFAULT_LOGS = Path("/home/physical/cansar_logs")
+DEFAULT_LOGS = Path.home() / "cansar_logs"   # 현장 Pi(physical 계정)에서는 전과 같은 폴더
 L = W1 - W0
 
 

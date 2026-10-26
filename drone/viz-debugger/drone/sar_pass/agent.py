@@ -23,7 +23,7 @@ pi3 의 드론 에이전트(`drone-node.service`, `~/hw/pi/drone/drone_node.py`)
 
 설정은 환경변수(`/etc/hw-node.env` 등):
   SAR_FC_URL            기본 udpin://0.0.0.0:14540
-  SAR_CAP_PATH          기본 /home/physical/CAP_ON
+  SAR_CAP_PATH          기본 ~/CAP_ON (실행 계정의 홈 — capture.invoker_home). root 서비스면 절대경로로 준다
   SAR_CAP_ACK           비우면 끔. 레이더(cansar)가 CAP_ACK 를 쓰면 그 경로
   SAR_LOG_DIR           기본 /var/lib/hw-node/sar  (서비스의 StateDirectory 안 — 쓰기 가능)
   SAR_BASE_LISTEN       1 이면 …/rtcm 에서 베이스 좌표를 받아 패스 기록에 싣는다(기본 1)
@@ -203,10 +203,12 @@ def default_bridge(node) -> SarBridge:
         await v.connect(timeout_s=timeout)
         return v
 
-    cap = CaptureFlag(_env_path("SAR_CAP_PATH", DEFAULT_CAP_PATH), install_handlers=False,
+    cap_path = _env_path("SAR_CAP_PATH", DEFAULT_CAP_PATH)
+    cap = CaptureFlag(cap_path, install_handlers=False,
                       ack_path=_env_path("SAR_CAP_ACK", None),
-                      # CAP_ACK 를 레이더가 아직 안 쓰면 그쪽 events.csv 로 레이더 지연을 잰다(우회)
-                      events_root=_env_path("SAR_CAP_EVENTS", Path("/home/physical/cansar_logs")))
+                      # CAP_ACK 를 레이더가 아직 안 쓰면 그쪽 events.csv 로 레이더 지연을 잰다(우회).
+                      # 기본은 CAP_ON 옆의 cansar_logs — 현장(SAR_CAP_PATH=/home/<user>/CAP_ON)에서는 전과 같은 폴더다
+                      events_root=_env_path("SAR_CAP_EVENTS", Path(cap_path).parent / "cansar_logs"))
     log_dir = _env_path("SAR_LOG_DIR", DEFAULT_LOG_DIR)
     if log_dir is not None:
         log_dir.mkdir(parents=True, exist_ok=True)

@@ -1,6 +1,6 @@
 """SAR 비행 데이터 서버 (Pi) — 읽기 전용. 화면에서 버튼 한 번으로 받게 한다.
 
-  python -m sar_data --flights /home/physical/sar_logs --radar /home/physical/cansar_data --port 8765
+  python -m sar_data --flights ~/sar_logs --radar ~/cansar_data --port 8765
 
   GET /api/health                              살아 있나 · 디스크 여유
   GET /api/flights                             비행 목록 (패스 · 유효 여부 · 궤적/메타 파일 · 맞는 레이더 원시 파일)

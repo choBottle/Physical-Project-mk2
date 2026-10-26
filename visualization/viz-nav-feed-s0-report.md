@@ -1,6 +1,6 @@
 # pi1 가시화 중계 — §0 조사 보고
 
-- 대상: pi1 (`pi1.tailcb6bfb.ts.net`)
+- 대상: pi1 (`<pi1-tailnet-host>`)
 - 조사 시각: 2026-09-15 11:1x KST
 - 상태: **조사만 끝남. 구현 전.** 결정 필요 사항 3건 (맨 아래)
 
@@ -13,8 +13,8 @@
 
 | 항목 | 값 |
 |---|---|
-| Tailscale 이름 · IP | `pi1.tailcb6bfb.ts.net` · `100.83.132.16` (랜: wlan0 `192.168.50.243`, eth0 `192.168.123.162` = Go1 내부망) |
-| 유니티 UDP 를 받는 프로세스 | `go1-sdk.service` → `/home/physical/go1sdk/go1_sdk_pc` (C++, `--robot_ip 192.168.123.161 --unity_ip 192.168.50.244`). 15100·15110 을 이 프로세스가 bind 한다. 소스 `~/go1sdk/go1_sdk_pc.cpp` 는 저장소 `pi/robot/go1_sdk_pc.cpp` 와 같다. `unity_bridge.py` 는 돌지 않는다 |
+| Tailscale 이름 · IP | `<pi1-tailnet-host>` · `<pi1-tailscale-ip>` (랜: wlan0 `192.168.50.243`, eth0 `192.168.123.162` = Go1 내부망) |
+| 유니티 UDP 를 받는 프로세스 | `go1-sdk.service` → `~/go1sdk/go1_sdk_pc` (C++, `--robot_ip 192.168.123.161 --unity_ip 192.168.50.244`). 15100·15110 을 이 프로세스가 bind 한다. 소스 `~/go1sdk/go1_sdk_pc.cpp` 는 저장소 `pi/robot/go1_sdk_pc.cpp` 와 같다. `unity_bridge.py` 는 돌지 않는다 |
 | 15101 에 mode 98/99 를 싣는가 | **99 만 싣는다.** `go1_sdk_pc.cpp:1753-1757` 에서 `send_unity_state(yaw_unity,0,0,0,1,99)` 를 **한 번만** 보낸다(여러 주기가 아니다). **98 은 코드에 없다.** `handle_path_cancel_from_unity()`(`:605-637`)는 정지만 하고 아무것도 보내지 않는다. 계약 문서(`bridge-contract.md` §4.1)에는 98 이 있지만 구현되지 않았다. 평소 mode 필드는 1(서기) 또는 2(걷기)라서 0 이 아닌 값이 늘 실린다 |
 | 5009 state_change | 보낸다(`:921-936`, 바뀔 때 즉시 + 0.3초 하트비트). 형식: `{"state_change": b, "motion_active": b, "source": "go1_sdk_pc", "mode": n, ...}`. **같은 포트로 `go1_detect_forward` 의 탐지 JSON 도 나간다.** 두 키가 다 있는 것만 골라야 한다 |
 | mosquitto 1883 · 9001 | **둘 다 없다. pi1 에는 mosquitto 브로커가 설치돼 있지 않다**(`mosquitto-clients` 만 있고 `/etc/mosquitto` 없음, localhost:1883 은 연결 거부) |
@@ -28,7 +28,7 @@
 
 - UDP 포트 사용 중: 15100·15110 (`go1_sdk_pc`), 그 밖에 `go1_sdk_pc`·`python3` 의 임시 포트, 5353, 41641, 323
 - TCP 포트 사용 중: 22, 8090, 8443 (`bench.go1_cam_view`), 6444 (k3s), 34000 (tailscaled) 등. 1883·9001 은 비어 있다
-- paho-mqtt 는 `/home/physical/venv` 에만 있다(2.1.0). 시스템 python 에는 없다
+- paho-mqtt 는 `~/venv` 에만 있다(2.1.0). 시스템 python 에는 없다
 - AF_PACKET `recvfrom` 주소의 hatype 으로 링크 헤더 길이를 정한다: wlan0/eth0 = 1, lo = 772 → 14바이트, tun = 65534 → 0바이트
 - 조사 시점에 **실기 시험 중**이었다(15101 `vx=0.160 mode 2`, path id=1 실행)
 
@@ -96,4 +96,4 @@ Sep 15 11:17:32 pi1 go1_sdk_pc[2225]: [PATH] done notify sent (mode=99)
 
 ## 4. 가시화가 붙을 주소 (브로커 설치 후)
 
-`ws://pi1.tailcb6bfb.ts.net:9001/mqtt`
+`ws://<pi1-tailnet-host>:9001/mqtt`

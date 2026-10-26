@@ -16,9 +16,9 @@ cansar 가 파일을 몇 초마다 보느냐에 따라 1 s 늦으면 4 m/s 에�
   cansar 가 실제로 기록을 시작하면  →  ACK 파일에 그 순간의 `time.time()` 을 적는다 (한 줄, 소수 초)
   cansar 가 실제로 기록을 멈추면    →  ACK 파일을 지운다
 
-    # cansar 쪽 — 이 두 줄이면 된다
-    Path("/home/physical/CAP_ACK").write_text(f"{time.time():.6f}")   # 기록 시작 직후
-    Path("/home/physical/CAP_ACK").unlink(missing_ok=True)             # 기록 멈춘 직후
+    # cansar 쪽 — 이 두 줄이면 된다 (경로는 sar_pass 의 --cap-ack · SAR_CAP_ACK 와 같게)
+    Path.home().joinpath("CAP_ACK").write_text(f"{time.time():.6f}")   # 기록 시작 직후
+    Path.home().joinpath("CAP_ACK").unlink(missing_ok=True)             # 기록 멈춘 직후
 
 ACK 경로를 안 주면(`ack_path=None`) 확인은 「모름」으로 남고 지금까지와 똑같이 돈다.
 
@@ -40,7 +40,22 @@ import threading
 import time
 from pathlib import Path
 
-DEFAULT_CAP_PATH = Path("/home/physical/CAP_ON")  # 절대경로 — root 로 돌아도 같은 파일
+def invoker_home() -> Path:
+    """실행한 사람의 홈. `sudo` 로 돌면 root 의 홈(/root)이 아니라 부른 사람(SUDO_USER)의 홈이다.
+
+    전에는 현장 Pi 계정(physical)의 홈 경로를 절대경로로 박아 두었다. 공개 저장소에서는 계정 이름을 모르므로 홈을 따른다 —
+    현장 Pi 에서 `physical` 로(또는 `sudo` 로) 돌리면 값이 전과 같다. systemd 가 root 로 띄우는 서비스(drone-node 의
+    에이전트)는 SUDO_USER 가 없으므로 `/etc/sar-drone.env` 의 `SAR_CAP_PATH` 로 절대경로를 준다(deploy/pi).
+    """
+    sudo_user = os.environ.get("SUDO_USER")
+    if sudo_user and sudo_user != "root":
+        home = Path(os.path.expanduser(f"~{sudo_user}"))
+        if home.is_absolute():
+            return home
+    return Path.home()
+
+
+DEFAULT_CAP_PATH = invoker_home() / "CAP_ON"  # 절대경로 — sudo 로 돌아도 같은 파일 (위 invoker_home)
 
 log = logging.getLogger("sar_pass.capture")
 

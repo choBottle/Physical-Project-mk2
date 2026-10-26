@@ -23,15 +23,19 @@ import { t } from '../i18n/dict.ts';
 import { connectionAddress, registerConnectionDefault, splitAddressList } from '../shared/connections.ts';
 import { AI_DRONE_BASE, AI_GO1_BASE } from './presets.ts';
 
-const meta = import.meta as unknown as { env?: { VITE_AUTODRIVE_AI_BASE?: string } };
-
 /**
  * 사용자가 준 주소 그대로. 연결 관리에서 덮어쓸 수 있다.
  *
  * **기본값이 두 줄이다** (260929 지시) — Go1(260915)과 드론(260929). 첫 줄(Go1)이 자율주행 편의 판정이 보는
  * 주소라 순서를 바꾸지 않는다. 환경변수가 있으면 그것이 이긴다(줄바꿈으로 여럿).
+ * 두 주소도 환경변수에서 온다(`presets.ts`) — 안 정해진 줄은 빼고, 둘 다 없으면 빈 칸이다.
+ * 환경변수는 그 자리에서 읽는다 — 중간 변수를 두면 Vite 빌드가 값을 못 넣는다(`presets.ts` 머리 주석).
  */
-registerConnectionDefault('autodrive-ai', 'base', meta.env?.VITE_AUTODRIVE_AI_BASE ?? [AI_GO1_BASE, AI_DRONE_BASE].join('\n'));
+registerConnectionDefault(
+  'autodrive-ai', 'base',
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_AUTODRIVE_AI_BASE
+    || [AI_GO1_BASE, AI_DRONE_BASE].filter((base) => base !== '').join('\n'),
+);
 
 /** 로봇 앞 카메라. 사용자가 준 두 주소가 같은 이름을 쓴다. */
 export const AI_CAMERA = 'go1_front';

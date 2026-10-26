@@ -27,6 +27,19 @@ const {
   CHECKED_TARGETS, healthOf, targetOk, firstBroken, resetHealth,
 } = await load('src', 'shared', 'connectionHealth.ts');
 const { BROKER_PRESETS, presetReady } = await load('src', 'physical', 'presets.ts');
+/**
+ * 공개 저장소 정리 — 테일넷 프리셋 둘(Go1 · 드론)은 **환경변수(.env.local)에 값이 있을 때만** 생긴다
+ * (`VITE_PHYSICAL_PRESET_GO1` · `VITE_PHYSICAL_PRESET_DRONE`). 환경변수 없이 도는 이 검사에서는 목록에 없으므로,
+ * 고르는 칸의 동작(6-2 · 대조군)은 그 둘을 채운 **검사용 목록**으로 잰다 — 주소는 닿지 않는 예시 이름이다.
+ */
+const TEST_BROKER_PRESETS = [
+  { id: 'tailscale', labelKey: 'preset.broker.tailscale', url: 'ws://go1.tailnet.example:9001/mqtt', whyKey: 'preset.broker.tailscale.why' },
+  { id: 'drone-tailscale', labelKey: 'preset.broker.droneTailscale', url: 'ws://drone.tailnet.example:9001', whyKey: 'preset.broker.droneTailscale.why' },
+  ...BROKER_PRESETS.filter((p) => p.id !== 'tailscale' && p.id !== 'drone-tailscale'),
+];
+/** 주석을 뺀 소스에 테일넷 이름 · 테일넷 IP · 학교 공인 IP 가 박혀 있는가. */
+const HARDCODED = /\.ts\.net|\b100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+|\b210\.110\./;
+const bareSource = (...p) => readFileSync(join(root, ...p), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
 const failures = [];
 const controls = [];
@@ -231,12 +244,15 @@ const controls = [];
 {
   const real = BROKER_PRESETS.filter((p) => !p.url.startsWith('fake:'));
   const fake = BROKER_PRESETS.filter((p) => p.url.startsWith('fake:'));
-  if (real.length !== 3) {
-    failures.push(`실물 프리셋이 ${real.length}개 — 테일넷 둘 + 직접 입력 셋이어야 한다`);
+  // 공개 저장소 정리 — 테일넷 둘은 환경변수가 있을 때만 있다. 실물 줄은 그 둘과 직접 입력 밖에 없어야 한다(늘지 않는다).
+  if (real.some((p) => !['tailscale', 'drone-tailscale', 'manual'].includes(p.id))) {
+    failures.push(`실물 프리셋에 모르는 줄이 있다 — ${real.map((p) => p.id).join(', ')} · 테일넷 둘 + 직접 입력뿐이어야 한다`);
   }
   if (fake.some((p) => !p.id.startsWith('fake-'))) failures.push('가짜 프리셋의 id 가 fake- 로 시작하지 않는다');
-  for (const id of ['tailscale', 'drone-tailscale', 'manual']) {
-    if (!BROKER_PRESETS.some((p) => p.id === id)) failures.push(`프리셋 ${id} 가 없다`);
+  if (!BROKER_PRESETS.some((p) => p.id === 'manual')) failures.push('프리셋 manual 이 없다');
+  const presetSrc = readFileSync(join(root, 'src', 'physical', 'presets.ts'), 'utf8');
+  for (const name of ['VITE_PHYSICAL_PRESET_GO1', 'VITE_PHYSICAL_PRESET_DRONE']) {
+    if (!new RegExp(`\\.env\\?\\.${name}`).test(presetSrc)) failures.push(`테일넷 프리셋이 환경변수 ${name} 를 안 읽는다`);
   }
   /**
    * **빈 프리셋이 없다.** 주소를 모르면 줄을 안 만든다 — 직접 입력으로 넣는다.
@@ -263,14 +279,11 @@ const controls = [];
   /**
    * **둘 다 테일넷 이름이어야 한다** (260921 지시 — 「드론도 로봇과 동일하게 tailnet 으로」).
    *
-   * IP 로 두면 기계마다 규칙이 갈린다 — 「망이 바뀌면 이쪽」이라는 한 문장이 Go1 에만
-   * 맞고 드론에는 안 맞게 된다. 무대에서 그 차이를 기억해야 하는 사람이 생긴다.
+   * 공개 저장소 정리 뒤로는 그 이름이 `.env.local` 에 있다 — `.env.example` 이 둘 다 테일넷 이름 꼴로 적어 두고,
+   * 여기서는 **소스에 주소가 다시 박히지 않았는지**를 본다(박히면 남의 조직이 우리 테일넷에 붙으려 한다).
    */
-  for (const id of ['tailscale', 'drone-tailscale']) {
-    const preset = BROKER_PRESETS.find((p) => p.id === id);
-    if (preset !== undefined && !/\.ts\.net/.test(preset.url)) {
-      failures.push(`${id} 프리셋이 ts.net 이름이 아니다 — ${preset.url}`);
-    }
+  for (const file of [['src', 'physical', 'presets.ts'], ['src', 'physical', 'PhysicalClient.ts'], ['src', 'physical', 'NavClient.ts']]) {
+    if (HARDCODED.test(bareSource(...file))) failures.push(`${file.join('/')} 에 테일넷 · 공인 주소가 박혀 있다 — .env.local 로 옮긴다`);
   }
   const panel = readFileSync(join(root, 'src', 'shell', 'ConnectionsPanel.tsx'), 'utf8');
   if (!/BROKER_PRESETS/.test(panel)) failures.push('연결 관리가 프리셋을 안 그린다');
@@ -287,32 +300,32 @@ const controls = [];
 {
   const { selectedPresetId, applyPresetChoice, MANUAL_ID } = await load('src', 'shell', 'presetChoice.ts');
   const panel = readFileSync(join(root, 'src', 'shell', 'ConnectionsPanel.tsx'), 'utf8');
-  const tail = BROKER_PRESETS.find((p) => p.id === 'tailscale');
-  const drone = BROKER_PRESETS.find((p) => p.id === 'drone-tailscale');
+  const tail = TEST_BROKER_PRESETS.find((p) => p.id === 'tailscale');
+  const drone = TEST_BROKER_PRESETS.find((p) => p.id === 'drone-tailscale');
 
   // ① 고른 것이 그대로 남는다 — 이것이 고친 버그다.
-  const chose = applyPresetChoice(BROKER_PRESETS, MANUAL_ID);
+  const chose = applyPresetChoice(TEST_BROKER_PRESETS, MANUAL_ID);
   if (chose.manual !== true) failures.push('직접 입력을 골랐는데 기억하지 않는다');
-  if (selectedPresetId(BROKER_PRESETS, tail.url, chose.manual) !== MANUAL_ID) {
+  if (selectedPresetId(TEST_BROKER_PRESETS, tail.url, chose.manual) !== MANUAL_ID) {
     failures.push('직접 입력을 골랐는데 목록이 옛 프리셋으로 돌아간다 — 260921 의 그 버그다');
   }
   // ② 주소는 안 건드린다 — 고쳐 쓰려던 값을 잃으면 안 된다.
   if (chose.url !== null) failures.push(`직접 입력이 주소를 ${chose.url} 로 바꿨다 — 그대로 둬야 한다`);
 
   // ③ 프리셋을 고르면 주소가 들어가고 기억이 풀린다.
-  const back = applyPresetChoice(BROKER_PRESETS, 'drone-tailscale');
+  const back = applyPresetChoice(TEST_BROKER_PRESETS, 'drone-tailscale');
   if (back.manual !== false) failures.push('프리셋을 고른 뒤에도 직접 입력으로 남아 있다');
   if (back.url !== drone.url) failures.push(`고른 프리셋의 주소가 안 들어간다 — ${back.url}`);
-  if (selectedPresetId(BROKER_PRESETS, drone.url, back.manual) !== 'drone-tailscale') {
+  if (selectedPresetId(TEST_BROKER_PRESETS, drone.url, back.manual) !== 'drone-tailscale') {
     failures.push('프리셋을 골랐는데 목록이 그것을 안 가리킨다');
   }
 
   // ④ 손으로 고친 주소는 어느 프리셋도 아니다 — 전에도 되던 것이고 그대로 둔다.
-  if (selectedPresetId(BROKER_PRESETS, 'ws://10.0.0.9:9001', false) !== MANUAL_ID) {
+  if (selectedPresetId(TEST_BROKER_PRESETS, 'ws://10.0.0.9:9001', false) !== MANUAL_ID) {
     failures.push('손으로 넣은 주소가 직접 입력으로 안 보인다');
   }
   // ⑤ 빈 주소를 값이 빈 프리셋과 짝지으면 안 된다.
-  if (selectedPresetId(BROKER_PRESETS, '', false) !== MANUAL_ID) {
+  if (selectedPresetId(TEST_BROKER_PRESETS, '', false) !== MANUAL_ID) {
     failures.push('주소가 비었는데 직접 입력이 아니다');
   }
 
@@ -408,7 +421,8 @@ const controls = [];
 // 칸이 「직접 입력」으로 떠 있는데 값은 프리셋과 같은 상태가 된다(6절과 같은 이유).
 {
   const { DETECT_PRESETS, detectPresetReady } = await load('src', 'detect', 'presets.ts');
-  for (const id of ['tailscale', 'manual']) {
+  // 공개 저장소 정리 — 테일넷 줄(tailscale · tailscale-ip)은 환경변수가 있을 때만 있다. 늘 있는 것은 로컬 · 직접 입력이다.
+  for (const id of ['local', 'manual']) {
     if (!DETECT_PRESETS.some((p) => p.id === id)) failures.push(`탐지 프리셋 ${id} 가 없다`);
   }
   const { connectionAddress } = await load('src', 'shared', 'connections.ts');
@@ -418,7 +432,7 @@ const controls = [];
   if (tail !== undefined && seeded !== tail.url) {
     failures.push(`탐지 기본 주소가 ${seeded || '(빈 값)'} — Tailscale 프리셋(${tail.url})과 같아야 한다`);
   }
-  if (tail !== undefined && !/\.ts\.net/.test(tail.url)) failures.push('탐지 Tailscale 프리셋이 ts.net 주소가 아니다');
+  if (HARDCODED.test(bareSource('src', 'detect', 'presets.ts'))) failures.push('탐지 프리셋에 테일넷 주소가 박혀 있다 — .env.local(VITE_DETECT_PRESET_TAILNET)로 옮긴다');
   if (DETECT_PRESETS.some((p) => p.id !== 'manual' && !detectPresetReady(p))) {
     failures.push('값이 빈 탐지 프리셋을 고를 수 있다');
   }
@@ -441,16 +455,18 @@ function control(name, hit) {
    * 아래 둘은 고치기 전 판에 있던 식 그대로다.
    */
   const { selectedPresetId, applyPresetChoice, MANUAL_ID } = await load('src', 'shell', 'presetChoice.ts');
-  const tail = BROKER_PRESETS.find((p) => p.id === 'tailscale');
+  const tail = TEST_BROKER_PRESETS.find((p) => p.id === 'tailscale');
   const oldValue = (presets, url) => presets.find((p) => p.url === url)?.id ?? MANUAL_ID;
   const oldChange = (presets, id) => { const p = presets.find((x) => x.id === id); return p && p.url ? p.url : null; };
   control('옛 구현은 직접 입력을 골라도 주소를 안 바꾼다',
-    oldChange(BROKER_PRESETS, MANUAL_ID) === null);
+    oldChange(TEST_BROKER_PRESETS, MANUAL_ID) === null);
   control('옛 구현은 그래서 목록이 옛 프리셋으로 되돌아간다',
-    oldValue(BROKER_PRESETS, tail.url) === 'tailscale');
+    oldValue(TEST_BROKER_PRESETS, tail.url) === 'tailscale');
   // 반대 대조군 — 지금 구현은 같은 자리에서 직접 입력을 지킨다.
   control('지금 구현은 직접 입력을 지킨다',
-    selectedPresetId(BROKER_PRESETS, tail.url, applyPresetChoice(BROKER_PRESETS, MANUAL_ID).manual) === MANUAL_ID);
+    selectedPresetId(TEST_BROKER_PRESETS, tail.url, applyPresetChoice(TEST_BROKER_PRESETS, MANUAL_ID).manual) === MANUAL_ID);
+  // 소스 검사가 헛돌지 않는가 — 박힌 주소 사본은 잡혀야 한다.
+  control('소스에 박힌 테일넷 이름은 잡힌다', HARDCODED.test("url: 'ws://pi7.tailnet0.ts" + ".net:9001/mqtt'"));
 }
 {
   /**

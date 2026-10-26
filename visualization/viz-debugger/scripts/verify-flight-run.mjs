@@ -75,7 +75,7 @@ const near = (a, b) => Math.abs(a - b) < 1e-6;
 // ── 3. 출력 읽기 — 스크립트 log() 의 실제 줄 모양 ─────────────────────────
 const L = (seq, text) => ({ seq, text });
 const FLY = [
-  '[1760000000.001] [로그] /home/physical/cansar_logs/test_sar_rtk_20261014_153012.log',
+  '[1760000000.001] [로그] ~/cansar_logs/test_sar_rtk_20261014_153012.log',
   "[1760000000.002] [설정] {'altitude': 5.0}",
   '[1760000000.010] [연결] udpin://0.0.0.0:14540 ...',
   '[1760000001.000] [연결] 완료',

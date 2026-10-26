@@ -1,7 +1,7 @@
 """레이더 팀 quick-look(`cansar_quick.py`)을 패스마다 돌려 결과 PNG 를 화면에 준다 — 레이더 팀 README(2026-10-04) 그대로.
 
-  Pi:  python -m sar_data … --cansar-quick /home/physical/cansar/cansar_quick.py \\
-           --cansar-data /home/physical/flight --cansar-logs /home/physical/cansar_logs --cansar-side right
+  Pi:  python -m sar_data … --cansar-quick ~/cansar/cansar_quick.py \\
+           --cansar-data ~/flight --cansar-logs ~/cansar_logs --cansar-side right
 
 지키는 것(그쪽 README 「주의」):
   - 그쪽 명령 · 출력 이름(quick_N.png · quick_N.npz)만 쓴다. 코드는 그쪽이 계속 바꾼다.

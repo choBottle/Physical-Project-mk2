@@ -166,7 +166,7 @@ FC 유무는 14543 수신 공백 + `~/drone/state/mode` 로 스스로 판정하�
 | 브로커 포트 | `ss -tlnp` | `0.0.0.0:1883`, `0.0.0.0:9001` ✅ |
 | 1883 왕복 | `mosquitto_pub`→`mosquitto_sub` | 3.1.1 ✅ / MQTT 5.0 ✅ |
 | 9001 WebSocket | HTTP Upgrade | `101 Switching Protocols` + `Sec-WebSocket-Protocol: mqtt` ✅ |
-| 주소 3개 | 각 주소로 발행 | `pi3.local`(→192.168.50.254) ✅ / `192.168.50.254` ✅ / `100.85.243.54` ✅ |
+| 주소 3개 | 각 주소로 발행 | `pi3.local`(→192.168.50.254) ✅ / `192.168.50.254` ✅ / `<pi3-tailscale-ip>` ✅ |
 | 노드 기동 | journal | `entity=x500-001 node=pi3 zone=zoneA type=drone`, `[접속] 127.0.0.1:1883` ✅ |
 | Capability | `mosquitto_sub -F %x` | `capability{device_id:"x500-001", actions:["ping"]}` 18B ✅ |
 | `ping` | protobuf 발행 → uplink 관찰 | `acceptance(true)`→`status(EXECUTING)`×2→`result{SUCCEEDED, uptime_s, fc_link=0}` ✅ |

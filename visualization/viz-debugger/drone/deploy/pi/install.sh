@@ -19,6 +19,9 @@ UNIT_DIR=/etc/systemd/system
 UNITS=(sar-rtk.service sar-ulog.service sar-data.service)
 AGENT_DROPIN="$UNIT_DIR/drone-node.service.d/50-sar.conf"
 SVC_USER="${SAR_USER:-physical}"
+# 서비스 계정의 홈 — 틀 파일(env 예시 · drone-node 덮어쓰기)의 @SAR_HOME@ 자리에 들어간다. SAR_HOME 으로 바꿀 수 있다
+SVC_HOME="${SAR_HOME:-$(getent passwd "$SVC_USER" 2>/dev/null | cut -d: -f6)}"
+SVC_HOME="${SVC_HOME:-/home/$SVC_USER}"
 
 DRY=0; MODE=install; AGENT=0
 for a in "$@"; do
@@ -37,6 +40,12 @@ warn() { printf '  \033[33m!\033[0m %s\n' "$*"; }
 bad()  { printf '  \033[31m✗\033[0m %s\n' "$*"; }
 step() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 run()  { if [ "$DRY" = 1 ]; then printf '  [dry-run] %s\n' "$*"; else "$@"; fi; }
+# 틀 파일을 깐다 — @SAR_HOME@ 은 서비스 계정의 홈으로, User=physical 은 SAR_USER 로 바꾼다 (공개 저장소: 계정 경로를 박지 않는다)
+render() {  # render 원본 대상
+  if [ "$DRY" = 1 ]; then printf '  [dry-run] %s → %s (@SAR_HOME@=%s, User=%s)\n' "$1" "$2" "$SVC_HOME" "$SVC_USER"; return; fi
+  sed -e "s#@SAR_HOME@#$SVC_HOME#g" -e "s#^User=physical\$#User=$SVC_USER#" "$1" > "$2.tmp"
+  chmod 0644 "$2.tmp" && mv "$2.tmp" "$2"
+}
 
 need_root() {
   if [ "$DRY" = 0 ] && [ "$(id -u)" != 0 ]; then echo "sudo 로 실행한다: sudo $0 $*" >&2; exit 1; fi
@@ -44,7 +53,7 @@ need_root() {
 
 env_get() {  # 설치된 env 파일(없으면 예시)에서 값 하나
   local f="$ENV_FILE"; [ -f "$f" ] || f="$HERE/sar-drone.env.example"
-  sed -n "s/^$1=//p" "$f" | tail -1
+  sed -n "s/^$1=//p" "$f" | tail -1 | sed "s#@SAR_HOME@#$SVC_HOME#g"
 }
 
 status() {
@@ -107,13 +116,13 @@ install() {
 
   step "3. 설정 · 폴더"
   if [ -f "$ENV_FILE" ]; then ok "$ENV_FILE 있음 — 그대로 둔다"
-  else run install -m 0644 "$HERE/sar-drone.env.example" "$ENV_FILE"; ok "$ENV_FILE 만듦 — MQTT 주소 등 현장값을 확인한다"; fi
+  else render "$HERE/sar-drone.env.example" "$ENV_FILE"; ok "$ENV_FILE 만듦 — MQTT 주소 등 현장값을 확인한다"; fi
   local ld; ld="$(env_get SAR_LOG_DIR)"
   run install -d -o "$SVC_USER" -g "$SVC_USER" "$ld"
   ok "비행 기록 폴더 $ld"
 
   step "4. 서비스"
-  for u in "${UNITS[@]}"; do run install -m 0644 "$HERE/$u" "$UNIT_DIR/$u"; done
+  for u in "${UNITS[@]}"; do render "$HERE/$u" "$UNIT_DIR/$u"; done
   run systemctl daemon-reload
   for u in "${UNITS[@]}"; do run systemctl enable --now "$u"; done
   ok "${UNITS[*]}"
@@ -127,7 +136,7 @@ install() {
     fi
     ok "import 확인 ($wd)"
     run install -d "$UNIT_DIR/drone-node.service.d"
-    run install -m 0644 "$HERE/drone-node-sar.conf" "$AGENT_DROPIN"
+    render "$HERE/drone-node-sar.conf" "$AGENT_DROPIN"
     run systemctl daemon-reload
     run systemctl restart drone-node
     if [ "$DRY" = 0 ]; then
