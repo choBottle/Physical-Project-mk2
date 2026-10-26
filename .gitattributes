@@ -1,0 +1,26 @@
+# 저장소 안에서는 LF. 배포 대상(중앙 서버·엣지 Pi)이 리눅스라 셸·설정에 CRLF 가 섞이면
+# 컨테이너 안에서 스크립트가 `bad interpreter` 로 죽거나 값 끝에 \r 이 붙어 조용히 어긋난다.
+# 각 파트 폴더의 .gitattributes 가 그 안에서는 더 구체적인 규칙으로 덮어쓴다.
+* text=auto eol=lf
+
+*.sh    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.conf  text eol=lf
+*.env   text eol=lf
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.pdf   binary
+*.docx  binary
+*.xlsx  binary
+*.pptx  binary
+*.zip   binary
+*.gz    binary
+*.mp4   binary
+*.h264  binary

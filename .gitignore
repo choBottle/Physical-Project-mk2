@@ -1,0 +1,29 @@
+# 저장소 공통 무시 규칙. 각 파트 폴더의 .gitignore 는 그 안에서 그대로 적용된다.
+
+# ── 비밀정보 — 공개 저장소이므로 절대 커밋 금지 ──
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# ── 배포 런타임 산출물 ──
+deploy/backups/
+
+# ── Python / Node 공통 ──
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+node_modules/
+.vite/
+
+# ── OS / 에디터 ──
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.swp
