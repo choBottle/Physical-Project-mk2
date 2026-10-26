@@ -73,10 +73,10 @@ const PUSHGATEWAY = '# HELP go_goroutines x\ngo_goroutines 12\npushgateway_build
   const file = relay.metricsRelayTarget(`/server-metrics?url=${encodeURIComponent('file:///etc/metrics')}`);
   if (!file || !('error' in file)) failures.push('http(s) 가 아닌 주소를 옮긴다');
 
-  connections.saveConnections({ 'gateway.ws': 'ws://100.102.8.102:8765/state?token=x' });
+  connections.saveConnections({ 'gateway.ws': 'ws://192.0.2.102:8765/state?token=x' });
   const auto = status.serverMetricsTarget();
-  if (auto?.url !== 'http://100.102.8.102:9100/metrics' || auto.auto !== true) failures.push(`칸이 비었을 때 9100 을 안 두드린다 — ${JSON.stringify(auto)}`);
-  connections.saveConnections({ 'gateway.ws': 'ws://100.102.8.102:8765/state', 'gateway.metrics': 'http://10.9.9.9:9100/metrics' });
+  if (auto?.url !== 'http://192.0.2.102:9100/metrics' || auto.auto !== true) failures.push(`칸이 비었을 때 9100 을 안 두드린다 — ${JSON.stringify(auto)}`);
+  connections.saveConnections({ 'gateway.ws': 'ws://192.0.2.102:8765/state', 'gateway.metrics': 'http://10.9.9.9:9100/metrics' });
   if (status.serverMetricsTarget()?.url !== 'http://10.9.9.9:9100/metrics') failures.push('칸에 적은 지표 주소가 안 이긴다');
 }
 
@@ -91,7 +91,7 @@ const PUSHGATEWAY = '# HELP go_goroutines x\ngo_goroutines 12\npushgateway_build
   });
 
   // 지표가 이름을 밝힌다
-  connections.saveConnections({ 'gateway.ws': 'ws://100.102.8.102:8765/state' });
+  connections.saveConnections({ 'gateway.ws': 'ws://192.0.2.102:8765/state' });
   status.resetServerStatus();
   await status.refreshServerStatus(textFetch(node(1, 1)), Date.now, visionFetch('other-name'));
   let s = status.serverStatus();
@@ -99,7 +99,7 @@ const PUSHGATEWAY = '# HELP go_goroutines x\ngo_goroutines 12\npushgateway_build
   if (s.resources === null || s.metricsError !== null) failures.push('지표를 읽었는데 자원이 비었다');
 
   // Pushgateway — 자원 없음 · 이름은 같은 호스트의 추론 서버
-  connections.saveConnections({ 'gateway.ws': 'ws://100.102.8.102:8765/state', 'vision.host': 'http://100.102.8.102', 'vision.ports': '10001' });
+  connections.saveConnections({ 'gateway.ws': 'ws://192.0.2.102:8765/state', 'vision.host': 'http://192.0.2.102', 'vision.ports': '10001' });
   status.resetServerStatus();
   await status.refreshServerStatus(textFetch(PUSHGATEWAY), Date.now, visionFetch('sysai-server2'));
   s = status.serverStatus();
@@ -107,7 +107,7 @@ const PUSHGATEWAY = '# HELP go_goroutines x\ngo_goroutines 12\npushgateway_build
   if (s.name !== 'sysai-server2' || s.nameFrom !== 'vision') failures.push(`같은 기계의 추론 서버 이름을 못 쓴다 — ${s.name}/${s.nameFrom}`);
 
   // 대조군 — 추론 서버가 다른 호스트면 그 이름을 서버 이름으로 쓰면 안 된다
-  connections.saveConnections({ 'gateway.ws': 'ws://100.102.8.102:8765/state', 'vision.host': 'http://100.1.1.1', 'vision.ports': '10001' });
+  connections.saveConnections({ 'gateway.ws': 'ws://192.0.2.102:8765/state', 'vision.host': 'http://192.0.2.1', 'vision.ports': '10001' });
   status.resetServerStatus();
   await status.refreshServerStatus(textFetch(PUSHGATEWAY), Date.now, visionFetch('someone-else'));
   if (status.serverStatus().name !== null) failures.push('대조군 실패: 다른 기계의 추론 서버 이름을 서버 이름으로 적었다');

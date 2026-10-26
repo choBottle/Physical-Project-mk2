@@ -1,6 +1,6 @@
 """Pi 쪽 — 패스가 끝나면 레이더 원시를 거리 압축 파일로 줄여 둔다. 노트북 미러는 줄인 것만 핫스팟으로 가져간다.
 
-    python -m sar_data --flights … --radar … --reduce-adapter sar_image.sdr:iq_npy --radar-json /home/physical/radar.json
+    python -m sar_data --flights … --radar … --reduce-adapter sar_image.sdr:iq_npy --radar-json ~/radar.json
 
 SDR(AD9361) 원시는 패스 하나에 수백 MB~수 GB 다. 거리 압축(정합 필터)하고 기록 거리 창(range_min~max)만 남기면
 수백 분의 일이 된다(시험: 120 MB → 0.1 MB). 원시는 그대로 두니 나중에 USB 로 옮겨 다시 처리할 수 있다.

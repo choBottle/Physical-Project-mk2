@@ -23,7 +23,7 @@ pi3 의 드론 에이전트(`drone-node.service`, `~/hw/pi/drone/drone_node.py`)
 
 설정은 환경변수(`/etc/hw-node.env` 등):
   SAR_FC_URL            기본 udpin://0.0.0.0:14540
-  SAR_CAP_PATH          기본 /home/physical/CAP_ON
+  SAR_CAP_PATH          기본 ~/CAP_ON (실행 계정의 홈 — capture.invoker_home). root 서비스면 절대경로로 준다
   SAR_CAP_ACK           비우면 끔. 레이더(cansar)가 CAP_ACK 를 쓰면 그 경로
   SAR_LOG_DIR           기본 /var/lib/hw-node/sar  (서비스의 StateDirectory 안 — 쓰기 가능)
   SAR_BASE_LISTEN       1 이면 …/rtcm 에서 베이스 좌표를 받아 패스 기록에 싣는다(기본 1)

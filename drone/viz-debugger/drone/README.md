@@ -7,7 +7,7 @@ viz-debugger(컴퓨터공학과 GUI)에 드론 파트 기능을 붙였다. 화�
  [브라우저: viz-debugger]                       [Raspberry Pi 5 (컴패니언)]                   [FC: PX4]
   캔버스 노드 「SAR 패스 비행」 ── sar_start ──▶  드론 에이전트 ─▶ sar_pass ── MAVSDK ──▶ 오프보드 속도 제어
             「RTK 상태」       ◀── sar 상태 ───  (MQTT ws :9001)     │                     (TELEM2 ↔ UART)
-                               ◀── state(gps) ─                     └─ touch/unlink /home/physical/CAP_ON
+                               ◀── state(gps) ─                     └─ touch/unlink ~/CAP_ON
                                                                                 ▲
                                                                      cansar.service 가 보고 캡처
 ```
@@ -39,7 +39,7 @@ viz-debugger(컴퓨터공학과 GUI)에 드론 파트 기능을 붙였다. 화�
   - `sar_abort` 명령: 받는 즉시
   - SIGINT · SIGTERM · `atexit`
   - 감시 시한: `구간 길이 ÷ 속도 × 1.5 + 10초` 를 넘기면 강제로 끈다
-- 경로는 `/home/physical/CAP_ON` 절대경로다. root 로 실행해도 같은 파일을 쓴다.
+- 경로는 기본 `~/CAP_ON`(실행 계정의 홈, `sudo` 면 부른 사람의 홈) 절대경로다. root 서비스로 돌릴 때는 `SAR_CAP_PATH`(또는 `--cap`)에 절대경로를 준다(`deploy/pi/sar-drone.env.example`).
 
 ### 로그
 
@@ -99,7 +99,7 @@ uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -e '.[te
    - `sar_pass` 는 14540 에 붙는다. 이 끝점은 「한 번에 하나」라 SAR 비행 중에는 점검 스크립트(`check_link` 등)를 같이 돌리지 않는다.
    - QGC: Application Settings → Comm Links → Add → **TCP**, Host = Pi 의 핫스팟 IP, Port = 5760.
 3. **브라우저 → MQTT**: 화면 ⇄ 연결 관리의 물리 장비 칸에 `ws://<Pi 핫스팟 IP>:9001` 을 적는다.
-   - 기본 프리셋(`pi3.tailcb6bfb.ts.net`)은 Tailscale 이름이라, 핫스팟에 인터넷이 없으면 안 닿는다.
+   - 기본 프리셋(`<pi3-tailnet-host>`)은 Tailscale 이름이라, 핫스팟에 인터넷이 없으면 안 닿는다.
    - 핫스팟이 IP 를 바꿀 수 있으니, 핫스팟 기기에서 Pi 에 고정 IP 를 주거나 `<호스트명>.local`(mDNS)을 쓴다.
 4. **오프보드 · 링크 안전 파라미터**: 이름은 PX4 버전마다 조금 다를 수 있으니 QGC 파라미터 검색으로 확인한다.
    - `COM_OF_LOSS_T`: 오프보드 설정값이 끊긴 뒤 판정까지의 시간. 실행기는 20 Hz 로 보낸다. 1초 안팎을 권장한다.
@@ -128,7 +128,7 @@ uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -e '.[te
 ```
 
 ```
- ✓  CAP_ON 자리       /home/physical 쓰기 가능
+ ✓  CAP_ON 자리       ~ 쓰기 가능
  ✓  시계 동기화       NTP 동기화됨
  ✓  cansar.service    active
  ✓  MQTT 브로커       127.0.0.1:1883
@@ -347,7 +347,7 @@ RTK 만으로는 여전히 흐려지지만(X대역 −13 dB 보다는 덜), 리�
 
 ```bash
 python -m sar_pass cart --start 37.5665,126.9780 --heading 45 --length 30 --passes 3 \
-    --mqtt 127.0.0.1:1883 --cap /home/physical/CAP_ON --cap-ack /home/physical/CAP_ACK --log-dir /home/physical/sar_logs
+    --mqtt 127.0.0.1:1883 --cap ~/CAP_ON --cap-ack ~/CAP_ACK --log-dir ~/sar_logs
 ```
 
 1. 시작점 **뒤**로 가서 선 방향으로 민다 → 시작점을 지나면 CAP_ON(횡 ±3 m 안, 0.3 m/s 이상)
@@ -365,8 +365,8 @@ python -m sar_pass cart --start 37.5665,126.9780 --heading 45 --length 30 --pass
 
 ```bash
 # Pi — 패스가 끝나면 거리 압축으로 줄여 둔다(events.csv 가 Pi 에 있어서 Pi 에서 줄인다). 노트북 미러는 줄인 것만 받는다
-python -m sar_data --flights /home/physical/sar_logs --radar /home/physical/flight --radar-glob 'iq_*.bin' \
-    --reduce-adapter sar_image.cansar:load --radar-json /home/physical/radar.json
+python -m sar_data --flights ~/sar_logs --radar ~/flight --radar-glob 'iq_*.bin' \
+    --reduce-adapter sar_image.cansar:load --radar-json ~/radar.json
 ```
 
 - radar.json 은 `sar_image/example_radar_cansar.json` 에서 시작한다 — 파장 0.0527 m · 대역 368 MHz(부대역 8 × 50 MHz, 거리 해상도 0.41 m)는
@@ -408,7 +408,7 @@ python -m sar_data ... --radar-json radar.json --adapter team_sar:load --former 
 요구사항의 「비행 후 .ulg 받기」를 사람이 잊지 않게, Pi 에 상주시켜 **시동이 꺼질 때마다** 그 비행의 로그를 받는다.
 
 ```bash
-python -m sar_pass ulog --watch --connect tcp://127.0.0.1:5760 --log-dir /home/physical/sar_logs
+python -m sar_pass ulog --watch --connect tcp://127.0.0.1:5760 --log-dir ~/sar_logs
 ```
 
 - 받은 파일은 그 비행 폴더(`flight_<시각>/fc_<날짜>_<번호>.ulg`)에 두고, `ulog.json` 에 FC 로그 번호 · 날짜 · 크기를 적는다.
@@ -599,15 +599,15 @@ HW 브랜치의 공통 틀 `pi/common/` 을 상속한다. **그 파일들은 고
 
 ```bash
 # 1) Pi 에 이 저장소의 drone 폴더를 두고, 에이전트가 쓰는 venv 에 설치 (mavsdk-grpc 도 함께 들어간다)
-/home/physical/venv/bin/pip install -e '/home/physical/Junho_drone/viz-debugger/drone'
+~/venv/bin/pip install -e ~/Junho_drone/viz-debugger/drone
 
 # 2) 실행 명령만 바꾸는 덮어쓰기 파일 — 원래 서비스 파일은 그대로 둔다
 sudo systemctl edit drone-node
 #   [Service]
 #   ExecStart=
-#   ExecStart=/home/physical/venv/bin/python3 -u -m sar_pass.agent --node drone.drone_node:DroneNode
+#   ExecStart=/home/<user>/venv/bin/python3 -u -m sar_pass.agent --node drone.drone_node:DroneNode
 #   Environment=SAR_LOG_DIR=/var/lib/hw-node/sar
-#   # 레이더가 CAP_ACK 를 쓰면: Environment=SAR_CAP_ACK=/home/physical/CAP_ACK
+#   # 레이더가 CAP_ACK 를 쓰면: Environment=SAR_CAP_ACK=/home/<user>/CAP_ACK
 sudo systemctl restart drone-node && journalctl -u drone-node -f     # "SAR 명령 준비" 가 보이면 끝
 
 # 되돌리기: sudo systemctl revert drone-node && sudo systemctl restart drone-node
@@ -615,7 +615,7 @@ sudo systemctl restart drone-node && journalctl -u drone-node -f     # "SAR 명�
 
 - `WorkingDirectory` 는 원래 서비스의 것(`~/hw/pi`)을 쓴다. 그래서 `common` · `drone` 패키지가 그대로 import 된다.
 - `SAR_LOG_DIR` 는 서비스가 쓸 수 있는 곳이어야 한다. `StateDirectory=hw-node` 가 있으면 `/var/lib/hw-node/…` 가 맞다.
-  없으면 `/home/physical/sar_logs` 처럼 홈 아래로 둔다.
+  없으면 `~/sar_logs` 처럼 홈 아래로 둔다.
 - 설정은 모두 환경변수다: `SAR_FC_URL`(기본 `udpin://0.0.0.0:14540`) · `SAR_CAP_PATH` · `SAR_CAP_ACK` · `SAR_LOG_DIR` ·
   `SAR_BASE_LISTEN` · `SAR_CONNECT_TIMEOUT`. 설명은 `sar_pass/agent.py` 머리말에 있다.
 

@@ -10,6 +10,10 @@
  *
  * 주소는 서버(sysai-server2)의 테일넷 주소다. 공인 주소는 적지 않는다 — 같은 기기의 다른 서버(장애물 탐지 AI)가
  * 그 주소를 쓰고, 그 주소는 `src/autodrive/` 경계 밖에 적지 않는다(`verify:autodrive-ai`).
+ *
+ * **테일넷 주소도 소스에 적지 않는다** (공개 저장소 정리) — `.env.local` 의 `VITE_VISION_STREAM_HOST`
+ * (예: `http://<tailscale-ip>`)에 둔다. 없으면 IP 칸이 비고, 그 프리셋 줄은 목록에 안 생긴다.
+ * 환경변수는 그 자리에서 읽는다 — 중간 변수를 두면 Vite 빌드가 값을 못 넣는다.
  */
 
 export type VisionPreset = {
@@ -19,8 +23,8 @@ export type VisionPreset = {
   whyKey: string;
 };
 
-/** 스트림 서버 호스트 (261001 사용자가 준 테일넷 주소). */
-export const VISION_STREAM_HOST = 'http://100.102.8.102';
+/** 스트림 서버 호스트 (261001 사용자가 준 테일넷 주소 — `VITE_VISION_STREAM_HOST`). 없으면 빈 문자열. */
+export const VISION_STREAM_HOST: string = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_VISION_STREAM_HOST ?? '';
 
 /** 서버가 여는 포트 — 순서가 서버의 `SOURCES` 순서다. */
 export const VISION_STREAM_PORTS: readonly { port: number; source: string }[] = [
@@ -36,7 +40,7 @@ export const VISION_DEFAULT_PORTS: readonly string[] = VISION_STREAM_PORTS.map((
 export const VISION_HOST_PRESETS: readonly VisionPreset[] = [
   { id: 'tailnet', labelKey: 'preset.vision.hostTailnet', url: VISION_STREAM_HOST, whyKey: 'preset.vision.why' },
   { id: 'manual', labelKey: 'preset.manual', url: '', whyKey: 'preset.manual.why' },
-];
+].filter((preset) => preset.id === 'manual' || preset.url.trim() !== '');
 
 /** 포트 줄마다 고르는 것 — 값이 번호뿐이다. */
 export const VISION_PORT_PRESETS: readonly VisionPreset[] = [

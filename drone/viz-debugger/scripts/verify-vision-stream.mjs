@@ -29,16 +29,16 @@ const store = await load('src', 'vision', 'store.ts');
 /** 261001 실측 — sysai-server2 :10003 `/health` (파이가 꺼져 있던 때). */
 const HEALTH_ROBOT1_IDLE = {
   source: 'robot1', port: 10003, host: 'sysai-server2',
-  folder: '/home/dg/capstone-db/data_stream/stream_data/robot1/20261001_103459',
+  folder: '/srv/capstone-db/data_stream/stream_data/robot1/20261001_103459',
   frames: 0, states: 0, save_fail: 0, redis_fail: 0, redis_error: null,
-  status: { video: '끊김 (TimeoutError: timed out) — 다시 붙는 중', state: '붙는 중 mqtt://100.72.109.9:1883' },
+  status: { video: '끊김 (TimeoutError: timed out) — 다시 붙는 중', state: '붙는 중 mqtt://192.0.2.10:1883' },
   vision: {}, vision_error: null,
 };
 /** 같은 모양에 비전 결과가 붙은 것 — 서버 docstring 의 `"vision": {모델: {results, n, run, lag_ms, infer_ms, detections, age_s}}`. */
 const HEALTH_ROBOT1_LIVE = {
   ...HEALTH_ROBOT1_IDLE,
   frames: 1520,
-  status: { video: '받는 중 http://100.72.109.9:8090/stream/1', state: '받는 중 mqtt://100.72.109.9:1883' },
+  status: { video: '받는 중 http://192.0.2.10:8090/stream/1', state: '받는 중 mqtt://192.0.2.10:1883' },
   vision: {
     yoloe: { results: 812, n: 1519, run: '20261001_103459', lag_ms: 71, infer_ms: 58.2, detections: 4, age_s: 0.2 },
     unidepth: { results: 120, n: 1498, run: '20261001_103459', lag_ms: 640, infer_ms: 590, detections: 4, age_s: 41.0 },
@@ -47,17 +47,17 @@ const HEALTH_ROBOT1_LIVE = {
 
 // ── 1. 경로 ─────────────────────────────────────────────────────────────────
 {
-  const base = encodeURIComponent('http://100.102.8.102:10003');
+  const base = encodeURIComponent('http://192.0.2.102:10003');
   const health = relay.visionRelayTarget(`/vision-stream/health?base=${base}`);
-  if (health?.upstream !== 'http://100.102.8.102:10003/health') failures.push(`health 가 그 포트의 /health 로 안 간다 — ${JSON.stringify(health)}`);
+  if (health?.upstream !== 'http://192.0.2.102:10003/health') failures.push(`health 가 그 포트의 /health 로 안 간다 — ${JSON.stringify(health)}`);
   const overlay = relay.visionRelayTarget(`/vision-stream/frame?base=${base}&model=yoloe&n=3`);
-  if (overlay?.upstream !== 'http://100.102.8.102:10003/vision?model=yoloe') failures.push(`frame(model) 이 /vision?model= 로 안 간다 — ${JSON.stringify(overlay)}`);
+  if (overlay?.upstream !== 'http://192.0.2.102:10003/vision?model=yoloe') failures.push(`frame(model) 이 /vision?model= 로 안 간다 — ${JSON.stringify(overlay)}`);
   const raw = relay.visionRelayTarget(`/vision-stream/frame?base=${base}`);
-  if (raw?.upstream !== 'http://100.102.8.102:10003/stream') failures.push(`model 이 없으면 원본 /stream 이어야 한다 — ${JSON.stringify(raw)}`);
+  if (raw?.upstream !== 'http://192.0.2.102:10003/stream') failures.push(`model 이 없으면 원본 /stream 이어야 한다 — ${JSON.stringify(raw)}`);
   if (relay.visionRelayTarget('/autodrive-ai/control/go1_front') !== null) failures.push('다른 창구의 경로를 가로챈다');
   for (const [url, why] of [
     [`/vision-stream/push?base=${base}`, '열지 않은 경로'],
-    [`/vision-stream/health?base=${encodeURIComponent('http://100.102.8.102:10003/admin')}`, '경로가 붙은 base'],
+    [`/vision-stream/health?base=${encodeURIComponent('http://192.0.2.102:10003/admin')}`, '경로가 붙은 base'],
     [`/vision-stream/health?base=${encodeURIComponent('file:///etc/passwd')}`, 'http 가 아닌 base'],
     [`/vision-stream/frame?base=${base}&model=${encodeURIComponent('../x')}`, '모델 이름이 아닌 것'],
   ]) {
@@ -103,7 +103,7 @@ const HEALTH_ROBOT1_LIVE = {
 {
   const idle = client.parseStreamHealth(HEALTH_ROBOT1_IDLE);
   if (idle?.source !== 'robot1' || idle.port !== 10003) failures.push(`실측 /health 를 못 뜯는다 — ${JSON.stringify(idle)}`);
-  if (idle?.upstreamHosts.join(',') !== '100.72.109.9') failures.push(`상태 문장에서 파이 주소를 못 뽑는다 — ${idle?.upstreamHosts}`);
+  if (idle?.upstreamHosts.join(',') !== '192.0.2.10') failures.push(`상태 문장에서 파이 주소를 못 뽑는다 — ${idle?.upstreamHosts}`);
   if (idle?.models.length !== 0) failures.push('결과가 없는데 모델이 생겼다');
 
   const live = client.parseStreamHealth(HEALTH_ROBOT1_LIVE);
@@ -125,9 +125,13 @@ const HEALTH_ROBOT1_LIVE = {
 // ── 3-b. IP 한 칸 + 포트 줄 (261001 지시 — IP 만 바꾸면 포트 넷이 다 따라간다) ──
 {
   const { saveConnections, connectionKey } = await load('src', 'shared', 'connections.ts');
+  // 공개 저장소 정리 — 서버의 테일넷 IP 는 소스가 아니라 .env.local 의 VITE_VISION_STREAM_HOST 에 있다.
+  // 환경변수 없이는 IP 칸이 비어 주소가 하나도 안 나와야 하고, IP 를 넣으면 기본 포트 넷이 다 따라와야 한다.
+  if (client.visionBases().length !== 0) failures.push(`환경변수 없이 기본 주소가 나온다 — ${client.visionBases().join(', ')}`);
+  saveConnections({ [connectionKey('vision', 'host')]: 'http://192.0.2.102' });
   const defaults = client.visionBases();
-  if (defaults.join(',') !== ['10001', '10002', '10003', '10004'].map((p) => `http://100.102.8.102:${p}`).join(',')) {
-    failures.push(`기본 주소가 테일넷 IP + 포트 넷이 아니다 — ${defaults.join(', ')}`);
+  if (defaults.join(',') !== ['10001', '10002', '10003', '10004'].map((p) => `http://192.0.2.102:${p}`).join(',')) {
+    failures.push(`기본 주소가 IP + 포트 넷이 아니다 — ${defaults.join(', ')}`);
   }
   saveConnections({ [connectionKey('vision', 'host')]: '10.0.0.5' });
   const moved = client.visionBases();
@@ -148,17 +152,17 @@ const HEALTH_ROBOT1_LIVE = {
 
 // ── 4. 장비와 포트 묶기 ─────────────────────────────────────────────────────
 {
-  const B = (port) => `http://100.102.8.102:${port}`;
+  const B = (port) => `http://192.0.2.102:${port}`;
   const state = (body) => ({ health: client.parseStreamHealth(body), receivedAtMs: 0, error: null, via: 'relay', rate: {} });
-  const robot2 = { ...HEALTH_ROBOT1_IDLE, source: 'robot2', port: 10004, status: { state: '붙는 중 mqtt://100.83.132.16:1883' } };
+  const robot2 = { ...HEALTH_ROBOT1_IDLE, source: 'robot2', port: 10004, status: { state: '붙는 중 mqtt://192.0.2.16:1883' } };
   const sources = { [B(10003)]: state(HEALTH_ROBOT1_IDLE), [B(10004)]: state(robot2) };
   const bases = [B(10001), B(10002), B(10003), B(10004)];
 
-  const matched = binding.resolveVisionBinding(null, '100.72.109.9', sources, bases);
+  const matched = binding.resolveVisionBinding(null, '192.0.2.10', sources, bases);
   if (matched.how !== 'matched' || matched.base !== B(10003)) failures.push(`주소가 같은 포트 하나를 못 묶는다 — ${JSON.stringify(matched)}`);
-  const chosen = binding.resolveVisionBinding(B(10004), '100.72.109.9', sources, bases);
+  const chosen = binding.resolveVisionBinding(B(10004), '192.0.2.10', sources, bases);
   if (chosen.how !== 'chosen' || chosen.base !== B(10004)) failures.push('사람이 고른 포트가 자동 맞춤에 진다');
-  const unbound = binding.resolveVisionBinding(binding.VISION_UNBOUND, '100.72.109.9', sources, bases);
+  const unbound = binding.resolveVisionBinding(binding.VISION_UNBOUND, '192.0.2.10', sources, bases);
   if (unbound.base !== null || unbound.how !== 'unbound') failures.push('「연결 안 함」을 골랐는데 묶는다');
   const none = binding.resolveVisionBinding(null, 'pi7.local', sources, bases);
   if (none.base !== null) failures.push('주소가 다른데 아무 포트나 묶는다');
@@ -166,8 +170,8 @@ const HEALTH_ROBOT1_LIVE = {
   if (noHost.base !== null) failures.push('브로커가 없는 장비(/state)를 아무 포트에나 묶는다');
 
   // 대조군 — 같은 파이를 두 포트가 보고 있으면(서버 실행 인자 실수) 고르지 않는다.
-  const twin = { ...sources, [B(10004)]: state({ ...robot2, status: { state: '받는 중 mqtt://100.72.109.9:1883' } }) };
-  const ambiguous = binding.resolveVisionBinding(null, '100.72.109.9', twin, bases);
+  const twin = { ...sources, [B(10004)]: state({ ...robot2, status: { state: '받는 중 mqtt://192.0.2.10:1883' } }) };
+  const ambiguous = binding.resolveVisionBinding(null, '192.0.2.10', twin, bases);
   if (ambiguous.base === null && ambiguous.how === 'ambiguous' && ambiguous.candidates.length === 2) controls.push('주소가 같은 포트가 둘이면 안 묶는다');
   else failures.push(`대조군 실패: 후보가 둘인데 하나를 골랐다 — ${JSON.stringify(ambiguous)}`);
 }
@@ -181,7 +185,7 @@ const HEALTH_ROBOT1_LIVE = {
     headers: { get: (name) => (name === 'X-Vision-Relay' ? '1' : null) },
     json: async () => ({ ...HEALTH_ROBOT1_LIVE, vision: { yoloe: { ...HEALTH_ROBOT1_LIVE.vision.yoloe, results } } }),
   }));
-  const base = 'http://100.102.8.102:10003';
+  const base = 'http://192.0.2.102:10003';
   await store.pollVisionSource(base, () => now);
   if (store.visionSourceOf(base).rate.yoloe !== undefined) failures.push('한 번 받고 속도를 지어낸다');
   results = 164; now = 20_000;

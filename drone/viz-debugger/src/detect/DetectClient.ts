@@ -29,17 +29,18 @@ import type {
   DetectFeatures, DetectFrameEvidence, DetectLocalization, DetectPath, DetectSummary,
 } from './types.ts';
 
-const meta = import.meta as unknown as { env?: { VITE_DETECT_URL?: string } };
-
 /**
  * **기본값이 Tailscale 주소다** (260914 지시).
  *
  * 전에는 비어 있어서 연결 관리에 주소를 손으로 넣어야 붙었다. 탐지가 시연장 밖의 데스크톱에서
  * 돌게 되면서 주소가 하나로 정해졌다 — 테일넷 이름이다(`presets.ts`). 로봇과 같은 규칙으로
  * 환경변수가 있으면 그것이 이기고, 연결 관리에서 넣은 값이 그 위에서 이긴다.
+ *
+ * 테일넷 프리셋도 환경변수에서 온다(`presets.ts`) — 둘 다 없으면 빈 칸이다(연결 관리에서 넣는다).
+ * 환경변수는 그 자리에서 읽는다 — 중간 변수를 두면 Vite 빌드가 값을 못 넣는다.
  */
 const TAILSCALE = DETECT_PRESETS.find((preset) => preset.id === 'tailscale')?.url ?? '';
-registerConnectionDefault('detect', 'base', meta.env?.VITE_DETECT_URL ?? TAILSCALE);
+registerConnectionDefault('detect', 'base', (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_DETECT_URL || TAILSCALE);
 
 /** 탐지 서비스 주소. **이 함수 밖에서 주소 문자열을 만들지 않는다.** */
 export function detectBaseUrl(): string {
@@ -182,7 +183,7 @@ export async function fetchFeatures(source: DetectSource, target: DetectClass = 
  * 그 각도의 그림 주소. **경로 문자열을 화면이 만들지 않는다.**
  *
  * 시료의 `evidence.json` 에는 탐지 기계의 로컬 절대경로가 들어 있다
- * (`/home/jin24/…/original.jpg`). 브라우저는 그걸 못 연다 — 그 값을 화면에 넘기면
+ * (`/home/<user>/…/original.jpg`). 브라우저는 그걸 못 연다 — 그 값을 화면에 넘기면
  * 깨진 그림이 뜬다. 여기서 **우리가 열 수 있는 주소**로 바꾼다.
  */
 export function frameImageUrl(

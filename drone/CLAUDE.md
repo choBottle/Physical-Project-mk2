@@ -16,7 +16,7 @@
 
 Holybro X500 V2 + H743 FC(PX4) · QGroundControl · Raspberry Pi 5(FC TELEM 에 연결, mavlink-router: MAVSDK 14540 · TCP 5760) ·
 지상국 노트북 ↔ Pi 는 핫스팟 WiFi · RTK 베이스 MicoAir M-RTK(USB → 노트북 → UDP 14660 → Pi → GPS_RTCM_DATA → FC) ·
-레이더(cansar)는 `/home/physical/CAP_ON` 파일로 캡처를 켜고 끈다(CAP_ACK 로 확인).
+레이더(cansar)는 `~/CAP_ON` 파일(Pi 서비스 계정의 홈)로 캡처를 켜고 끈다(CAP_ACK 로 확인).
 
 SAR 비행 규칙: 고도 20 m 일정 · 직선 60 m 이상을 3~5 m/s 등속(가감속은 구간 밖) · 기수는 진행 방향 고정 ·
 같은 선 같은 방향 2회 이상 · 패스 간격 10 s 이상 · CAP_ON 은 등속 진입 때 만들고 감속 전 · 중단 · RTL · 예외 때 반드시 지운다.

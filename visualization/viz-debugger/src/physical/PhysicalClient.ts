@@ -12,7 +12,7 @@
  *
  * ## 채널 (하드웨어가 실제로 쏴 보고 확인한 값)
  *
- *   브로커   ws://pi7.tailcb6bfb.ts.net:9001/mqtt (WebSocket) · MQTT 5 · 인증 없음
+ *   브로커   ws://<go1-tailnet-host>:9001/mqtt (WebSocket) · MQTT 5 · 인증 없음
  *   발행     terminal/<붙은 장비>/downlink  QoS 1
  *   수신     terminal/+/uplink              QoS 1
  *   페이로드 protobuf 바이너리 — JSON 문자열이 아니다
@@ -46,8 +46,6 @@ import { fakeMqtt, isFakeAddress } from './fakeDevice.ts';
 import { noteFcx } from '../shared/fcxStatus.ts';
 import { decodeCapability, decodeUplink, type UplinkMessage } from './uplink.ts';
 
-const meta = import.meta as unknown as { env?: { VITE_PHYSICAL_WS?: string } };
-
 /**
  * 기본 주소. **환경변수는 기본값일 뿐이고** 화면의 「연결 관리」가 덮어쓸 수 있다
  * (260904 · `VZ-C-07`). 다만 주소를 아는 면은 여기 하나여야 하므로 환경변수는 이 파일에서만
@@ -61,8 +59,17 @@ const meta = import.meta as unknown as { env?: { VITE_PHYSICAL_WS?: string } };
  * 망이 바뀌어도 같다.
  *
  * `pi7.local` 은 프리셋에 남겨 둔다(`presets.ts`) — 같은 랜에 있을 때는 그쪽이 한 홉 짧다.
+ *
+ * **테일넷 이름은 소스에 적지 않는다** (공개 저장소 정리). `VITE_PHYSICAL_WS` 가 없으면 Go1 테일넷
+ * 프리셋(`VITE_PHYSICAL_PRESET_GO1`)과 같은 값을 쓰고 — 기본값과 프리셋이 갈리지 않게 —, 그것도 없으면
+ * 빈 칸이다(연결 관리에서 넣는다). 환경변수는 그 자리에서 읽는다 — 중간 변수를 두면 Vite 빌드가 값을 못 넣는다.
  */
-registerConnectionDefault('physical', 'ws', meta.env?.VITE_PHYSICAL_WS ?? 'ws://pi7.tailcb6bfb.ts.net:9001/mqtt');
+registerConnectionDefault(
+  'physical', 'ws',
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_PHYSICAL_WS
+    || (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_PHYSICAL_PRESET_GO1
+    || '',
+);
 
 /**
  * 지금 쓰는 브로커 주소들. 상수가 아니라 **읽을 때마다 지금 값**이다.

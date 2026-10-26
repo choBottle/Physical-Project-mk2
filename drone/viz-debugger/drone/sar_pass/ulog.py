@@ -1,7 +1,7 @@
 """비행이 끝나면 FC 의 `.ulg` 를 받아 그 비행 폴더에 둔다 — 「비행 후 QGC 에서 .ulg 받기」를 사람이 잊지 않게.
 
     # Pi 에 상주 (systemd). 착륙 · 시동 꺼짐을 보고 그 비행의 로그를 받는다
-    python -m sar_pass ulog --watch --connect tcp://127.0.0.1:5760 --log-dir /home/physical/sar_logs
+    python -m sar_pass ulog --watch --connect tcp://127.0.0.1:5760 --log-dir ~/sar_logs
 
     # 지금 가장 최근 로그 하나만
     python -m sar_pass ulog --connect tcp://127.0.0.1:5760 --log-dir sar_logs

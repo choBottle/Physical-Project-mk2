@@ -25,6 +25,10 @@ const code = (source) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*
 
 const relay = await load('scripts', 'autodrive-ai-relay.mjs');
 const client = await load('src', 'autodrive', 'aiClient.ts');
+// 공개 저장소 정리 — AI 서버 주소는 소스에 없고 환경변수(.env.local)에서 온다. 검사에서는 문서용 주소(192.0.2.0/24)를
+// 연결 관리에 넣은 것처럼 둔다 — 주소에서 경로를 만드는 규칙을 재는 것이지 실제 서버에 닿는 것이 아니다.
+const AI_TEST = 'http://192.0.2.33:7864';
+(await load('src', 'shared', 'connections.ts')).saveConnections({ 'autodrive-ai.base': AI_TEST });
 const obstacle = await load('src', 'autodrive', 'obstacle.ts');
 
 const failures = [];
@@ -42,11 +46,11 @@ const SAMPLE = {
 
 // ── 1. 창구 ──────────────────────────────────────────────────────────────────
 {
-  const base = encodeURIComponent('http://210.110.250.33:7864');
+  const base = encodeURIComponent(AI_TEST);
   const ok = relay.relayTarget(`/autodrive-ai/control/go1_front?base=${base}`);
-  if (ok?.upstream !== 'http://210.110.250.33:7864/control/go1_front') failures.push(`control 이 사용자가 준 주소로 안 간다 — ${ok?.upstream}`);
+  if (ok?.upstream !== `${AI_TEST}/control/go1_front`) failures.push(`control 이 사용자가 준 주소로 안 간다 — ${ok?.upstream}`);
   const frame = relay.relayTarget(`/autodrive-ai/frame/go1_front?base=${base}`);
-  if (frame?.upstream !== 'http://210.110.250.33:7864/stream/ai/go1_front') failures.push(`frame 이 사용자가 준 스트림으로 안 간다 — ${frame?.upstream}`);
+  if (frame?.upstream !== `${AI_TEST}/stream/ai/go1_front`) failures.push(`frame 이 사용자가 준 스트림으로 안 간다 — ${frame?.upstream}`);
   if (relay.relayTarget('/detect-sample/x.json') !== null) failures.push('다른 창구의 경로를 가로챈다');
   const refused = [
     ['/autodrive-ai/upload/go1_front', '열린 경로 밖'],
@@ -207,7 +211,7 @@ const SAMPLE = {
       // 자료로 들고 있다). 태그 꼴로 적힌 것만 빼고 보므로, 그 폴더에 진짜 AI 카메라 이름이나
       // 서버 주소가 들어오면 **그대로 잡힌다.**
       const bare = source.replaceAll('sensor.camera.go1_front', '');
-      if (/210\.110\.250\.33|:7864|go1_front/.test(bare) && !rel.startsWith(autodriveDir)) failures.push(`${rel}: AI 서버 주소·카메라 이름이 경계 밖에 있다`);
+      if (/VITE_AUTODRIVE_AI_|:7864|go1_front/.test(bare) && !rel.startsWith(autodriveDir)) failures.push(`${rel}: AI 서버 주소·카메라 이름이 경계 밖에 있다`);
     }
     if (rel.startsWith(join('src', 'detect')) && /autodrive/.test(source)) failures.push(`${rel}: 문 찾기 탐지가 자율주행 폴더를 안다`);
   }
@@ -254,8 +258,8 @@ const SAMPLE = {
   if (!CONNECTION_TARGETS.some((t) => t.id === 'autodrive-ai' && t.live)) failures.push('연결 관리에 AI 서버 대상이 없다');
   await load('src', 'detect', 'DetectClient.ts');
   if (connectionAddress('detect', 'base') === connectionAddress('autodrive-ai', 'base')) failures.push('문 찾기 탐지와 AI 서버가 같은 주소를 본다');
-  if (client.aiStreamUrl() !== 'http://210.110.250.33:7864/stream/ai/go1_front') failures.push(`영상 주소가 사용자가 준 것과 다르다 — ${client.aiStreamUrl()}`);
-  if (client.aiControlUrl() !== 'http://210.110.250.33:7864/control/go1_front') failures.push(`장애물 주소가 사용자가 준 것과 다르다 — ${client.aiControlUrl()}`);
+  if (client.aiStreamUrl() !== `${AI_TEST}/stream/ai/go1_front`) failures.push(`영상 주소가 사용자가 준 것과 다르다 — ${client.aiStreamUrl()}`);
+  if (client.aiControlUrl() !== `${AI_TEST}/control/go1_front`) failures.push(`장애물 주소가 사용자가 준 것과 다르다 — ${client.aiControlUrl()}`);
   const { checkAutodriveAi } = await load('src', 'shared', 'connectionCheck.ts');
   const lines = await checkAutodriveAi(async (url) => ({ ok: true, status: 200, headers: { get: (k) => (k === 'X-Autodrive-Relay' && url.startsWith('/autodrive-ai/') ? '1' : null) }, json: async () => SAMPLE }));
   if (lines[0]?.ok !== true || !/탐지 2건/.test(String(lines[0]?.reason))) failures.push('연결 확인의 장애물 줄이 받은 값을 말하지 않는다');

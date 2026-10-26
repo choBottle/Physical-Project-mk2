@@ -16,9 +16,9 @@
 Pi 설정(`/etc/sar-drone.env`):
 
 ```bash
-SAR_CANSAR_QUICK=/home/physical/cansar_radar/cansar_quick.py   # cansar_flight.py 와 같은 폴더 (레이더 팀이 정함)
-SAR_CANSAR_DATA=/home/physical/flight
-SAR_CANSAR_LOGS=/home/physical/cansar_logs
+SAR_CANSAR_QUICK=/home/<user>/cansar_radar/cansar_quick.py   # cansar_flight.py 와 같은 폴더 (레이더 팀이 정함)
+SAR_CANSAR_DATA=/home/<user>/flight
+SAR_CANSAR_LOGS=/home/<user>/cansar_logs
 SAR_CANSAR_SIDE=right            # 안테나가 보는 쪽 — 비행 전에 레이더 팀이 정한다
 ```
 
@@ -87,14 +87,14 @@ SAR_CANSAR_SIDE=right            # 안테나가 보는 쪽 — 비행 전에 레
 | roff | 실내 CR 실측 0.4 m, 지금 케이블 구성은 약 0.24 m → **0.24~0.4 m, 비행 중 CR 로 다시 보정** | 리플렉터로 roff 를 추정하는 도구(아래 5) |
 | CAP_ON | 드론 쪽 비행 스크립트가 만들고 지운다 — 그대로 | CAP_ON 안에 패스 번호 · 비행 이름 · 시각(JSON 한 줄)을 적기 시작 |
 | CAP_ACK | 없음, 필요하면 그쪽 Pi 서비스에 넣는다 | **넣어 주세요** — 형식은 아래 |
-| quick 경로 | `/home/physical/cansar_radar/` (cansar_quick.py · cansar_flight.py) | env 기본값으로 넣음 |
+| quick 경로 | `~/cansar_radar/` (cansar_quick.py · cansar_flight.py) | env 기본값으로 넣음 |
 | 캡처 번호 N | SD 카드 최대 번호 + 1 일련번호 — 겹치지 않음 | — |
 | 안테나 방향 · 레버암 | 비행 전에 재서 알려 줌 | 받으면 radar.json · SAR_CANSAR_SIDE |
 | Pi 에서 dec 1 quick | 느리다 → 영역 줄이거나 드론 쪽 GPU 파이프라인에 맡김 | **드론 쪽 영상이 주 영상**, Pi quick-look 은 참고 |
 
 ### 레이더 팀에 부탁 (남은 것)
 
-1. **CAP_ACK** (그 전까지는 드론 쪽이 events.csv 의 start · stop 줄로 대신 잰다 — `SAR_CAP_EVENTS`) — 기록을 실제로 시작한 직후 `/home/physical/CAP_ACK` 에 그 순간 `time.time()` 을 한 줄로 쓰고, 멈춘 직후 지운다.
+1. **CAP_ACK** (그 전까지는 드론 쪽이 events.csv 의 start · stop 줄로 대신 잰다 — `SAR_CAP_EVENTS`) — 기록을 실제로 시작한 직후 `~/CAP_ACK` 에 그 순간 `time.time()` 을 한 줄로 쓰고, 멈춘 직후 지운다.
    드론 쪽은 이것으로 레이더 지연을 재서 다음 패스부터 그만큼 미리 켠다(이미 들어 있음).
 2. **CAP_ON 내용 같이 적기** — CAP_ON 파일 안의 JSON(`pass` · `flight`)을 passes.csv 나 meta_N.txt 에 한 칸 더 적어 주면
    드론 패스와 캡처를 정확히 짝짓는다.
@@ -104,7 +104,7 @@ SAR_CANSAR_SIDE=right            # 안테나가 보는 쪽 — 비행 전에 레
 ## 5. 레이더 팀 처리 코드 v2 (2026-10-04 오후) — 받아서 붙임
 
 `tests/data/cansar/` 를 v2 로 바꿨다(`CHANGES_v2.md`). 명령 형식 · 결과 이름 · 표준 출력의 `[판정]` · `영상 첨두` 줄이 그대로라
-드론 쪽 quick-look 실행(`sar_data/quick.py`)은 손대지 않고 돈다(시험 통과). Pi 에는 `/home/physical/cansar_radar/` 에 v2 두 파일을 둔다.
+드론 쪽 quick-look 실행(`sar_data/quick.py`)은 손대지 않고 돈다(시험 통과). Pi 에는 `~/cansar_radar/` 에 v2 두 파일을 둔다.
 
 | v2 변경 | 드론 쪽 |
 |---|---|
@@ -126,4 +126,4 @@ Pi 에서 도는 레이더 팀 프로그램: CAP_ON 을 보고 **SSH 로 SDR 에
 | CAP_ACK 없음 · pass 번호 없음 | 레이더 지연 · 짝짓기를 짐작 | `--ack` · passes.csv 에 pass · flight |
 
 제안 판 `radar_team/cansar_pi.py` · `cansar.service` · 차이 `cansar_pi.diff` · 설명 `radar_team/README.md`. 가짜 SDR 로 원본 · 제안 둘 다 시험.
-제안 판을 쓰면 드론 쪽 `/etc/sar-drone.env` 에 `SAR_CAP_ACK=/home/physical/CAP_ACK`.
+제안 판을 쓰면 드론 쪽 `/etc/sar-drone.env` 에 `SAR_CAP_ACK=/home/<user>/CAP_ACK`.

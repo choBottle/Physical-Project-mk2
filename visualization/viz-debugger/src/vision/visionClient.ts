@@ -21,14 +21,14 @@ import { t } from '../i18n/dict.ts';
 import { connectionAddress, registerConnectionDefault, splitAddressList } from '../shared/connections.ts';
 import { VISION_DEFAULT_PORTS, VISION_STREAM_HOST } from './presets.ts';
 
-const meta = import.meta as unknown as { env?: { VITE_VISION_STREAM_HOST?: string; VITE_VISION_STREAM_PORTS?: string } };
-
 /**
  * **IP 한 칸 + 포트 목록** (261001 지시). IP 만 바뀌고 포트는 그대로인 일이 있어서, IP 칸 하나를 고치면 포트 줄이
  * 전부 따라간다. 환경변수가 있으면 그것이 이긴다(포트는 줄바꿈으로 여럿).
+ * 호스트 환경변수(`VITE_VISION_STREAM_HOST`)는 `presets.ts` 가 읽는다 — 없으면 IP 칸이 빈다.
+ * 환경변수는 그 자리에서 읽는다 — 중간 변수를 두면 Vite 빌드가 값을 못 넣는다.
  */
-registerConnectionDefault('vision', 'host', meta.env?.VITE_VISION_STREAM_HOST ?? VISION_STREAM_HOST);
-registerConnectionDefault('vision', 'ports', meta.env?.VITE_VISION_STREAM_PORTS ?? VISION_DEFAULT_PORTS.join('\n'));
+registerConnectionDefault('vision', 'host', VISION_STREAM_HOST);
+registerConnectionDefault('vision', 'ports', (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_VISION_STREAM_PORTS ?? VISION_DEFAULT_PORTS.join('\n'));
 
 /** 개발 서버 창구 — `scripts/vision-stream-relay.mjs` 의 `VISION_RELAY_URL` 과 같아야 한다. */
 const RELAY = '/vision-stream';
@@ -133,7 +133,7 @@ export type StreamHealth = {
 const num = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null);
 const str = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
 
-/** 상태 문장에서 상대 호스트를 뽑는다 — `받는 중 mqtt://100.72.109.9:1883` → `100.72.109.9`. */
+/** 상태 문장에서 상대 호스트를 뽑는다 — `받는 중 mqtt://192.0.2.10:1883` → `192.0.2.10`. */
 export function upstreamHostsOf(texts: readonly (string | null)[]): string[] {
   const out = new Set<string>();
   for (const text of texts) {

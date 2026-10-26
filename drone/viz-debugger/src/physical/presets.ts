@@ -141,25 +141,32 @@ export type BrokerPreset = {
  * 근거다(`deviceIdentity.ts`). 여기 `Go1`·`드론` 이라고 적힌 것은 사람이 고르기 위한
  * 이름일 뿐이고, 코드가 이 문자열을 보고 기종을 가르지 않는다.
  */
+/**
+ * ## 테일넷 주소는 환경변수에서 온다 (공개 저장소 정리)
+ *
+ * 팀의 테일넷 이름은 소스에 적지 않는다 — `.env.local`(커밋 안 됨)의 `VITE_PHYSICAL_PRESET_GO1` ·
+ * `VITE_PHYSICAL_PRESET_DRONE` 에 둔다(`.env.example`). 위 규칙(「주소를 모르면 프리셋을 안 만든다」) 그대로,
+ * 값이 없는 줄은 목록에 안 생긴다 — 남는 것은 직접 입력이다.
+ * 환경변수는 그 자리에서 읽는다 — 중간 변수를 두면 Vite 빌드가 값을 못 넣는다.
+ */
 export const BROKER_PRESETS: readonly BrokerPreset[] = [
-  // **기본값.** 망이 바뀌어도 이름이 같다 — 노트북에서 돌리든 발표장에서 돌든 한 주소다.
-  { id: 'tailscale', labelKey: 'preset.broker.tailscale', url: 'ws://pi7.tailcb6bfb.ts.net:9001/mqtt', whyKey: 'preset.broker.tailscale.why' },
+  // **기본값.** 망이 바뀌어도 이름이 같다 — 노트북에서 돌리든 발표장에서 돌든 한 주소다. 예: ws://<go1-tailnet-host>:9001/mqtt
+  { id: 'tailscale', labelKey: 'preset.broker.tailscale', url: (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_PHYSICAL_PRESET_GO1 ?? '', whyKey: 'preset.broker.tailscale.why' },
   /**
    * 드론도 **테일넷 이름**으로 둔다 — Go1 과 같은 꼴이라야 「망이 바뀌면 이쪽」이라는 규칙이
-   * 기계마다 갈리지 않는다.
+   * 기계마다 갈리지 않는다. 예: ws://<drone-tailnet-host>:9001
    *
-   * ⚠ **이름은 계약이 준 값이 아니다.** 계약 §1 이 준 것은 테일넷 **IP**(`100.85.243.54`)이고
-   * 그마저 1883 왕복만 확인됐다. 이름은 pi7(`pi7.tailcb6bfb.ts.net`)·pi1
-   * (`pi1.tailcb6bfb.ts.net`, `NavClient.ts`)이 쓰는 테일넷을 그대로 따른 것이다 —
+   * ⚠ **이름은 계약이 준 값이 아니다.** 계약 §1 이 준 것은 테일넷 **IP**(`<tailscale-ip>`)이고
+   * 그마저 1883 왕복만 확인됐다. 이름은 pi7·pi1(`NavClient.ts`)이 쓰는 테일넷을 그대로 따른 것이다 —
    * 같은 테일넷에 MagicDNS 로 `pi3` 가 올라 있어야 풀린다. **실기에서 먼저 확인할 것.**
-   * 안 풀리면 직접 입력에 `ws://100.85.243.54:9001` 을 넣으면 된다.
+   * 안 풀리면 직접 입력에 `ws://<tailscale-ip>:9001` 을 넣으면 된다.
    *
    * 경로(`/mqtt`)를 안 붙인 이유: 계약이 9001 을 확인한 형태가 경로 없는 쪽이다(§1).
    * Go1 쪽은 `/mqtt` 로 돌고 있으므로 각자 확인된 모양을 그대로 둔다.
    */
-  { id: 'drone-tailscale', labelKey: 'preset.broker.droneTailscale', url: 'ws://pi3.tailcb6bfb.ts.net:9001', whyKey: 'preset.broker.droneTailscale.why' },
+  { id: 'drone-tailscale', labelKey: 'preset.broker.droneTailscale', url: (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_PHYSICAL_PRESET_DRONE ?? '', whyKey: 'preset.broker.droneTailscale.why' },
   { id: 'manual', labelKey: 'preset.manual', url: '', whyKey: 'preset.manual.why' },
-];
+].filter((preset) => preset.id === 'manual' || preset.url.trim() !== '');
 
 /**
  * 고를 수 있는 프리셋인가. 값이 빈 것은 아직 없는 것이다.

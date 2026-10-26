@@ -25,7 +25,7 @@ Go1(`pi7`)과 **같은 구조**다. 웹은 연결 관리의 주소를 `ws://pi7.
 |---|---|---|
 | 이름(mDNS) | `pi3.local` | `getent hosts pi3.local` → `192.168.50.254` ✅ |
 | 연구실 IP | `192.168.50.254` | 1883 pub ✅ / 9001 `101 Switching Protocols` ✅ |
-| Tailscale IP | `100.85.243.54` | 1883 pub ✅ |
+| Tailscale IP | `<pi3-tailscale-ip>` | 1883 pub ✅ |
 | TCP(말단·백엔드·도구) | **1883** | MQTT 3.1.1·5.0 왕복 ✅ |
 | WebSocket(브라우저) | **9001** | `Sec-WebSocket-Protocol: mqtt`, `101` ✅ |
 | 인증 | **없음**(`allow_anonymous true`) | `/etc/mosquitto/conf.d/hw.conf` |

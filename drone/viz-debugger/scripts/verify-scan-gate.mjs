@@ -35,6 +35,10 @@ const session = await load('src', 'physical', 'robotSession.ts');
 const store = await load('src', 'detect', 'store.ts');
 const log = await load('src', 'detect', 'detectLog.ts');
 const gate = await load('src', 'physical', 'scanGate.ts');
+
+// 공개 저장소 정리 — 탐지 주소의 기본값이 비었다(팀의 테일넷 주소는 .env.local). 비어 있으면 게이트가 탐지를
+// 안 기다리므로(`scanGate.ts`) 검사용 주소를 하나 넣는다 — 닿지 않아도 된다, 결과는 아래에서 손으로 넣는다.
+(await load('src', 'shared', 'connections.ts')).saveConnections({ 'detect.base': 'http://detect.invalid:8000' });
 const { receiveUplink, receiveScanCapture } = await load('src', 'physical', 'robotBridge.ts');
 const { arrivedFrames } = await load('src', 'viewpoint', 'store.ts');
 const { frameImageUrl, roundedImageUrl, viewSourceOf } = await load('src', 'detect', 'DetectClient.ts');

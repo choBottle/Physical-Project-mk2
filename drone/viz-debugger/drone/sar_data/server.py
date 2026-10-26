@@ -1,6 +1,6 @@
 """SAR 비행 데이터 서버 (Pi) — 읽기 전용. 화면에서 버튼 한 번으로 받게 한다.
 
-  python -m sar_data --flights /home/physical/sar_logs --radar /home/physical/cansar_data --port 8766
+  python -m sar_data --flights ~/sar_logs --radar ~/cansar_data --port 8766
 
   GET /api/health                              살아 있나 · 디스크 여유
   GET /api/flights                             비행 목록 (패스 · 유효 여부 · 궤적/메타 파일 · 맞는 레이더 원시 파일)
@@ -473,11 +473,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--tile-cache", type=Path, help="지도 타일을 받아 둘 폴더 — 인터넷 없는 현장용 (/tiles/…)")
     c = p.add_argument_group("레이더 팀 quick-look (Pi) — sar_data/quick.py")
     c.add_argument("--cansar-quick", type=Path, help="레이더 팀 cansar_quick.py 경로 — 주면 패스마다 돌린다")
-    c.add_argument("--cansar-data", type=Path, default=Path("/home/physical/flight"), help="iq_N.bin · meta_N.txt 폴더")
-    c.add_argument("--cansar-logs", type=Path, default=Path("/home/physical/cansar_logs"), help="cansar_logs 폴더")
+    # 기본 폴더는 실행 계정의 홈 아래다(현장 Pi 의 sar-data.service 는 User=physical → 그 계정의 홈 아래, 전과 같은 폴더)
+    c.add_argument("--cansar-data", type=Path, default=Path.home() / "flight", help="iq_N.bin · meta_N.txt 폴더 (기본 ~/flight)")
+    c.add_argument("--cansar-logs", type=Path, default=Path.home() / "cansar_logs", help="cansar_logs 폴더 (기본 ~/cansar_logs)")
     c.add_argument("--cansar-side", default="right", choices=["right", "left", "both"], help="안테나가 보는 쪽(진행 방향 기준)")
     c.add_argument("--cansar-lever", help="안테나 위치 F,R,D m (FC 기준 앞 · 오른쪽 · 아래) — 없으면 --radar-json 의 antenna_offset_m")
-    c.add_argument("--cap-path", type=Path, default=Path(os.environ.get("SAR_CAP_PATH", "/home/physical/CAP_ON")),
+    c.add_argument("--cap-path", type=Path, default=Path(os.environ.get("SAR_CAP_PATH") or Path.home() / "CAP_ON"),
                    help="이 파일이 있는 동안(캡처 중)은 quick-look 을 미룬다")
     a = p.parse_args(argv)
     import threading

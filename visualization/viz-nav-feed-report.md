@@ -1,6 +1,6 @@
 # pi1 가시화 중계 (viz-nav-feed) — 구현 보고
 
-- 대상: pi1 (`pi1.tailcb6bfb.ts.net` · `100.83.132.16`)
+- 대상: pi1 (`<pi1-tailnet-host>` · `<pi1-tailscale-ip>`)
 - 작업일: 2026-09-15 KST
 - 앞선 문서: [§0 조사 보고](viz-nav-feed-s0-report.md)
 - 상태: **서비스 가동 중 (부팅 자동 시작)**. 실제 유니티 경로로 보는 시험(§4.4)은 아직 안 함
@@ -8,7 +8,7 @@
 ## 요약
 
 - 새 서비스 `viz-nav-feed` 가 `zoneA/robot/go1-001/nav_state`(2 Hz)와 `…/nav_event`(사건 즉시)를 pi1 로컬 브로커로 발행한다.
-- 가시화 접속 주소: **`ws://pi1.tailcb6bfb.ts.net:9001/mqtt`** (MQTT 5, 인증 없음)
+- 가시화 접속 주소: **`ws://<pi1-tailnet-host>:9001/mqtt`** (MQTT 5, 인증 없음)
 - **기존 파일은 하나도 고치지 않았다.** `go1-sdk` 는 재시작하지 않았고(NRestarts=0, 11:10:38 기동 그대로), 유니티 포트로 보낸 것도 없다. 중계는 어떤 포트도 bind 하지 않는다.
 - 경로 사건은 **브리지 journal 로그**에서 얻는다(`physical` 이 `adm` 그룹이라 읽을 수 있었고, 그룹은 더하지 않았다).
 
@@ -16,7 +16,7 @@
 
 | 항목 | 상태 |
 |---|---|
-| §4.3 다른 테일넷 기기에서 WebSocket 접속 | 못 함. 켜진 기기가 Windows `desktop-oaujese` 뿐이고 접근할 수 없었다. pi1 자신에서 Tailscale 이름으로 붙는 것만 확인 |
+| §4.3 다른 테일넷 기기에서 WebSocket 접속 | 못 함. 켜진 기기가 Windows `<detect-desktop>` 뿐이고 접근할 수 없었다. pi1 자신에서 Tailscale 이름으로 붙는 것만 확인 |
 | §4.4 실제 유니티 경로 시험 | 안 함. 사람 입회 + 가시화와 시간 맞춰 진행 필요 |
 | journal 사건을 실제 `go1-sdk` 로그 줄로 확인 | 안 됨. 배포 뒤 경로가 실행되지 않았다. 같은 문구를 시험용 태그로 넣어 확인했다 |
 
@@ -28,8 +28,8 @@
 
 | 항목 | 값 |
 |---|---|
-| Tailscale 이름 · IP | `pi1.tailcb6bfb.ts.net` · `100.83.132.16` |
-| 유니티 UDP 를 받는 프로세스 | `go1-sdk.service` → `/home/physical/go1sdk/go1_sdk_pc` (C++) |
+| Tailscale 이름 · IP | `<pi1-tailnet-host>` · `<pi1-tailscale-ip>` |
+| 유니티 UDP 를 받는 프로세스 | `go1-sdk.service` → `~/go1sdk/go1_sdk_pc` (C++) |
 | 15101 mode 98/99 | 99 만, `path_done_notify` 로 **한 번만**. 98 은 코드에 없다 |
 | 5009 state_change | 보낸다. 같은 포트로 `go1_detect_forward` 탐지 JSON 도 나간다 |
 | mosquitto 1883 · 9001 | **이번에 설치** (원래 없었다) |
@@ -108,7 +108,7 @@ robot-node 의 엣지 브로커 설정은 건드리지 않았다. 새 브로커�
      Loaded: loaded (/etc/systemd/system/viz-nav-feed.service; enabled; preset: enabled)
      Active: active (running)
      CGroup: /system.slice/viz-nav-feed.service
-             ├─ /home/physical/venv/bin/python3 -u -m robot.viz_nav_feed
+             ├─ ~/venv/bin/python3 -u -m robot.viz_nav_feed
              └─ journalctl -u go1-sdk -f -o json --no-pager -n 0
 [viz-nav] Go1 MQTT 접속 192.168.123.161 rc=Success
 [viz-nav] 시작 topic=zoneA/robot/go1-001 경로 사건 원천=journal ports path=15110 state=15101 teleop=15100 motion=5009
@@ -270,7 +270,7 @@ nftables 가 `tailscale0` 입력을 전부 허용하므로 밖에서도 될 것�
 ## 7. 가시화 접속 주소
 
 ```
-ws://pi1.tailcb6bfb.ts.net:9001/mqtt
+ws://<pi1-tailnet-host>:9001/mqtt
 ```
 
 ---

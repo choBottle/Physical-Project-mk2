@@ -473,8 +473,14 @@ async function replay4_4(options = {}) {
   if (!CONNECTION_TARGETS.some((t) => t.id === 'autodrive' && t.live)) failures.push('연결 관리에 pi1 대상이 없다');
   await load('src', 'physical', 'PhysicalClient.ts');
   await load('src', 'physical', 'NavClient.ts');
-  if (!/pi7\./.test(connectionAddress('physical', 'ws'))) failures.push(`시연 로봇 주소가 ${connectionAddress('physical', 'ws')} — pi7 이어야 한다`);
-  if (connectionAddress('autodrive', 'ws') === connectionAddress('physical', 'ws')) failures.push('pi1 과 pi7 이 같은 주소를 본다');
+  // 공개 저장소 정리 — pi7 · pi1 의 테일넷 이름은 소스가 아니라 .env.local 에 있다(VITE_PHYSICAL_WS · VITE_AUTODRIVE_WS).
+  // 환경변수 없이 도는 이 검사에서는 둘 다 비어 있어야 하고, 두 연결이 **다른 변수**를 읽어야 한다 — 같은 변수면 같은 주소를 본다.
+  if (connectionAddress('physical', 'ws') !== '') failures.push(`시연 로봇 주소가 ${connectionAddress('physical', 'ws')} — 환경변수 없이는 비어 있어야 한다`);
+  if (connectionAddress('autodrive', 'ws') !== '') failures.push(`pi1 주소가 ${connectionAddress('autodrive', 'ws')} — 환경변수 없이는 비어 있어야 한다`);
+  const navSrc = readFileSync(join(root, 'src', 'physical', 'NavClient.ts'), 'utf8');
+  const physSrc = readFileSync(join(root, 'src', 'physical', 'PhysicalClient.ts'), 'utf8');
+  if (!/\.env\?\.VITE_AUTODRIVE_WS/.test(navSrc) || /VITE_PHYSICAL_WS/.test(navSrc)) failures.push('pi1 주소를 VITE_AUTODRIVE_WS 에서만 읽지 않는다');
+  if (!/\.env\?\.VITE_PHYSICAL_WS/.test(physSrc) || /VITE_AUTODRIVE_WS/.test(physSrc)) failures.push('pi1 과 pi7 이 같은 주소를 본다 — 시연 로봇은 VITE_PHYSICAL_WS 에서만 읽어야 한다');
 }
 
 // ── 6. 연결 확인 — 브로커 · 중계 두 줄 ──────────────────────────────────────
@@ -492,9 +498,10 @@ async function replay4_4(options = {}) {
   if (dead[0]?.ok !== false || dead[1]?.ok !== null) failures.push('브로커가 없을 때 중계 줄이 「못 물어봤다」가 아니다');
   const { navClient } = await load('src', 'physical', 'NavClient.ts');
   const { connectionAddress: addressOf, registerConnectionDefault } = await load('src', 'shared', 'connections.ts');
-  // 260915 — pi1 이 보고한 이름이 기본값이다. 검사는 실제 테일넷에 붙지 않게 잠깐 비운다.
+  // 260915 — pi1 이 보고한 이름이 기본값이다(공개 저장소 정리 뒤로는 .env.local 의 VITE_AUTODRIVE_WS).
+  // 검사는 실제 테일넷에 붙지 않게 잠깐 비운다.
   const seeded = addressOf('autodrive', 'ws');
-  if (seeded !== 'ws://pi1.tailcb6bfb.ts.net:9001/mqtt') failures.push(`pi1 기본 주소가 ${seeded} — 보고된 Tailscale 이름이어야 한다`);
+  if (/\.ts\.net|\b100\.\d+\.\d+\.\d+/.test(seeded)) failures.push(`pi1 기본 주소가 ${seeded} — 소스에 테일넷 주소가 박혀 있다`);
   registerConnectionDefault('autodrive', 'ws', '');
   const empty = await navClient().connect();
   registerConnectionDefault('autodrive', 'ws', seeded);

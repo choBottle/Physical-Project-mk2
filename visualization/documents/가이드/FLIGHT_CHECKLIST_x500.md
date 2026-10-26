@@ -256,8 +256,8 @@ sync                               # 비행 직전 디스크 flush
 
 QGroundControl을 붙여 두면 상태를 한눈에 본다. 비행 필수는 아니다.
 
-- 연결: **TCP `100.85.243.54:5760`** (라즈베리파이 Tailscale IP)
-- 지상국 장비: `desktop-oaujese` (`100.125.71.51`)
+- 연결: **TCP `<pi3-tailscale-ip>:5760`** (라즈베리파이 Tailscale IP)
+- 지상국 장비: `<detect-desktop>` (`<desktop-tailscale-ip>`)
 - 안 붙으면: 노트북에서 `tailscale ping pi3`
 
 가시화 웹은 `ws://pi3.local:9001` (MQTT over WebSocket). **읽기 전용이라 웹에서는 못 띄운다.**
@@ -408,7 +408,7 @@ vcgencmd get_throttled                          # 비행 중 전원 문제 흔�
 | ⚠ 쓰면 안 되는 장치 | `/dev/serial0` (디버그 커넥터 `ttyAMA10` 을 가리킴) |
 | 장비 ID | `x500-001` |
 | 포트 | 14540 제어(MAVSDK) · 14541 linkmon · 14542 detect · 14543 브리지 · 5760 QGC(TCP) |
-| Tailscale | `pi3` = `100.85.243.54` / 지상국 `desktop-oaujese` = `100.125.71.51` |
+| Tailscale | `pi3` = `<pi3-tailscale-ip>` / 지상국 `<detect-desktop>` = `<desktop-tailscale-ip>` |
 | MQTT | `127.0.0.1:1883` (말단) · `ws://pi3.local:9001` (웹) |
 | 감지 주기 / 끊김 판정 | 10초 / 15초 |
 | 파이썬 | `~/drone/venv/bin/python` (전역 python 아님) |

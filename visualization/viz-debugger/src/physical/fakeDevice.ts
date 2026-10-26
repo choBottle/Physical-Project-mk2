@@ -549,7 +549,7 @@ class FakeDrone extends FakeDevice {
   private newProc(commandId: string | null, dryRun: boolean | null, argv: string[], mode?: string): Proc {
     const runId = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
     return { runId, commandId, state: 'running', dryRun, argv, startedAt: Date.now() / 1000, endedAt: null, exitCode: null,
-      outPath: `/home/physical/cansar_logs/runner/${runId}.out`, mode, lines: [] };
+      outPath: `~/cansar_logs/runner/${runId}.out`, mode, lines: [] };
   }
 
   private exit(process: Proc, code: number): void {
@@ -609,7 +609,7 @@ class FakeDrone extends FakeDevice {
     const say = (text: string) => this.say(run, text);
     let phase: 'pre' | 'air' = 'pre';
     try {
-      say(`[로그] /home/physical/cansar_logs/test_sar_rtk_${run.runId}.log`);
+      say(`[로그] ~/cansar_logs/test_sar_rtk_${run.runId}.log`);
       say(`[설정] {'pattern': '${pattern}', 'side': '${side}', 'altitude': ${alt}, 'length': ${length}, 'speed': ${speed}, 'passes': ${passes}, 'dry_run': ${dryRun ? 'True' : 'False'}, 'fake': True}`);
       say('[연결] udpin://0.0.0.0:14540 ...');
       await this.wait(700);

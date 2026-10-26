@@ -22,7 +22,7 @@ const failures = [];
 const check = (ok, message) => { if (!ok) failures.push(message); };
 
 const dir = mkdtempSync(join(tmpdir(), 'video-records-'));
-const middleware = videoRecordsMiddleware(dir, async (host) => (host === '100.68.72.33' ? 'DESKTOP-TEST' : null));
+const middleware = videoRecordsMiddleware(dir, async (host) => (host === '192.0.2.68' ? 'DESKTOP-TEST' : null));
 const server = createServer((req, res) => middleware(req, res, () => { res.statusCode = 404; res.end('next'); }));
 await new Promise((done) => server.listen(0, '127.0.0.1', done));
 const origin = `http://127.0.0.1:${server.address().port}`;
@@ -80,18 +80,18 @@ try {
 
   // ── 5. PC 이름 — 주소가 맞는 기기 ───────────────────────────────────────────
   const status = {
-    Self: { HostName: 'LAPTOP-SELF', DNSName: 'laptop-self.tail.ts.net.', TailscaleIPs: ['100.78.11.92'] },
+    Self: { HostName: 'LAPTOP-SELF', DNSName: 'laptop-self.tailnet.example.', TailscaleIPs: ['192.0.2.78'] },
     Peer: {
-      a: { HostName: 'DESKTOP-DQDNRF2', DNSName: 'desktop-dqdnrf2.tail.ts.net.', TailscaleIPs: ['100.68.72.33', 'fd7a::1'] },
-      b: { HostName: 'raspberrypi', DNSName: 'raspberrypi.tail.ts.net.', TailscaleIPs: ['100.64.0.7'] },
+      a: { HostName: 'DESKTOP-PEER', DNSName: 'desktop-peer.tailnet.example.', TailscaleIPs: ['192.0.2.68', 'fd7a::1'] },
+      b: { HostName: 'raspberrypi', DNSName: 'raspberrypi.tailnet.example.', TailscaleIPs: ['192.0.2.7'] },
     },
   };
-  check(tailscaleNameOf(status, '100.68.72.33') === 'DESKTOP-DQDNRF2', 'IP 로 기기 이름을 못 찾았다');
-  check(tailscaleNameOf(status, 'desktop-dqdnrf2') === 'DESKTOP-DQDNRF2', '짧은 DNS 이름으로 못 찾았다');
-  check(tailscaleNameOf(status, '100.78.11.92') === 'LAPTOP-SELF', '자기 자신을 못 찾았다');
+  check(tailscaleNameOf(status, '192.0.2.68') === 'DESKTOP-PEER', 'IP 로 기기 이름을 못 찾았다');
+  check(tailscaleNameOf(status, 'desktop-peer') === 'DESKTOP-PEER', '짧은 DNS 이름으로 못 찾았다');
+  check(tailscaleNameOf(status, '192.0.2.78') === 'LAPTOP-SELF', '자기 자신을 못 찾았다');
   check(tailscaleNameOf(status, '10.0.0.1') === null, '없는 주소에 이름을 지어냈다');
-  check(tailscaleNameOf(null, '100.68.72.33') === null, 'Tailscale 이 없을 때 이름을 지어냈다');
-  const named = await fetch(`${origin}/video-records/host-name?host=100.68.72.33`).then((r) => r.json());
+  check(tailscaleNameOf(null, '192.0.2.68') === null, 'Tailscale 이 없을 때 이름을 지어냈다');
+  const named = await fetch(`${origin}/video-records/host-name?host=192.0.2.68`).then((r) => r.json());
   check(named.name === 'DESKTOP-TEST', `host-name 창구가 조회 결과를 안 돌려줬다: ${JSON.stringify(named)}`);
 
   // ── 내 주소가 아니면 지나간다 ──────────────────────────────────────────────

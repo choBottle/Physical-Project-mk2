@@ -23,15 +23,17 @@ import { connectionAddress, registerConnectionDefault } from '../shared/connecti
 import { navFeedState, receiveNavMessage } from './navFeed.ts';
 import { resolveConnect, type PhysicalStatus } from './PhysicalClient.ts';
 
-const meta = import.meta as unknown as { env?: { VITE_AUTODRIVE_WS?: string } };
-
 /**
- * **기본 주소 — pi1 이 보고한 Tailscale 이름** (260915 `pi1_조사결과.md` · 100.83.132.16).
+ * **기본 주소 — pi1 이 보고한 Tailscale 이름** (260915 `pi1_조사결과.md`).
  *
  * 처음엔 비워 뒀다 — 짐작한 주소가 들어 있으면 「왜 안 붙지」로 시간을 쓴다. 이름은 이제 확인됐다.
  * ⚠ 보고 시점에 pi1 에는 **브로커(mosquitto)가 아직 없다.** 설치 전에는 이 주소로 확인을 누르면 브로커 줄이 빨갛다.
+ *
+ * **테일넷 이름은 소스에 적지 않는다** (공개 저장소 정리) — `.env.local` 의 `VITE_AUTODRIVE_WS`
+ * (예: `ws://<pi1-tailnet-host>:9001/mqtt`)에 둔다. 없으면 빈 칸이다(연결 관리에서 넣는다).
+ * 환경변수는 그 자리에서 읽는다 — 중간 변수를 두면 Vite 빌드가 값을 못 넣는다.
  */
-registerConnectionDefault('autodrive', 'ws', meta.env?.VITE_AUTODRIVE_WS ?? 'ws://pi1.tailcb6bfb.ts.net:9001/mqtt');
+registerConnectionDefault('autodrive', 'ws', (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_AUTODRIVE_WS ?? '');
 
 export function navWsUrl(): string {
   return connectionAddress('autodrive', 'ws');

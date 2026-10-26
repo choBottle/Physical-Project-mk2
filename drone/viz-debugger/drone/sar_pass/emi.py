@@ -1,6 +1,6 @@
 """GPS 간섭 지상 시험 — 레이더를 켜고 끄기를 번갈아 하며 GPS 위성 수 · 정확도 · RTK 를 비교한다. **날지 않는다.**
 
-    python -m sar_pass emi --connect tcp:127.0.0.1:5760 --cap /home/physical/CAP_ON --cycles 4 --period 30 --out emi.json
+    python -m sar_pass emi --connect tcp:127.0.0.1:5760 --cap ~/CAP_ON --cycles 4 --period 30 --out emi.json
 
 레이더는 CAP_ON 이 있을 때 기록(송신)한다고 본다 — 이 도구가 CAP_ON 을 켰다 껐다 한다. 레이더 송신을 손으로 켜고 끄려면 --manual
 (화면에 「지금 켜세요 / 끄세요」를 띄우고 Enter 를 기다린다).

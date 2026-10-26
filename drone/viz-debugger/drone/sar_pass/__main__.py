@@ -11,7 +11,7 @@
   python -m sar_pass check --connect udpin://0.0.0.0:14540 --mqtt 127.0.0.1:1883
 
   # 비행이 끝날 때마다 FC 의 .ulg 를 그 비행 폴더로 (상주)
-  python -m sar_pass ulog --watch --connect tcp://127.0.0.1:5760 --log-dir /home/physical/sar_logs
+  python -m sar_pass ulog --watch --connect tcp://127.0.0.1:5760 --log-dir ~/sar_logs
 
   # 파이 시계를 FC 의 GPS 시각에 맞춘다 (핫스팟에 인터넷이 없을 때)
   sudo python -m sar_pass timesync --connect udpin://0.0.0.0:14540 --apply
@@ -75,7 +75,7 @@ def build_parser() -> argparse.ArgumentParser:
         q.add_argument("--q-heading", type=float, default=3.0, help="캡처 중 yaw 오차 허용(°)")
         q.add_argument("--q-edge", type=float, default=2.0, help="실제 기록이 구간 끝에서 모자라도 되는 거리(m)")
         q.add_argument("--extra-passes", type=int, default=2, help="무효 패스를 다시 날 최대 횟수")
-        q.add_argument("--cap-ack", type=Path, help="레이더 확인 파일 경로 (예: /home/physical/CAP_ACK)")
+        q.add_argument("--cap-ack", type=Path, help="레이더 확인 파일 경로 (예: ~/CAP_ACK)")
         q.add_argument("--cap-lead", type=float, help="미리 켜고 끄는 시간(s). 안 주면 잰 레이더 지연으로 자동")
         q.add_argument("--min-battery", type=float, default=30.0, help="다음 패스 + 복귀 뒤에도 남아야 할 배터리 %%")
         r = s.add_argument_group("재처리용 기록 (비행 폴더에 같이 남긴다)")
