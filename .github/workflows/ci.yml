@@ -77,6 +77,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: gitleaks — PR 이면 base..head, push 면 before..after 만 본다
+        # 기존 파일 전체를 훑으면 오탐(브라우저 저장 키 'viz.*' 등)에 묻힌다. 새로 들어오는 것만 막는다.
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="origin/${{ github.base_ref }}..HEAD"
+          elif [ -n "${{ github.event.before }}" ] && ! echo "${{ github.event.before }}" | grep -qE '^0+$'; then
+            RANGE="${{ github.event.before }}..${{ github.sha }}"
+          else
+            RANGE="-1"
+          fi
+          echo "범위: $RANGE"
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.28.0             git /repo --redact --no-banner --log-opts="$RANGE"
