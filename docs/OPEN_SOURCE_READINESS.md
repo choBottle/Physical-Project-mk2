@@ -16,6 +16,7 @@
 | C4 | `/home/<사용자>` 절대 경로 | ❌ | hardware systemd 유닛(`/home/physical`) · drone env 예시 · camera360(75곳) · ai 문서 → `${HOME}`/설치 경로 변수 |
 | C5 | 포트 충돌 8765 · 8766 · 8767 | ✅ | 8765 는 AI status UI 를 8775 로 옮겨 해결, 8766 · 8767 은 기기가 달라 실제 충돌 없음 — [PORTS.md](PORTS.md) |
 | C6 | 사람이 읽는 파트 문서의 실명 | 🟢 | 팀원 본인 동의 하에 유지 가능 — 원치 않으면 GitHub 계정명으로 |
+| C7 | 사진 메타데이터(EXIF GPS) | ✅ | 이미지 152장 전수 검사 — GPS 가 있던 1장(회의 사진)에서 EXIF 를 재인코딩 없이 제거(2026-10-26) |
 
 ## 2. 파트별
 
@@ -36,20 +37,22 @@
 
 ### visualization
 - ❌ 소스에 Tailscale IP 5개 · tailnet 호스트 하드코딩
-- 🟡 `documents/` 의 docx/pdf/회의 사진(인물 가능) — 공개 여부 결정
+- 🟡 `documents/` 의 docx/pdf — 공개 여부 결정. 이미지 44장은 확인 결과 다이어그램·UI 캡처와 칠판 사진 1장(인물 없음)
+- ❗ `door_example/test/{door,pedestal}/` 프레임 이미지 — **얼굴이 식별되는 인물**(실내 시험 참가자)이 찍혀 있다. 본인 동의를 받거나,
+  인물이 없는 프레임으로 바꾸거나, 흐림 처리 후 공개
 - 🟡 `web-dashboard/.env.local` 이 커밋돼 있음(값은 localhost 뿐 — 비밀 아님). Vite 관례상 `.env` 로 옮기는 것을 권장
 - 🟡 Vite dev/preview 미들웨어에만 있는 CORS 중계 — 정적 빌드(`dist/`)로 배포하면 사라진다
 
 ### drone
 - ✅ `radar_team/cansar_pi.py` 등 레이더 팀 코드 — 원 저작자가 MIT 공개에 동의(2026-10-26) · [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
-- 🟡 `screenshots/` 38장 — 위성 지도·현장 위치 노출 가능
+- 🟡 `screenshots/` 38장 — 확인 결과 UI·SAR 결과 캡처. 일부에 시험 장소의 위성 지도가 보인다(인물 없음) — 시험 장소 공개 여부 결정
 - ❌ `viz-debugger/` 전체 사본이 `visualization/` 과 중복(약 183개 파일이 다름). `drone/` 은 드론 모듈(`viz-debugger/drone/`)만 정본으로 두고
   UI 는 `visualization/` 하나로 합치는 것을 제안 — `DRONE_MERGE_REVIEW.md` 의 2차 병합과 같은 일
 - 🟢 CI 워크플로를 저장소 루트로 옮겼다(`.github/workflows/drone.yml` — 하위 폴더의 워크플로는 GitHub 가 실행하지 않는다)
 
 ### camera360
 - ❌ 배포 자산 없음(Docker · systemd · env 없음), 의존성은 231줄 `pip freeze`
-- 🟡 `image backup/` · `360도 카메라 반영범위/` — 실험실/현장 사진(인물 가능)
+- 🟡 `image backup/` · `360도 카메라 반영범위/` — 연구실 내부 사진. 책상에 앉은 사람이 작게(주로 뒷모습) 보인다 — 동의 또는 흐림 처리 검토
 - 🟡 `구버전(참고금지)/` — 공개 판에서 제외하거나 `archive/` 로
 - 🟢 이번에 스냅샷 zip(6.9MB, 폴더와 같은 내용)을 지웠다
 
