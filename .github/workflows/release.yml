@@ -1,0 +1,59 @@
+# 릴리스 — 태그 v*.*.* 를 밀면 백엔드 이미지를 GHCR 에 게시하고 GitHub Release 초안을 만든다.
+# 절차: docs/RELEASE.md §2
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  backend-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/mk2-backend
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - uses: docker/build-push-action@v6
+        with:
+          context: server
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  github-release:
+    needs: backend-image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          body: |
+            ## 배포
+            ```bash
+            git checkout ${{ github.ref_name }}
+            cd deploy && ./scripts/init-env.sh
+            # 미리 빌드된 이미지를 쓰려면 deploy/.env 에:
+            #   MK2_BACKEND_IMAGE=ghcr.io/${{ github.repository_owner }}/mk2-backend:${{ github.ref_name }}
+            docker compose up -d --wait && ./scripts/healthcheck.sh
+            ```
+            업그레이드 절차와 이번 판의 배포 변경(환경변수·DB 마이그레이션)은 `CHANGELOG.md` 와 `docs/deployment/operations.md`.

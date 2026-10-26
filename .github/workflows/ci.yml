@@ -1,0 +1,82 @@
+# 정적 검사 + 파트별 단위 시험 (인프라 없이 도는 것)
+# 백엔드 회귀(인프라 필요)는 deploy-smoke 가 실제 스택 위에서 돌린다.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-config:
+    name: 배포 설정 검증
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: compose 문법 (중앙 · 엣지)
+        run: |
+          cp deploy/.env.example deploy/.env
+          docker compose -f deploy/docker-compose.yml config --quiet
+          cp deploy/edge/.env.example deploy/edge/.env
+          docker compose -f deploy/edge/docker-compose.yml config --quiet
+      - name: OTel Collector 설정 (이미지와 같은 판으로 validate)
+        run: |
+          IMG=$(grep -m1 -o 'otel/opentelemetry-collector-contrib:[^"[:space:]]*' deploy/docker-compose.yml)
+          docker run --rm -v "$PWD/deploy/server/config/otel-collector.yaml:/c.yaml" -e MK2_OTLP_CORS_EXTRA_ORIGIN=http://x:1 "$IMG" validate --config=/c.yaml
+          docker run --rm -v "$PWD/deploy/edge/config/otel-collector.yaml:/c.yaml" -e MK2_ZONE_ID=z -e MK2_CENTRAL_OTLP=x:4317 "$IMG" validate --config=/c.yaml
+      - name: Prometheus 설정 · 알림 규칙
+        run: |
+          IMG=$(grep -m1 -o 'prom/prometheus:[^"[:space:]]*' deploy/docker-compose.yml)
+          docker run --rm --entrypoint promtool -v "$PWD/deploy/server/config:/c" "$IMG" check config /c/prometheus.yml
+          docker run --rm --entrypoint promtool -v "$PWD/deploy/server/config:/c" "$IMG" check rules /c/prometheus-rules.yml
+          docker run --rm --entrypoint promtool -v "$PWD/deploy/edge/config:/c" "$IMG" check config /c/prometheus.yml
+      - name: 셸 스크립트 (shellcheck)
+        run: shellcheck -S warning deploy/scripts/*.sh deploy/server/initdb/*/*.sh
+      - name: 이미지 태그 고정 확인 (:latest·태그 없음 금지)
+        run: |
+          bad=$(grep -hE '^\s*image:' deploy/docker-compose.yml deploy/edge/docker-compose.yml                 | grep -v MK2_BACKEND_IMAGE | grep -vE ':v?[0-9][^[:space:]]*\s*$' || true)
+          if [ -n "$bad" ]; then echo "버전이 고정되지 않은 이미지:"; echo "$bad"; exit 1; fi
+
+  contracts:
+    name: 공통 규격 예제 (가시화 계약)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install jsonschema
+      - run: python validate_examples.py
+        working-directory: visualization/contracts
+
+  ai:
+    name: AI perception-framework
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults: { run: { working-directory: ai/perception-framework } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: ai/perception-framework/pyproject.toml }
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq libgl1 libglib2.0-0
+      - run: pip install -e ".[dev,mqtt,kafka,otel,sim]"
+      - run: python -m pytest -q
+        env:
+          OTEL_SDK_DISABLED: "true"
+
+  secrets:
+    name: 비밀값 스캔 (이번 변경분)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

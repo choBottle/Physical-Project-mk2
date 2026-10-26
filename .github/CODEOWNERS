@@ -1,0 +1,19 @@
+# 폴더별 리뷰 담당 — GOVERNANCE.md 「현재 메인테이너」와 같다.
+# 마지막으로 일치하는 규칙이 이긴다.
+
+*                       @choBottle
+
+/server/                @daegyu10
+/hardware/              @choBottle
+/ai/                    @JNY03
+/visualization/         @khw18033
+/osmocam/               @khw18033
+/camera360/             @daegyu10
+# drone/ — 담당자(jhjeong)의 GitHub 계정 확인 후 추가
+
+# 파트를 가로지르는 약속 — 백엔드(규격 정본 소유)와 배포 담당이 함께 본다
+/server/contracts/      @daegyu10 @khw18033 @JNY03 @choBottle
+/server/infra/sql/      @daegyu10 @choBottle
+/deploy/                @choBottle @daegyu10
+/docs/                  @choBottle
+/.github/               @choBottle

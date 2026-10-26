@@ -1,0 +1,37 @@
+name: 배포 문제 / Deployment problem
+description: 배포 가이드대로 했는데 안 된다
+labels: ["deployment"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        배포 가이드: docs/deployment/README.md (§6 문제 해결을 먼저 확인해 주세요).
+        ⚠ 로그를 붙일 때 비밀번호·토큰·실제 IP 를 지워 주세요.
+  - type: input
+    id: version
+    attributes:
+      label: 버전 / 커밋
+      placeholder: v1.0.0 또는 git rev-parse --short HEAD
+    validations: { required: true }
+  - type: input
+    id: env
+    attributes:
+      label: 환경
+      placeholder: Ubuntu 24.04 · Docker 27.x · Compose 2.x · 8코어 16GB
+    validations: { required: true }
+  - type: textarea
+    id: step
+    attributes:
+      label: 어느 단계에서 멈췄나
+      description: 가이드의 몇 번 단계, 실행한 명령
+    validations: { required: true }
+  - type: textarea
+    id: healthcheck
+    attributes:
+      label: ./scripts/healthcheck.sh 출력
+      render: text
+  - type: textarea
+    id: logs
+    attributes:
+      label: docker compose ps -a 와 실패한 서비스 로그
+      render: text

@@ -1,0 +1,77 @@
+# 배포 스모크 테스트 — "우리 환경에서는 되는데 새 환경에서는 안 된다"를 매 PR 마다 잡는다.
+#
+# 빈 러너(이전 상태 없음)에서 문서(docs/deployment/README.md §3)의 절차를 그대로 실행한다:
+#   init-env → up --build --wait → seed-demo → healthcheck(업무 관통 · 관측 3종 · 권한) → 백엔드 회귀 pytest
+name: deploy-smoke
+
+on:
+  pull_request:
+    paths: ["deploy/**", "server/**", ".github/workflows/deploy-smoke.yml"]
+  push:
+    branches: [main]
+    paths: ["deploy/**", "server/**", ".github/workflows/deploy-smoke.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  central-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults: { run: { working-directory: deploy } }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ① 환경변수 생성
+        run: ./scripts/init-env.sh
+
+      - name: ② 스택 기동 (빌드 포함)
+        run: docker compose up -d --build --wait --wait-timeout 420
+
+      - name: ③ 데모 레지스트리
+        run: ./scripts/seed-demo.sh
+
+      - name: ④ 헬스체크 — 흐르는가
+        run: ./scripts/healthcheck.sh
+
+      - name: ⑤ 백엔드 회귀 (게이트웨이 컨테이너 안에서 — 시험이 127.0.0.1 의 WS 입구를 쓴다)
+        run: |
+          docker compose exec -T \
+            -e MK2_PROMETHEUS_URL=http://prometheus:9090 \
+            -e MK2_LOKI_URL=http://loki:3100 \
+            -e MK2_TEMPO_URL=http://tempo:3200 \
+            be-gateway python -m pytest -q -p no:cacheprovider
+
+      - name: ⑥ 백업 → 복구 왕복
+        run: |
+          ./scripts/backup.sh backups/ci
+          echo y | ./scripts/restore.sh backups/ci
+          ./scripts/healthcheck.sh --quick
+
+      - name: 실패 시 상태·로그
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color --tail 80
+
+      - name: 정리
+        if: always()
+        run: docker compose down -v
+
+  edge-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults: { run: { working-directory: deploy/edge } }
+    steps:
+      - uses: actions/checkout@v4
+      - name: 엣지 스택 기동
+        run: |
+          cp .env.example .env
+          sed -i 's|^MK2_CENTRAL_OTLP=.*|MK2_CENTRAL_OTLP=localhost:4317|' .env
+          docker compose up -d --wait --wait-timeout 120
+          docker compose ps -a
+      - name: 정리
+        if: always()
+        run: docker compose down -v
