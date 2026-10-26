@@ -1,7 +1,7 @@
 
-C:\Users\asdfa\physical mk2\360camera_work>curl -F "capture_id=PAIR_0921" -F "camera_id=pro2_anchor" -F "file=@preview_frame.jpg;filename=equirect.jpg" http://210.110.250.33:7866/upload_pano
+C:\Users\asdfa\physical mk2\360camera_work>curl -F "capture_id=PAIR_0921" -F "camera_id=pro2_anchor" -F "file=@preview_frame.jpg;filename=equirect.jpg" http://<server-ip>:7866/upload_pano
 {"status":"saved","camera_id":"pro2_anchor","capture_id":"PAIR_0921","filename":"equirect.jpg","size_kb":846.4,"path":"pano_captures/pro2_anchor/PAIR_0921/equirect.jpg"}
-C:\Users\asdfa\physical mk2\360camera_work>curl -F "capture_id=PAIR2_0921" -F "camera_id=pro2_anchor" -F "file=@pair_live.jpg;filename=equirect.jpg" http://210.110.250.33:7866/upload_pano
+C:\Users\asdfa\physical mk2\360camera_work>curl -F "capture_id=PAIR2_0921" -F "camera_id=pro2_anchor" -F "file=@pair_live.jpg;filename=equirect.jpg" http://<server-ip>:7866/upload_pano
 {"status":"saved","camera_id":"pro2_anchor","capture_id":"PAIR2_0921","filename":"equirect.jpg","size_kb":960.1,"path":"pano_captures/pro2_anchor/PAIR2_0921/equirect.jpg"}
 C:\Users\asdfa\physical mk2\360camera_work>
 
@@ -17,13 +17,13 @@ anchor360_live — 360° 실시간 장애물 파이프라인
   카메라     : 높이 1.85m, 하향 -35.0deg
   Unity      : UDP 192.168.50.246:5010
   필터       : 접지잘림제외=ON, 최대거리=8m
-  감시 대상  : /home/dg/capstone-db/image_server/pano_captures/pro2_anchor
-  출력       : /home/dg/capstone-db/docx2026/p2_live_v35
-  슬라이스백업: /home/dg/capstone-db/docx2026/p2_live_v35/slices
-  작업 디렉터리: /home/dg/capstone-db/docx2026  (CLIP 캐시 기준)
+  감시 대상  : ~/capstone-db/image_server/pano_captures/pro2_anchor
+  출력       : ~/capstone-db/docx2026/p2_live_v35
+  슬라이스백업: ~/capstone-db/docx2026/p2_live_v35/slices
+  작업 디렉터리: ~/capstone-db/docx2026  (CLIP 캐시 기준)
 ==============================================================
-[live] config : /home/dg/capstone-db/image_server/unidepth_dual_yolo_config.yaml
-[live] weight : /home/dg/capstone-db/image_server/yolov8s-world.pt
+[live] config : ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml
+[live] weight : ~/capstone-db/image_server/yolov8s-world.pt
 [live] classes: 59개, conf=0.12, iou=0.45
 [live] 모델 로드 8.57s + 워밍업 0.87s — 상주 완료
 
@@ -50,13 +50,13 @@ anchor360_live — 360° 실시간 장애물 파이프라인
   카메라     : 높이 1.85m, 하향 -35.0deg
   Unity      : UDP 192.168.50.246:5010
   필터       : 접지잘림제외=ON, 최대거리=8m
-  감시 대상  : /home/dg/capstone-db/image_server/pano_captures/pro2_anchor
-  출력       : /home/dg/capstone-db/docx2026/p2_live_v3625
-  슬라이스백업: /home/dg/capstone-db/docx2026/p2_live_v3625/slices
-  작업 디렉터리: /home/dg/capstone-db/docx2026  (CLIP 캐시 기준)
+  감시 대상  : ~/capstone-db/image_server/pano_captures/pro2_anchor
+  출력       : ~/capstone-db/docx2026/p2_live_v3625
+  슬라이스백업: ~/capstone-db/docx2026/p2_live_v3625/slices
+  작업 디렉터리: ~/capstone-db/docx2026  (CLIP 캐시 기준)
 ==============================================================
-[live] config : /home/dg/capstone-db/image_server/unidepth_dual_yolo_config.yaml
-[live] weight : /home/dg/capstone-db/image_server/yolov8s-world.pt
+[live] config : ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml
+[live] weight : ~/capstone-db/image_server/yolov8s-world.pt
 [live] classes: 59개, conf=0.12, iou=0.45
 [live] 모델 로드 8.60s + 워밍업 0.82s — 상주 완료
 
@@ -84,13 +84,13 @@ anchor360_live — 360° 실시간 장애물 파이프라인
   카메라     : 높이 1.85m, 하향 -35.0deg
   Unity      : UDP 192.168.50.246:5010
   필터       : 접지잘림제외=ON, 최대거리=8m
-  감시 대상  : /home/dg/capstone-db/image_server/pano_captures/pro2_anchor
-  출력       : /home/dg/capstone-db/docx2026/p2_proj
-  슬라이스백업: /home/dg/capstone-db/docx2026/p2_proj/slices
-  작업 디렉터리: /home/dg/capstone-db/docx2026  (CLIP 캐시 기준)
+  감시 대상  : ~/capstone-db/image_server/pano_captures/pro2_anchor
+  출력       : ~/capstone-db/docx2026/p2_proj
+  슬라이스백업: ~/capstone-db/docx2026/p2_proj/slices
+  작업 디렉터리: ~/capstone-db/docx2026  (CLIP 캐시 기준)
 ==============================================================
-[live] config : /home/dg/capstone-db/image_server/unidepth_dual_yolo_config.yaml
-[live] weight : /home/dg/capstone-db/image_server/yolov8s-world.pt
+[live] config : ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml
+[live] weight : ~/capstone-db/image_server/yolov8s-world.pt
 [live] classes: 59개, conf=0.12, iou=0.45
 [live] 모델 로드 8.63s + 워밍업 0.81s — 상주 완료
 
@@ -158,12 +158,12 @@ Ctrl+C 로 프리뷰 정지 후 종료.
 [종료] 프리뷰 정지 중...
 [정지] done
 
-C:\Users\asdfa\physical mk2\360camera_work>scp -P 8522 "dg@210.110.250.33:~/capstone-db/docx2026/p2_live_v3625/slices/*.jpg" p2_live_slice.jpg
-dg@210.110.250.33's password:
+C:\Users\asdfa\physical mk2\360camera_work>scp -P 8522 "dg@<server-ip>:~/capstone-db/docx2026/p2_live_v3625/slices/*.jpg" p2_live_slice.jpg
+dg@<server-ip>'s password:
 20260921_072438__PAIR2_0921__u+230_v-36.jpg                                           100%  116KB   2.4MB/s   00:00
 
-C:\Users\asdfa\physical mk2\360camera_work>scp -P 8522 "dg@210.110.250.33:~/capstone-db/docx2026/p2_proj/slices/*.jpg" p2_proj_slice.jpg
-dg@210.110.250.33's password:
+C:\Users\asdfa\physical mk2\360camera_work>scp -P 8522 "dg@<server-ip>:~/capstone-db/docx2026/p2_proj/slices/*.jpg" p2_proj_slice.jpg
+dg@<server-ip>'s password:
 20260921_072511__PIC_20160212_022003__20260921_161145__u+50_v-35.jpg                  100%  143KB   2.6MB/s   00:00
 
 C:\Users\asdfa\physical mk2\360camera_work>

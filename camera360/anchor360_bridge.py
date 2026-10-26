@@ -2,7 +2,7 @@
 anchor360_bridge.py — 서버 JSON → 유니티 UDP 중계기
 
 [왜 필요한가]
-  서버(210.110.250.33, 학교망)에서 유니티 PC(192.168.50.244, 사설망)로
+  서버(<server-ip>, 학교망)에서 유니티 PC(192.168.50.244, 사설망)로
   UDP 직송이 안 된다. 서버에 192.168.50.x 경로가 없어서 패킷이 기본
   게이트웨이로 나가 버려진다. (에러 없이 조용히 사라지므로 UDP 송신은
   계속 '성공'으로 찍힌다.)
@@ -17,7 +17,7 @@ anchor360_bridge.py — 서버 JSON → 유니티 UDP 중계기
 
 [어디서 실행하나 — 둘 중 하나]
   (1) 유니티 PC에서 실행  ← 홉이 1개라 더 좋다
-      먼저 브라우저로 http://210.110.250.33:7866/pano_health 가 열리는지 확인.
+      먼저 브라우저로 http://<server-ip>:7866/pano_health 가 열리는지 확인.
       열리면:  python anchor360_bridge.py --unity-ip 127.0.0.1
 
   (2) 랩실 PC(Pro2 연결된 PC)에서 실행
@@ -44,6 +44,11 @@ anchor360_bridge.py — 서버 JSON → 유니티 UDP 중계기
               return {"status": "empty"}
           return FileResponse(LATEST_JSON, media_type="application/json")
 
+[서버 주소 설정]
+  --server 를 안 주면 환경변수로 정한다 (camera360/.env.example 참고).
+    MK2_ANCHOR360_URL  엔드포인트 URL 전체 (가장 우선)
+    MK2_SERVER_HOST    서버 호스트만 (기본 127.0.0.1) → http://<호스트>:7866/anchor360_latest
+
 [의존]
   pip install requests
 
@@ -51,6 +56,7 @@ anchor360_bridge.py — 서버 JSON → 유니티 UDP 중계기
   Ctrl+C
 """
 
+import os
 import json
 import time
 import socket
@@ -60,7 +66,10 @@ import datetime
 import requests
 
 
-DEF_SERVER = "http://210.110.250.33:7866/anchor360_latest"
+# 서버 주소는 환경변수로 받는다 (기본 localhost)
+SERVER_HOST = os.environ.get("MK2_SERVER_HOST", "127.0.0.1")
+DEF_SERVER = os.environ.get("MK2_ANCHOR360_URL",
+                            f"http://{SERVER_HOST}:7866/anchor360_latest")
 DEF_UNITY_IP = "192.168.50.244"
 DEF_PORT = 5010
 DEF_POLL = 2.0
@@ -142,7 +151,8 @@ def main():
                 if not warned:
                     print(f"[{ts()}] 서버 연결 실패: {e}")
                     print("        → 이 PC에서 서버에 닿는지 확인하세요:")
-                    print("           브라우저로 http://210.110.250.33:7866/pano_health")
+                    health = args.server.rsplit("/", 1)[0] + "/pano_health"
+                    print(f"           브라우저로 {health}")
                     warned = True
             except json.JSONDecodeError:
                 print(f"[{ts()}] JSON 파싱 실패 — 서버가 쓰는 중일 수 있음, 다음 주기 재시도")

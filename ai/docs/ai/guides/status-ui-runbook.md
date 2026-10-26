@@ -65,12 +65,12 @@ curl -s -X POST $B/api/reset
 | 폐쇄망으로 검사 | `config/status_ui.example.json` | `deployment.closed_network: true` — 외부 endpoint를 선언한 provider가 `external_connection_*` 사유로 탈락하는지 확인 |
 | 실제 클러스터에 배치 | 실행 인자 | `--control k3s --namespace <ns>`; manifest의 `deployment.image`가 실제로 pull 가능한 이미지여야 함(`example.invalid/...` 기본값은 의도적으로 실패한다 — `image_pull` 거부가 그대로 사유로 보인다) |
 
-### 4-1. 실기기 인벤토리 (2026-09-17 SSH 실측, Tailscale `*.tailcb6bfb.ts.net`)
+### 4-1. 실기기 인벤토리 (2026-09-17 SSH 실측, Tailscale `*.<tailnet>`)
 
 | 노드 | 보드 | 카메라 | 확인 방법 |
 |---|---|---|---|
-| pi6 (100.76.251.100) | Raspberry Pi 5 Model B Rev 1.0 | **Camera Module 3** — `imx708`, 4608×2592 10-bit RGGB, 모드 1536×864@120 / 2304×1296@56 / 4608×2592@14.35 | `rpicam-hello --list-cameras`, `rpicam-still` 720p 촬영 성공 |
-| pi4 (100.81.196.55) | Raspberry Pi 5 Model B Rev 1.0 (이름만 pi4) | **Camera Module 3 Wide** — `imx708_wide`, 같은 해상도·모드(렌즈만 광각) | 동일 |
+| pi6 (<tailscale-ip-pi6>) | Raspberry Pi 5 Model B Rev 1.0 | **Camera Module 3** — `imx708`, 4608×2592 10-bit RGGB, 모드 1536×864@120 / 2304×1296@56 / 4608×2592@14.35 | `rpicam-hello --list-cameras`, `rpicam-still` 720p 촬영 성공 |
+| pi4 (<tailscale-ip-pi4>) | Raspberry Pi 5 Model B Rev 1.0 (이름만 pi4) | **Camera Module 3 Wide** — `imx708_wide`, 같은 해상도·모드(렌즈만 광각) | 동일 |
 
 둘 다 `camera_auto_detect=1`, `/dev/video0` 존재. `config/status_ui.example.json`의 `nodes[]`에
 `sensor.camera.imx708` / `sensor.camera.imx708_wide` 태그로 반영해 두었다 — 광각 전용

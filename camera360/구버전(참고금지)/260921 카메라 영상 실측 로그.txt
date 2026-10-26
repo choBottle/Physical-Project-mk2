@@ -1140,7 +1140,7 @@ INFO:     Finished server process [3575952]
 C:\Users\asdfa\docx2026_code>python anchor360_bridge.py --unity-ip 192.168.50.244 --poll 0.3
 ==============================================================
 anchor360_bridge — 서버 JSON → 유니티 UDP 중계
-  가져올 곳 : http://210.110.250.33:7866/anchor360_latest
+  가져올 곳 : http://<server-ip>:7866/anchor360_latest
   보낼 곳   : UDP 192.168.50.244:5010
   주기      : 0.3s  (하트비트 겸용)
   Ctrl+C 로 종료
@@ -1554,7 +1554,7 @@ C:\Users\asdfa\docx2026_code>
 C:\Users\asdfa\physical mk2\360camera_work>
 C:\Users\asdfa\physical mk2\360camera_work>python stream_to_server.py --fps 5
 ======================================================================
-stream_to_server — 카메라 192.168.100.124 → http://210.110.250.33:7866/upload_pano
+stream_to_server — 카메라 192.168.100.124 → http://<server-ip>:7866/upload_pano
   목표 5.0 fps | JPEG q92 | capture_id=LIVE_STREAM  (고정)
 ======================================================================
 [연결] Fingerprint=986lLI8xebU=

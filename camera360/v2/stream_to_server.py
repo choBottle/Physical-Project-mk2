@@ -60,10 +60,16 @@ stream_to_server.py — pro2_auto_bg.py 의 영상판 (사진 촬영 → 실시�
   python stream_to_server.py --fps 3              # 3fps
   python stream_to_server.py --count 30           # 30장만 올리고 종료(측정용)
   python stream_to_server.py --dry-run --count 20 # 업로드 없이 스트림 성능만
-  python stream_to_server.py --upload http://210.110.250.33:7866/upload_pano
+  python stream_to_server.py --upload http://<server-ip>:7866/upload_pano
                                                   # 예전처럼 7866 한 곳만
-  python stream_to_server.py --upload http://210.110.250.33:7866/upload_pano --upload http://127.0.0.1:10001/upload_pano
+  python stream_to_server.py --upload http://<server-ip>:7866/upload_pano --upload http://127.0.0.1:10001/upload_pano
                                                   # 7866 + 이 노트북에서 도는 데이터 스트림 파일
+
+[서버 주소 설정 — 환경변수]
+  --upload 를 안 주면 아래 환경변수로 기본 업로드 주소를 정한다 (camera360/.env.example 참고).
+  MK2_SERVER_HOST        서버 호스트 (기본 127.0.0.1) → http://<호스트>:7866 · :10001
+  MK2_UPLOAD_URL         첫 번째 업로드 URL 전체를 직접 지정 (MK2_SERVER_HOST 보다 우선)
+  MK2_UPLOAD_STREAM_URL  두 번째(데이터 스트림) 업로드 URL 전체를 직접 지정
 
 [의존]
   requests, opencv-python
@@ -72,6 +78,7 @@ stream_to_server.py — pro2_auto_bg.py 의 영상판 (사진 촬영 → 실시�
   Ctrl+C  → _stopPreview 후 통계 출력
 """
 
+import os
 import sys
 import json
 import time
@@ -87,8 +94,11 @@ import cv2
 import requests
 
 DEF_IP         = "192.168.100.124"
-DEF_UPLOAD     = "http://210.110.250.33:7866/upload_pano"
-DEF_UPLOAD_STREAM = "http://210.110.250.33:10001/upload_pano"  # 데이터 스트림 360 입구 (2026-10-01 추가)
+# 서버 주소는 환경변수로 받는다 (기본 localhost). 예: MK2_SERVER_HOST=<server-ip>
+SERVER_HOST    = os.environ.get("MK2_SERVER_HOST", "127.0.0.1")
+DEF_UPLOAD     = os.environ.get("MK2_UPLOAD_URL", f"http://{SERVER_HOST}:7866/upload_pano")
+DEF_UPLOAD_STREAM = os.environ.get(  # 데이터 스트림 360 입구 (2026-10-01 추가)
+    "MK2_UPLOAD_STREAM_URL", f"http://{SERVER_HOST}:10001/upload_pano")
 DEF_CAPTURE_ID = "LIVE_STREAM"
 DEF_CAMERA_ID  = "cam360-001_main"     # 2026-10-14 통합데이터규약 v2 (예전 "pro2_anchor")
 SOURCE_ID      = "cam360-001"          # 카메라가 달린 장비 (규약 §2-3)
@@ -279,7 +289,7 @@ def reader(cap, latest, stop, stat, reopen):
 
 # ── 두 번째부터의 보낼 곳 (2026-10-01) ───────────────────
 def short_name(url):
-    """'http://210.110.250.33:7866/upload_pano' → '210.110.250.33:7866'"""
+    """'http://192.0.2.10:7866/upload_pano' → '192.0.2.10:7866'"""
     return url.split("://", 1)[-1].split("/", 1)[0]
 
 

@@ -77,7 +77,7 @@ Redis Stream (최근 --maxlen 개만 유지, 기본 300)
       dtype    "<f2" (float16)   shape  "H,W"   unit  "m"   header  vision_stream 과 같은 요약
 
   읽는 예 (파이썬)
-      r = redis.Redis(port=6380)      # 다른 기기: redis.Redis(host="100.114.96.78", port=6380)
+      r = redis.Redis(port=6380)      # 다른 기기: redis.Redis(host="<tailscale-ip>", port=6380)
       eid, f = r.xrevrange("vision_stream:drone:yoloe", count=1)[0]          # 최신 결과
       res = json.loads(f[b"result"])                                          # 검출 목록 등
       h = json.loads(f[b"header"])
@@ -126,13 +126,13 @@ Redis Stream (최근 --maxlen 개만 유지, 기본 300)
   360 카메라 노트북     stream_to_server.py --upload http://<이 파일이 도는 기기>:10001/upload_pano
                        (같은 노트북이면 http://127.0.0.1:10001/upload_pano)
   실시간 비전 (GPU 서버, 다른 터미널)
-                       /home/dg/capstone-db/venv_image/bin/python vision/vision_infer.py   (기본: 전 기기 yoloe)
+                       ~/capstone-db/venv_image/bin/python vision/vision_infer.py   (기본: 전 기기 yoloe)
 
 준비
   pip install redis paho-mqtt        (파이썬 3.8 이상)
   Redis 5.0 이상 (Stream 기능). 기본으로 이 기기 127.0.0.1:6380 의 전용 Redis 에 넣는다 (--redis 로 바꿈).
   tailnet 의 다른 기기도 구독하려면 Redis 를 tailscale 주소에도 묶는다 (띄우는 명령은 vision/vision_infer.py 맨 위).
-    다른 기기에서: redis.Redis.from_url("redis://100.114.96.78:6380/0")   (100.114.96.78 = 이 PC tailscale 주소)
+    다른 기기에서: redis.Redis.from_url("redis://<tailscale-ip>:6380/0")   (<tailscale-ip> = 이 PC tailscale 주소, `tailscale ip -4`)
   Redis 나 paho-mqtt 가 없어도 멈추지 않는다. 저장은 계속하고 경고만 낸다.
 
 주소 설정: 기기 주소(테일넷 IP)는 코드에 두지 않는다. hosts.example.json 을 hosts.local.json 으로

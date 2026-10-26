@@ -51,18 +51,22 @@ camera_intrinsics:
   cx: 232.0   # w_half / 2
   cy: 200.0   # h_total / 2
 
+# 모델 경로: 상대경로는 이 yaml 파일이 있는 폴더 기준으로 해석된다
+#   (unidepth_dual_yolo.py 의 _resolve_model_path). 절대경로·~/ 도 그대로 쓸 수 있다.
+#   로컬 체크포인트가 없으면 model_name 을 HF 모델 ID(lpiccinelli/unidepth-v2-vitb14)로 바꿔도 된다.
+#   다른 config 를 쓰려면 환경변수 CONFIG_PATH=/path/to/config.yaml
 models:
   unidepth:
-    model_name: /home/dg/capstone-db/image_server/checkpoints/unidepth-v2-vitb14
+    model_name: checkpoints/unidepth-v2-vitb14
     infer_imgsz: [320, 240]
 
   finetune_detector:
-    weight: /home/dg/capstone-db/image_server/best_finetune_train3.pt
+    weight: best_finetune_train3.pt
     conf: 0.25
     imgsz: 320
 
   zeroshot_detector:
-    weight: /home/dg/capstone-db/image_server/yolov8s-world.pt
+    weight: yolov8s-world.pt
     conf: 0.12
     imgsz: 320
 

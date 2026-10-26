@@ -1,6 +1,6 @@
 
 
-/home/dg/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_012903__20260712_162240/equirect.jpg
+~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_012903__20260712_162240/equirect.jpg
 
 -기본적인 설정값
 --카메라 equirect 값 (360도 카메라에서 왼쪽, 가운데, 오른쪽 복도로 90도씩 자른 각도) : 왼쪽 50, 가운데 150, 오른쪽 230
