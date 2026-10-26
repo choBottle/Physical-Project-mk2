@@ -1,0 +1,16 @@
+{
+  "note": "시험용 X대역 예시(9.6 GHz · 300 MHz) — 우리 레이더는 5.8 GHz SDR 이다: example_radar_sdr.json 을 쓴다",
+  "wavelength_m": 0.03123,
+  "bandwidth_hz": 300000000.0,
+  "prf_hz": 200.0,
+  "range_min_m": 5.0,
+  "range_max_m": 60.0,
+  "side": "right",
+  "depression_deg": 45.0,
+  "el_beamwidth_deg": 40.0,
+  "az_beamwidth_deg": 30.0,
+  "squint_deg": 0.0,
+  "antenna_offset_m": [0.0, 0.0, 0.0],
+  "gnss_offset_m": null,
+  "position_ref": "auto"
+}
