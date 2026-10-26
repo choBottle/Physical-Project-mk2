@@ -214,7 +214,7 @@ def require_token(name: str, token: str, hosts: List[str]) -> str:
         return token
     raise MissingSetting(
         "환경변수 {} 가 없다 — 바인딩 {} 는 loopback 이 아니라 토큰 없이 열 수 없다. "
-        "서버의 /home/dg/capstone-db/.env 에 영숫자 토큰을 넣는다".format(name, ",".join(hosts))
+        "서버의 .env(배포: deploy/.env) 에 영숫자 토큰을 넣는다".format(name, ",".join(hosts))
     )
 
 
@@ -358,8 +358,8 @@ def _required(name: str) -> str:
     value = os.environ.get(name, "")
     if not value:
         raise MissingSetting(
-            f"환경변수 {name} 가 없다. 서버의 /home/dg/capstone-db/.env 를 읽어 주입한다"
-            f"(예: `set -a; . ~/capstone-db/.env; set +a`)."
+            f"환경변수 {name} 가 없다. .env(배포: deploy/.env) 를 읽어 주입한다"
+            f"(예: `set -a; . ./.env; set +a`)."
         )
     return value
 

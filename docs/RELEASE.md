@@ -47,7 +47,7 @@
 ### 팀 결정 · 파트별 작업 (1.0 전에 남은 것 — [OPEN_SOURCE_READINESS.md](OPEN_SOURCE_READINESS.md))
 
 - [x] **전 기여자의 MIT 라이선스 동의** (2026-10-26 완료)
-- [ ] 하드코딩 제거: 공인 IP · Tailscale 주소 · `/home/<사용자>` 경로 → 환경변수
+- [x] 하드코딩 제거: 공인 IP · Tailscale 주소 · `/home/<사용자>` 경로 → 환경변수
 - [x] 포트 충돌 3건 해소 ([PORTS.md](PORTS.md))
 - [ ] 사진·스크린샷·영상의 개인정보/정밀 위치 검토
 - [x] 레이더 팀 제공 코드 라이선스 확인 (2026-10-26 MIT 동의)
