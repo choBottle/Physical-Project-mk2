@@ -10,7 +10,7 @@
 
 | # | 항목 | 상태 | 조치 |
 |---|---|---|---|
-| C1 | 라이선스 동의 | ❌ | 기여자 전원(daegyu10 · choBottle · JNY03 · khw18033 · jhjeong)이 MIT 공개에 동의 — 이슈/PR 댓글로 기록 |
+| C1 | 라이선스 동의 | ✅ | 기여자 전원(daegyu10 · choBottle · JNY03 · khw18033 · jhjeong)이 MIT 공개에 동의함 (2026-10-26) |
 | C2 | 학교 서버 공인 IP 하드코딩 | 🟡 | `server/` 는 이번에 `localhost` 기본값으로 교체. hardware(k3s·업로드 7864) · visualization · camera360 에 남음 |
 | C3 | Tailscale 주소(`100.x`) · tailnet 호스트명(`*.<tailnet>.ts.net`) | ❌ | visualization `viz-debugger/src` · ai `demo/test/mqtt_stream_receiver.py` · camera360 → 환경변수 |
 | C4 | `/home/<사용자>` 절대 경로 | ❌ | hardware systemd 유닛(`/home/physical`) · drone env 예시 · camera360(75곳) · ai 문서 → `${HOME}`/설치 경로 변수 |
