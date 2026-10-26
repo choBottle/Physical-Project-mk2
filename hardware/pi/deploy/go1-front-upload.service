@@ -3,6 +3,10 @@
 #
 # 로봇 전원이 꺼져 있으면 카메라 웹소켓이 타임아웃난다. 프로세스는 스스로 재연결을
 # 계속 시도하므로 죽지 않는다. 로봇이 돌아오면 저절로 붙는다.
+#
+# 설치: pi/deploy/install-units.sh go1-front-upload
+# 인지 서버 주소는 /etc/hw-robot.env 의 HW_UPLOAD_URL 로 준다(hw-robot.env.example 참고).
+# 비워 두면 로컬(127.0.0.1:7864)로 올린다.
 [Unit]
 Description=Go1 front camera uploader (HW-R-07)
 After=network-online.target
@@ -11,10 +15,11 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-User=physical
-WorkingDirectory=/home/physical/hw/pi
+User=@MK2_USER@
+WorkingDirectory=@MK2_PI_DIR@
 StandardInput=null
 Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/hw-robot.env
 ExecStart=/usr/bin/python3 -m robot.go1_front_upload --fps 10 --quality 5
 Restart=always
 RestartSec=3

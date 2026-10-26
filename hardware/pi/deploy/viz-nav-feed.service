@@ -4,7 +4,7 @@
 # 그래서 부팅 자동 시작해도 된다. 이 서비스가 죽어도 유니티 ↔ go1_sdk_pc 경로는 그대로다.
 #
 # 설치:
-#   sudo cp pi/deploy/viz-nav-feed.service /etc/systemd/system/
+#   pi/deploy/install-units.sh viz-nav-feed   # 계정·경로 치환 후 설치 (sudo cp 금지)
 #   sudo systemctl daemon-reload && sudo systemctl enable --now viz-nav-feed
 #   journalctl -u viz-nav-feed -f
 #
@@ -18,15 +18,15 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=physical
-WorkingDirectory=/home/physical/hw/pi
-ExecStart=/home/physical/venv/bin/python3 -u -m robot.viz_nav_feed
+User=@MK2_USER@
+WorkingDirectory=@MK2_PI_DIR@
+ExecStart=@MK2_VENV@/bin/python3 -u -m robot.viz_nav_feed
 Environment=PYTHONUNBUFFERED=1
 Environment=HW_ZONE_ID=zoneA HW_ENTITY_ID=go1-001 HW_NODE_ID=pi1
 EnvironmentFile=-/etc/viz-nav-feed.env
 
 # root 로 돌리지 않는다. 수동 캡처에 필요한 권한 하나만 준다.
-# journal 은 physical 의 adm 그룹으로 읽는다.
+# journal 은 실행 계정(@MK2_USER@)의 adm 그룹 소속으로 읽는다.
 AmbientCapabilities=CAP_NET_RAW
 CapabilityBoundingSet=CAP_NET_RAW
 NoNewPrivileges=true

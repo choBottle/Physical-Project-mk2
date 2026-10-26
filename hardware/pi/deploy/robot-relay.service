@@ -1,7 +1,7 @@
 # 로봇 상태 릴레이 — 신원(node_id/robot_type/robot_id)을 찍어 상위로 넘긴다 (HW-R-03)
 #
 # 설치:
-#   sudo cp pi/deploy/robot-relay.service /etc/systemd/system/
+#   pi/deploy/install-units.sh robot-relay   # 계정·경로 치환 후 설치 (sudo cp 금지)
 #   sudo systemctl daemon-reload && sudo systemctl enable --now robot-relay
 #
 # 왜 별도 프로세스인가
@@ -27,9 +27,9 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-User=physical
-WorkingDirectory=/home/physical/hw/pi
-ExecStart=/home/physical/venv/bin/python3 -u /home/physical/hw/pi/robot/robot_state_relay.py \
+User=@MK2_USER@
+WorkingDirectory=@MK2_PI_DIR@
+ExecStart=@MK2_VENV@/bin/python3 -u @MK2_PI_DIR@/robot/robot_state_relay.py \
   --node_id pi7 --unity_ip 192.168.50.244 --unity_port 15201 --ingress_port 15200 \
   --default_type go1 --default_robot_id go1-1
 Restart=always

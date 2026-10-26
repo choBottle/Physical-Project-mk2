@@ -1,7 +1,7 @@
 # 로봇 온보드 노드 부팅 자동 시작 (systemd)
 #
 # 설치:
-#   sudo cp pi/deploy/robot-node.service /etc/systemd/system/
+#   pi/deploy/install-units.sh robot-node   # 계정·경로 치환 후 설치 (sudo cp 금지)
 #   sudo cp pi/deploy/hw-node.env.example /etc/hw-node.env   # 현장값 기입
 #   sudo systemctl daemon-reload && sudo systemctl enable --now robot-node
 #
@@ -15,9 +15,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=physical
-WorkingDirectory=/home/physical/hw/pi
-ExecStart=/home/physical/venv/bin/python3 -u -m robot.robot_node
+User=@MK2_USER@
+WorkingDirectory=@MK2_PI_DIR@
+ExecStart=@MK2_VENV@/bin/python3 -u -m robot.robot_node
 
 EnvironmentFile=-/etc/hw-node.env
 EnvironmentFile=-/etc/hw-robot.env

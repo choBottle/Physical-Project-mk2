@@ -8,9 +8,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=physical
+User=@MK2_USER@
 SupplementaryGroups=video
-WorkingDirectory=/home/physical/hw/pi
+WorkingDirectory=@MK2_PI_DIR@
 Environment=PI_CAM_WIDTH=1280 PI_CAM_HEIGHT=720 PI_CAM_FPS=15 PI_CAM_QUALITY=70
 ExecStart=/usr/bin/python3 -m bench.pi_cam_view 8091
 Restart=always

@@ -1,7 +1,7 @@
 # 관제 웹 시험용 ACK 시뮬레이터 (로봇 없이 규약 응답 전 구간)
 #
 # 설치:
-#   sudo cp pi/deploy/ack-sim.service /etc/systemd/system/
+#   pi/deploy/install-units.sh ack-sim   # 계정·경로 치환 후 설치 (sudo cp 금지)
 #   sudo systemctl daemon-reload && sudo systemctl enable --now ack-sim
 #
 # ⚠ 장치 id 는 go1-sim 이다. 실물(go1-001)과 토픽이 다르므로 robot-node 와 같이 떠 있어도
@@ -17,9 +17,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=physical
-WorkingDirectory=/home/physical/hw/pi
-ExecStart=/home/physical/venv/bin/python3 -u -m bench.web_ack_sim --broker 127.0.0.1
+User=@MK2_USER@
+WorkingDirectory=@MK2_PI_DIR@
+ExecStart=@MK2_VENV@/bin/python3 -u -m bench.web_ack_sim --broker 127.0.0.1
 Environment=PYTHONUNBUFFERED=1
 Restart=always
 RestartSec=3

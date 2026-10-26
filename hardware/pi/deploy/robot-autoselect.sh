@@ -13,7 +13,7 @@
 #   Go1 : 내부망 192.168.123.161 (랜선)
 #
 # 설치:
-#   sudo cp pi/deploy/robot-autoselect.{service,timer} /etc/systemd/system/
+#   pi/deploy/install-units.sh robot-autoselect robot-autoselect.timer   # 계정·경로 치환 후 설치
 #   sudo cp pi/deploy/99-hw-robot.rules /etc/udev/rules.d/
 #   sudo systemctl daemon-reload && sudo udevadm control --reload
 #   sudo systemctl enable --now robot-autoselect.timer
@@ -21,7 +21,8 @@
 # 타이머(10초)가 주기적으로 맞추고, udev 가 USB 착탈 순간에 즉시 한 번 더 부른다.
 set -u
 
-COMPOSE_FILE="${COMPOSE_FILE:-/home/physical/hw/pi/deploy/docker-compose.yml}"
+# 기본값은 이 스크립트와 같은 폴더의 compose 파일이다 — 설치 위치·계정에 묶이지 않는다.
+COMPOSE_FILE="${COMPOSE_FILE:-$(cd "$(dirname "$0")" && pwd)/docker-compose.yml}"
 EP_HOST="${EP_HOST:-192.168.42.2}"
 GO1_HOST="${GO1_HOST:-192.168.123.161}"
 STATE_DIR="${STATE_DIR:-/run/hw-robot}"

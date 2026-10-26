@@ -7,8 +7,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=physical
-WorkingDirectory=/home/physical/hw/pi
+User=@MK2_USER@
+WorkingDirectory=@MK2_PI_DIR@
 ExecStart=/usr/bin/python3 -m bench.go1_cam_view 8090 8443
 Restart=always
 RestartSec=3

@@ -96,8 +96,9 @@ services:
       - dialout
     volumes:
       - ep-spool:/var/lib/hw-node
-      - /home/physical/hw/pi/common:/app/common:ro
-      - /home/physical/hw/pi/robot:/app/robot:ro
+      # MK2_PI_DIR = 코드 위치(저장소의 pi/). 비우면 이 파일 기준 상위 폴더(..)를 쓴다.
+      - ${MK2_PI_DIR:-..}/common:/app/common:ro
+      - ${MK2_PI_DIR:-..}/robot:/app/robot:ro
 
 volumes:
   go1-spool:

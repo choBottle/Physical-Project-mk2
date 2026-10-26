@@ -163,12 +163,12 @@ WSL2 는 **검증용 임시 구성**이다. 현장에서는 다음이 필요하�
 
 ## 6. 검증 후 원복 (2026-08-31 수행 완료)
 
-pi7 은 이 프로젝트 전용 장비가 아니라 **다른 클러스터(`210.110.250.33`)의 워커**였다.
+pi7 은 이 프로젝트 전용 장비가 아니라 **다른 클러스터(`<server-ip>`)의 워커**였다.
 HW-C-03 검증을 위해 임시로 이쪽 제어평면에 붙였다가, 검증이 끝난 뒤 원래대로 되돌렸다.
 
 | 항목 | 원복 내용 |
 |---|---|
-| pi7 의 k3s-agent | `K3S_URL`·`K3S_TOKEN` 을 원래 서버(`210.110.250.33:6443`)로 복원 → **원래 워크로드(`armc` 네임스페이스: `twin-w-ys-pi7`·`twin-w-fastsam-pi7`·`metrics-pusher`) 복귀 확인** |
+| pi7 의 k3s-agent | `K3S_URL`·`K3S_TOKEN` 을 원래 서버(`<server-ip>:6443`)로 복원 → **원래 워크로드(`armc` 네임스페이스: `twin-w-ys-pi7`·`twin-w-fastsam-pi7`·`metrics-pusher`) 복귀 확인** |
 | 임시 엣지 클러스터 | `kubectl delete node pi7` 로 잔여 노드 정리 |
 | WSL k3s server | `systemctl stop/disable k3s` — **설치는 유지**해 다시 세울 때 §2-2 를 건너뛸 수 있게 했다 |
 | `.wslconfig` | 원복(미러 네트워킹·`firewall=false` 해제). `firewall=false` 는 WSL 트래픽에 대한 방화벽 필터링을 끄므로, 필요할 때만 켠다 |

@@ -172,19 +172,23 @@ fi
 # 역할에 따라 설치할 서비스가 갈린다. 센서노드와 로봇 온보드는 공통 기반(HW-C)을
 # 공유하지만 상위 기능과 주기가 다르다.
 say "systemd 서비스 (role=$ROLE)"
+# 유닛은 계정·경로 자리표시자(@MK2_USER@ 등)를 가진 템플릿이라 cp 하면 안 된다.
+# install-units.sh 가 이 계정·이 저장소 위치·위 venv 로 치환해 설치하고 daemon-reload 까지 한다.
+install_unit() {
+  bash "$REPO_DIR/deploy/install-units.sh" --user "$(id -un)" --home "$HOME" \
+       --pi-dir "$REPO_DIR" --venv "$VENV" "$1" > /dev/null
+}
 case "$ROLE" in
   sensor)
     if [ -f "$REPO_DIR/deploy/sensor-node.service" ]; then
-      sudo cp "$REPO_DIR/deploy/sensor-node.service" /etc/systemd/system/
-      sudo systemctl daemon-reload
+      install_unit sensor-node
       sudo systemctl enable sensor-node > /dev/null 2>&1
       ok "sensor-node.service 설치·부팅 등록 (기동은 수동: systemctl start sensor-node)"
     fi
     ;;
   robot)
     if [ -f "$REPO_DIR/deploy/robot-node.service" ]; then
-      sudo cp "$REPO_DIR/deploy/robot-node.service" /etc/systemd/system/
-      sudo systemctl daemon-reload
+      install_unit robot-node
       sudo systemctl enable robot-node > /dev/null 2>&1
       ok "robot-node.service 설치·부팅 등록 (기동은 수동: systemctl start robot-node)"
     else
@@ -193,8 +197,7 @@ case "$ROLE" in
     ;;
   actuator)
     if [ -f "$REPO_DIR/deploy/actuator-node.service" ]; then
-      sudo cp "$REPO_DIR/deploy/actuator-node.service" /etc/systemd/system/
-      sudo systemctl daemon-reload
+      install_unit actuator-node
       sudo systemctl enable actuator-node > /dev/null 2>&1
       ok "actuator-node.service 설치·부팅 등록 (기동은 수동: systemctl start actuator-node)"
     else

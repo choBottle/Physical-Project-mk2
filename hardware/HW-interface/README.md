@@ -131,7 +131,7 @@ python -m bench.physical_command_node_test
 
 - pi1: 코드 `~/hw/pi`, venv `~/venv`(protobuf·paho 포함), 서비스 `sensor-node.service`(entity `wl-001`).
 - **부수 발견**: SD 재구축 후 유닛의 `WorkingDirectory` 가 옛 경로(`~/Physical-Project-mk2/pi`)를 가리켜
-  `200/CHDIR` 로 크래시루프(1848회) 중이었다. `/home/physical/hw/pi` 로 교정 → 노드 `active` 복구.
+  `200/CHDIR` 로 크래시루프(1848회) 중이었다. `~/hw/pi` 로 교정 → 노드 `active` 복구.
   그 위에서 규약 검증을 진행했다.
 
 ---

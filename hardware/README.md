@@ -121,6 +121,39 @@ journalctl -u sensor-node -f
 cd pi && python3 -m edge.monitor
 ```
 
+### 설치 환경 값 (계정·경로·서버 주소)
+
+저장소에는 특정 기관의 계정·경로·서버 주소를 넣지 않는다. 장비마다 다른 값은 아래로 준다.
+
+**systemd 유닛** — `pi/deploy/*.service` 는 자리표시자를 가진 템플릿이다. `sudo cp` 하지 말고
+`pi/deploy/install-units.sh` 로 설치한다(치환 → `/etc/systemd/system/` → `daemon-reload`).
+`pi_base_setup.sh` 도 내부에서 이 스크립트를 쓴다.
+
+| 자리표시자 | 옵션 / 환경변수 | 기본값 |
+|---|---|---|
+| `@MK2_USER@` | `--user` / `MK2_USER` | 스크립트를 부른 사용자(`sudo` 면 `SUDO_USER`) |
+| `@MK2_HOME@` | `--home` / `MK2_HOME` | 그 계정의 홈(`getent passwd`) |
+| `@MK2_PI_DIR@` | `--pi-dir` / `MK2_PI_DIR` | 스크립트 위치 기준 저장소의 `pi/` |
+| `@MK2_VENV@` | `--venv` / `MK2_VENV` | `<home>/venv` |
+
+```bash
+pi/deploy/install-units.sh sensor-node                 # 하나
+pi/deploy/install-units.sh --enable robot-node         # 설치 + 부팅 등록
+pi/deploy/install-units.sh --print go1-sdk             # 치환 결과만 확인
+# 팀 기존 구성(계정 physical, 코드 ~/hw/pi, venv ~/venv) 재설치 — physical 로 로그인해서:
+~/hw/pi/deploy/install-units.sh --user physical sensor-node robot-node go1-sdk
+```
+
+**런타임 환경변수** (`/etc/hw-node.env`, `/etc/hw-robot.env` — 템플릿은 `pi/deploy/*.env.example`)
+
+| 변수 | 쓰는 곳 | 기본값 |
+|---|---|---|
+| `HW_UPLOAD_URL` | `robot/go1_front_upload.py` | `http://127.0.0.1:7864/upload` |
+| `HW_DETECT_BASE` | `robot/go1_detect_forward.py` | `http://127.0.0.1:7864` |
+| `HW_GO1_DAEMON` | `robot/unity_bridge.py` (로봇 쪽 경로) | `~/hw_highcmd_daemon` |
+| `MK2_PI_DIR` | `docker-compose.yml`(ep-dev 코드 마운트), `k8s/augment-analyzer-dev.yaml`(envsubst) | compose: `..` / k8s: 필수 |
+| `COMPOSE_FILE` | `deploy/robot-autoselect.sh` | 스크립트와 같은 폴더의 `docker-compose.yml` |
+
 한 대에서 여러 역할을 함께 검증할 때는 `/etc/hw-robot.env`·`/etc/hw-actuator.env` 에
 `HW_ENTITY_ID` 를 넣고 각 서비스를 함께 띄운다(pi7 에서 3종 동시 가동 확인).
 설정은 코드가 아니라 `/etc/hw-node.env` 또는 `HW_*` 환경변수로 바꾼다.

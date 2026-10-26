@@ -49,27 +49,34 @@ pi/augment/Dockerfile, build.sh            arm64 이미지 빌드(레지스트�
 | `k3s` / `kubectl` 바이너리 | `/usr/local/bin/k3s`, `/usr/local/bin/kubectl` **있음** |
 | `k3s-agent.service` | 로드됨, `activating`(편입 실패로 Ready 못 됨) |
 | `/etc/rancher`, `/var/lib/rancher` | **있음** (재구축 때 복원됨) |
-| agent 대상 server | `K3S_URL=https://210.110.250.33:6443` |
+| agent 대상 server | `K3S_URL=https://<server-ip>:6443` |
 | server 도달성 | **도달됨**(TLS 핸드셰이크·CA 비교까지 진행) |
 | 편입 결과 | **실패 — 토큰 CA 해시 불일치** |
 
 ### 실패 로그 (원인 확정)
 ```
-k3s-agent: Failed to validate connection to cluster at https://210.110.250.33:6443:
+k3s-agent: Failed to validate connection to cluster at https://<server-ip>:6443:
   token CA hash does not match the Cluster CA certificate hash:
-  1f526b0c3b2d558faaa261356f96ffca0474ac91dc0c7a0bc1ed84750a11dfe3   (pi1 이 가진 토큰의 CA 해시)
-  != f3afef4c29cb20a8390dbf17e4ebb2d9b81607af73946116d8c571d8a9d09926 (server 의 현재 CA 해시)
+  <토큰의-CA-해시>   (pi1 이 가진 토큰의 CA 해시)
+  != <서버의-CA-해시> (server 의 현재 CA 해시)
 ```
 → **네트워크·방화벽 문제 아님.** 엣지 server 가 재설치되며 CA 가 바뀌었는데 pi1 의
 `K3S_TOKEN` 은 옛 CA 해시를 물고 있어 조인 인증에서 거부된다.
 
 토큰 저장 위치(pi1): `/etc/systemd/system/k3s-agent.service.env` (`K3S_TOKEN`, `K3S_URL`).
 
+> 실제 해시·토큰·서버 주소는 이 문서에 적지 않는다(공개 저장소). 자기 환경에서 확인하는 법:
+> - 두 해시: 말단에서 `journalctl -u k3s-agent | grep 'CA hash'` — 위 로그가 그대로 찍힌다.
+> - server 의 현재 CA 해시: server 에서
+>   `sudo sha256sum /var/lib/rancher/k3s/server/tls/server-ca.crt` (디스크의 PEM 파일 그대로)
+>   — node-token 의 `K10` 바로 뒤 64자리와 같아야 한다.
+> - server 주소: 말단의 `K3S_URL`, 또는 server 에서 `kubectl get nodes -o wide` 의 INTERNAL-IP.
+
 ---
 
 ## 4. 복구에 필요한 정보 (⬅ 지금 막힌 지점)
 
-**엣지 server(210.110.250.33)의 현재 node-token 1개**가 필요하다. HW 가 pi1 에서 꺼낼 수
+**엣지 server(<server-ip>)의 현재 node-token 1개**가 필요하다. HW 가 pi1 에서 꺼낼 수
 없는 값이다 — 엣지/백엔드 팀이 server 에서 아래로 확인해 전달해야 한다.
 
 ```bash
@@ -80,7 +87,7 @@ sudo cat /var/lib/rancher/k3s/server/node-token
 
 확인 요청 항목:
 1. **현재 node-token** (위 명령 출력) — 필수.
-2. server 주소가 여전히 `210.110.250.33:6443` 인지(바뀌었으면 새 주소).
+2. server 주소가 여전히 `<server-ip>:6443` 인지(바뀌었으면 새 주소).
 3. 엣지 server 가 지금 **떠 있는지**(`sudo systemctl is-active k3s`).
 
 ---
