@@ -6,7 +6,7 @@ Mosquitto로 발행한다 — 실제 배치(발행자=말단/엣지, 브로커=�
 (백엔드 패키지·Kafka 의존 없음).
 
 브로커 주소는 하드코딩하지 않고 `backend/settings.py`의 환경변수 표를 그대로 참조한다:
-`MK2_BROKER_HOST`(기본 `210.110.250.33`), `MK2_BROKER_PORT`(기본 `1883`). `settings`는
+`MK2_BROKER_HOST`(기본 `localhost`), `MK2_BROKER_PORT`(기본 `1883`). `settings`는
 표준 라이브러리만 쓰므로, 이 파일을 컴퓨터에서 돌릴 때 필요한 것은 여전히 `paho-mqtt`뿐이다.
 
 **구독이 먼저, 발행이 나중** — ingest 로그에 `READY` 가 뜬 뒤에 발행한다. 클린 세션 ingest는

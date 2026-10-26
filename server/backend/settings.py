@@ -8,7 +8,7 @@
 | 환경변수 | 기본값 | 누가 쓰나 |
 |---|---|---|
 | `MK2_MQTT_HOST` / `MK2_MQTT_PORT` | `localhost` / `1883` | ingest — **서버 안에서** Mosquitto에 붙는다 |
-| `MK2_BROKER_HOST` / `MK2_BROKER_PORT` | `210.110.250.33` / `1883` | 발행자(tests·실노드) — **브로커 바깥에서** 서버 Mosquitto에 붙는다 |
+| `MK2_BROKER_HOST` / `MK2_BROKER_PORT` | `localhost` / `1883` | 발행자(tests·실노드) — **브로커 바깥에서** 서버 Mosquitto에 붙는다 |
 | `MK2_KAFKA_BOOTSTRAP` | `localhost:9092` | ingest·저장 sink·WS — Kafka는 서버 localhost 전용 |
 | `MK2_WS_HOST` / `MK2_WS_PORT` | `127.0.0.1` / `8765` | 뷰어 입구(`/state`·`/media`) 바인딩. **콤마 구분 목록** — 단계 7 이후 `127.0.0.1,<서버 tailscale IP>` 둘 다 |
 | `MK2_WS_URL` | `ws://127.0.0.1:8765/state`(`MK2_WS_TOKEN`이 있으면 `?token=…` 부착) | WS 클라이언트(tests·콘솔)가 붙을 주소. **loopback 유지** — Tailscale 주소로 바꾸면 컴퓨터의 단위 테스트가 서버 주소를 찾는다 |
@@ -148,7 +148,7 @@ def entity_type_of_mqtt_topic(mqtt_topic: str) -> Optional[str]:
 # ingest·sink·WS는 서버에서 돌므로 기본값이 서버 localhost다. 발행자(tests·실노드)는 브로커
 # 바깥에서 붙으므로 서버 주소를 기본값으로 둔다.
 
-DEFAULT_BROKER_HOST = "210.110.250.33"  # 서버 Mosquitto (익명, 1883)
+DEFAULT_BROKER_HOST = "localhost"  # 배포마다 다르다 — 원격 서버는 MK2_BROKER_HOST 로 지정(특정 서버 주소를 기본값으로 박지 않는다)
 
 
 def mqtt_host() -> str:
