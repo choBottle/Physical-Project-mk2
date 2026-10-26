@@ -41,7 +41,7 @@
 - 🟡 Vite dev/preview 미들웨어에만 있는 CORS 중계 — 정적 빌드(`dist/`)로 배포하면 사라진다
 
 ### drone
-- ❌ `radar_team/cansar_pi.py` 등 **다른 팀 코드, 라이선스 없음** → 원 저작자 확인 전까지 공개 판에서 제외 검토
+- ✅ `radar_team/cansar_pi.py` 등 레이더 팀 코드 — 원 저작자가 MIT 공개에 동의(2026-10-26) · [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
 - 🟡 `screenshots/` 38장 — 위성 지도·현장 위치 노출 가능
 - ❌ `viz-debugger/` 전체 사본이 `visualization/` 과 중복(약 183개 파일이 다름). `drone/` 은 드론 모듈(`viz-debugger/drone/`)만 정본으로 두고
   UI 는 `visualization/` 하나로 합치는 것을 제안 — `DRONE_MERGE_REVIEW.md` 의 2차 병합과 같은 일

@@ -50,7 +50,7 @@
 - [ ] 하드코딩 제거: 공인 IP · Tailscale 주소 · `/home/<사용자>` 경로 → 환경변수
 - [ ] 포트 충돌 3건 해소 ([PORTS.md](PORTS.md))
 - [ ] 사진·스크린샷·영상의 개인정보/정밀 위치 검토
-- [ ] 레이더 팀 제공 코드 라이선스 확인
+- [x] 레이더 팀 제공 코드 라이선스 확인 (2026-10-26 MIT 동의)
 - [ ] `drone/` ↔ `visualization/` 의 `viz-debugger` 중복 정리
 - [ ] AI `perception-framework` Dockerfile 수정(없는 `examples/` 참조) · 360 카메라 의존성 명세
 - [ ] 실 하드웨어(센서 1 · 로봇 1)로 엣지 → 중앙 → 관제 화면 E2E 1회 기록
