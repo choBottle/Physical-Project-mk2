@@ -22,6 +22,7 @@ set -a && . ./.env && set +a  # 현재 셸에 올리기
 | `MK2_ANCHOR360_URL` | `anchor360_bridge.py` | `http://$MK2_SERVER_HOST:7866/anchor360_latest` |
 | `CONFIG_PATH` | `unidepth_dual_yolo.py` | 스크립트 옆 `unidepth_dual_yolo_config.yaml` |
 | `CONTROL_URL` | `unidepth_dual_yolo.py` | `http://127.0.0.1:7864/command/go1` |
+| `MK2_REDIS_PASSWORD` | `unidepth_dual_yolo.py` | 없음(config `redis.password`, 기본 빈 값) — 비밀값, 커밋 금지 |
 | `MK2_CAPSTONE_DB` | `venv_image_requirements.txt`(editable 설치 경로) | 없음 — 설치 시 필수 |
 
 - 명령줄 인자(`--upload`, `--server` 등)는 그대로 쓸 수 있고 환경변수보다 우선한다.

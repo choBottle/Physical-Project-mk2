@@ -66,7 +66,7 @@ def _resolve_model_path(p):
 REDIS_HOST = CFG["redis"]["host"]
 REDIS_PORT = int(CFG["redis"]["port"])
 REDIS_DB   = int(CFG["redis"]["db"])
-REDIS_PASS = CFG["redis"]["password"]
+REDIS_PASS = os.environ.get("MK2_REDIS_PASSWORD") or CFG["redis"].get("password") or None
 
 # ── 스트림 ─────────────────────────────────────────────────────────────────
 CAMERA_ID        = CFG["streams"]["camera_id"]

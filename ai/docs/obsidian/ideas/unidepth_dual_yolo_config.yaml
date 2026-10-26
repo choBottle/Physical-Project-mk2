@@ -2,7 +2,7 @@ redis:
   host: localhost
   port: 7860
   db: 0
-  password: robot_redis_1234
+  password: ""   # 비밀값은 커밋하지 않는다 — 환경변수 MK2_REDIS_PASSWORD 가 우선
 
 streams:
   camera_id: go1_front
