@@ -12,6 +12,7 @@
 | [edge.md](edge.md) | 구역 엣지 노드(라즈베리파이) 세우기 · 중앙과 연결 |
 | [security.md](security.md) | 노출 정책 · 토큰 · 터널 · 운영 전환 체크리스트 |
 | [operations.md](operations.md) | 운영 런북 — 재기동 · 업그레이드 · 백업 · 알림별 대응 |
+| [twin-demo.md](twin-demo.md) | 트윈 시연 기록 — 360 사진 → 검출 → Gazebo, 가시화 콘솔에 Gazebo · 360 카메라 · 로봇 (캡처) |
 | [pluggability.md](pluggability.md) | 바꿔 끼우기 — 다른 360 카메라, 다른 검출 모델, Unity가 아닌 트윈. 설정으로 되는 것과 아직 고정된 것 |
 | [endpoints.md](endpoints.md) | 외부 서버 주소가 바뀔 때 — 객체 탐지 스트림·인지·앵커 서버, Unity PC를 옮긴 뒤 바꿀 곳과 확인 |
 | [e2e.md](e2e.md) | 전 구간 시험 — 실제 말단 노드 코드 → 중앙 → 관제 화면 (장비 없이 · 실장비) |

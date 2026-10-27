@@ -506,7 +506,7 @@ def process_one(path, det: Detector, sock, args, seq):
           f"{f' (걸러냄 {n_drop}개)' if n_drop else ''}"
           f"  | read {t_read-t_all:.2f}s  slice {t_slice-t_read:.2f}s"
           f"  infer {t_infer-t_slice:.2f}s  총 {t_end-t_all:.2f}s"
-          f"  | UDP {'OK' if sent else 'FAIL'} → {args.unity_ip}:{args.port}"
+          f"  | UDP {'OK' if sent else 'FAIL'} → {', '.join('%s:%d' % d for d in parse_dests(args.unity_ip, args.port))}"
           f"  | 원본 {packet.get('frame_ref', {}).get('sequence_id', '-')} (meta {frame['meta']})")
     for d in packet["detections"]:
         print(f'        {d["label"]:16}{d["group"]:14}'
@@ -588,7 +588,7 @@ def main():
     print(f"  슬라이스   : u={args.u:+.1f}deg, v={args.v:+.1f}deg, "
           f"{args.slice_size}x{args.slice_size}")
     print(f"  카메라     : 높이 {args.cam_h}m, 하향 {args.pitch}deg")
-    print(f"  Unity      : UDP {args.unity_ip}:{args.port}")
+    print(f"  트윈       : UDP {', '.join('%s:%d' % d for d in parse_dests(args.unity_ip, args.port))}")
     print(f"  필터       : 접지잘림제외={'ON' if args.drop_clipped else 'off'}, "
           f"최대거리={f'{args.max_dist:g}m' if args.max_dist else '제한없음'}")
     print(f"  감시 대상  : {args.watch_dir}")

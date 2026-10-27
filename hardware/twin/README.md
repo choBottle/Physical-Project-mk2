@@ -57,6 +57,13 @@ Unity가 없으면 게이트웨이 주소만 준다. 게이트웨이를 기본 �
 - 360 장애물 두 개 → `obs_anchor360-live_1`, `_2`가 생기고 의자가 (1, 3, 0.4)에 놓인다.
 - 로봇 상태 10줄을 30 ms 간격으로 → 마지막 자세 (4, 2), yaw 0(Unity yaw π/2 = 동)으로 옮겨진다.
 - 상자가 빠진 360 스냅샷 → `obs_anchor360-live_2`가 지워진다.
+- Gazebo 호출은 틱마다 묶는다(`create_multiple`, `set_pose_vector`). 엔티티마다 부르던 처음 판은 10 Hz 로봇과
+  장애물이 겹치면 시간 초과가 쌓였다(twin-demo.md).
+
+## 시연
+
+중앙 스택 · 시뮬 로봇 · 360 검출 · 가시화 콘솔까지 이어 붙인 기록과 캡처는
+[docs/deployment/twin-demo.md](../../docs/deployment/twin-demo.md). 같은 구성을 `demo/run-demo.sh` 로 띄운다.
 
 ## 아직 안 되는 것
 

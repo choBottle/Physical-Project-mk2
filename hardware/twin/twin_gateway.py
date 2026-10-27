@@ -36,7 +36,6 @@ import argparse
 import importlib
 import json
 import math
-import queue
 import selectors
 import socket
 import subprocess
@@ -138,22 +137,27 @@ class UdpSink:
 
 class GazeboSink:
     """gz sim (Harmonic 이상) 에 모델을 만들고 옮긴다. gz CLI 서비스 호출이라 별도 파이썬 바인딩이 필요 없다.
-    엔티티마다 초당 max_hz 번까지만 옮기고, 호출은 별도 스레드에서 한다 (UDP 받기를 막지 않는다)."""
+    틱(1/max_hz 초)마다 쌓인 것을 한꺼번에 보낸다 — 새 모델은 create_multiple 한 번, 옮길 것은 set_pose_vector
+    한 번. 엔티티마다 gz 를 부르면 호출 하나(프로세스 하나, ~0.3 s)가 갱신을 못 따라가 시간 초과가 쌓인다
+    (2026-10-27 실측: 10 Hz 로봇 + 360 장애물). 호출은 별도 스레드에서 한다 (UDP 받기를 막지 않는다)."""
 
     COLORS = {"robot": "0 0.4 1 1", "obstacle": "1 0.5 0 1"}
 
     def __init__(self, world="empty", gz="gz", max_hz=5.0, timeout_ms=2000):
         self.world, self.gz, self.gap, self.timeout = world, gz, 1.0 / max_hz, str(timeout_ms)
-        self.created, self.last = set(), {}
-        self.q = queue.Queue(maxsize=1000)
-        self.pending = {}
+        self.created = set()
+        self.pending = {}                           # id → 가장 최근 엔티티 (같은 엔티티는 마지막 것만 남는다)
         self.lock = threading.Lock()
         threading.Thread(target=self._run, daemon=True).start()
 
     def _call(self, service, reqtype, req):
         cmd = [self.gz, "service", "-s", "/world/%s/%s" % (self.world, service), "--reqtype", reqtype,
                "--reptype", "gz.msgs.Boolean", "--timeout", self.timeout, "--req", req]
-        r = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True)
+        except OSError as e:                        # gz 가 PATH 에 없음 등 — 스레드를 죽이지 않고 알린다
+            print("[gazebo] %s 실패: gz 를 실행하지 못함 (%s)" % (service, e), flush=True)
+            return False
         ok = r.returncode == 0 and "data: true" in r.stdout
         if not ok:
             print("[gazebo] %s 실패: %s %s" % (service, r.stdout.strip()[:120], r.stderr.strip()[:120]), flush=True)
@@ -179,40 +183,40 @@ class GazeboSink:
         if ent["op"] == "attrs":
             return
         with self.lock:
-            self.pending[ent["id"]] = ent           # 같은 엔티티는 가장 최근 것만 남긴다
-        try:
-            self.q.put_nowait(ent["id"])
-        except queue.Full:
-            pass
+            self.pending[ent["id"]] = ent
+
+    def _retry(self, ents):
+        """실패한 것은 다음 틱에 다시 — 그사이 더 새 것이 왔으면 그것이 이긴다."""
+        with self.lock:
+            for e in ents:
+                self.pending.setdefault(e["id"], e)
 
     def _run(self):
         while True:
-            eid = self.q.get()
+            t0 = time.time()
             with self.lock:
-                ent = self.pending.pop(eid, None)
-            if ent is None:
-                continue
-            if ent["op"] == "remove":
-                if eid in self.created:
-                    self._call("remove", "gz.msgs.Entity", 'name: "%s" type: MODEL' % eid)
-                    self.created.discard(eid)
-                continue
-            now = time.time()
-            if eid not in self.created:
-                req = 'sdf: "%s" name: "%s" pose {%s}' % (self._sdf(ent).replace('"', '\\"'), eid,
-                                                          self._pose(ent["pose"]))
-                if self._call("create", "gz.msgs.EntityFactory", req):
-                    self.created.add(eid)
-                    self.last[eid] = now
-                continue
-            wait = self.gap - (now - self.last.get(eid, 0))
-            if wait > 0:                            # 너무 잦으면 미뤘다가 그때 가장 최근 것을 옮긴다 (마지막 자세를 놓치지 않게)
-                with self.lock:
-                    self.pending.setdefault(eid, ent)
-                threading.Timer(wait, self.q.put, args=(eid,)).start()
-                continue
-            self.last[eid] = now
-            self._call("set_pose", "gz.msgs.Pose", 'name: "%s" %s' % (eid, self._pose(ent["pose"])))
+                batch, self.pending = self.pending, {}
+            for e in batch.values():
+                if e["op"] == "remove" and e["id"] in self.created:
+                    if self._call("remove", "gz.msgs.Entity", 'name: "%s" type: MODEL' % e["id"]):
+                        self.created.discard(e["id"])
+            ups = [e for e in batch.values() if e["op"] == "upsert"]
+            new = [e for e in ups if e["id"] not in self.created]
+            moved = [e for e in ups if e["id"] in self.created]
+            if new:
+                req = " ".join('data {sdf: "%s" name: "%s" pose {%s}}'
+                               % (self._sdf(e).replace('"', '\\"'), e["id"], self._pose(e["pose"])) for e in new)
+                if self._call("create_multiple", "gz.msgs.EntityFactory_V", req):
+                    self.created.update(e["id"] for e in new)
+                else:
+                    self._retry(new)
+            if moved:
+                req = " ".join('pose {name: "%s" %s}' % (e["id"], self._pose(e["pose"])) for e in moved)
+                if not self._call("set_pose_vector", "gz.msgs.Pose_V", req):
+                    self._retry(moved)
+            wait = self.gap - (time.time() - t0)
+            if wait > 0:
+                time.sleep(wait)
 
 
 def make_sink(spec):
