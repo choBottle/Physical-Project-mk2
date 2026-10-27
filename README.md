@@ -197,6 +197,7 @@ stack and the ports used between devices and Unity.
 | [Edge](docs/deployment/edge.md) | Zone edge node and device node installation |
 | [End-to-end test](docs/deployment/e2e.md) | Scope, recorded runs, procedure on real hardware |
 | [Changing server addresses](docs/deployment/endpoints.md) | What to update when the perception, stream, anchor or Unity host moves |
+| [Swapping components](docs/deployment/pluggability.md) | Using another 360 camera, another detection model, or a twin other than Unity |
 | [Security](docs/deployment/security.md) | Exposure policy, tokens, tunnel, production checklist |
 | [Operations](docs/deployment/operations.md) | Restart, upgrade, backup, response to each alert |
 | [Release policy](docs/RELEASE.md) | Versioning, release procedure, 1.0 criteria, 1.x roadmap |

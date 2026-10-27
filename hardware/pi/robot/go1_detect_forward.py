@@ -45,9 +45,22 @@ DEFAULT_BASE = "http://127.0.0.1:7864"
 UNITY_OBSTACLE_PORT = 5009
 
 
+def parse_dests(hosts, default_port):
+    """"a,b:6000" → [("a", 기본포트), ("b", 6000)]. 트윈(Unity 등)을 여러 곳에 동시에 보낼 때 쉼표로 잇는다."""
+    out = []
+    for h in str(hosts).split(","):
+        h = h.strip()
+        if not h:
+            continue
+        host, _, port = h.rpartition(":") if h.count(":") == 1 else (h, "", "")
+        out.append((host, int(port)) if port else (h, int(default_port)))
+    return out
+
+
 def run(base, camera_id, unity_ip, unity_port, hz, verbose):
     url = "%s/control/%s" % (base.rstrip("/"), camera_id)
     tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    dests = parse_dests(unity_ip, unity_port)
     period = 1.0 / max(hz, 0.1)
 
     polled = sent = skipped = failed = 0
@@ -56,7 +69,7 @@ def run(base, camera_id, unity_ip, unity_port, hz, verbose):
     last_error = ""
     last_dets = 0
 
-    print("[init] %s -> udp %s:%d  %.1fHz" % (url, unity_ip, unity_port, hz), flush=True)
+    print("[init] %s -> udp %s  %.1fHz" % (url, ", ".join("%s:%d" % d for d in dests), hz), flush=True)
 
     while True:
         t0 = time.time()
@@ -77,7 +90,8 @@ def run(base, camera_id, unity_ip, unity_port, hz, verbose):
                 last_ts = ts
                 last_dets = len(obj.get("detections") or [])
                 # 서버 payload 를 그대로 — 모양을 바꾸지 않는다.
-                tx.sendto(raw, (unity_ip, unity_port))
+                for dst in dests:
+                    tx.sendto(raw, dst)
                 sent += 1
         except Exception as e:
             failed += 1
@@ -97,7 +111,8 @@ def main():
     ap = argparse.ArgumentParser(description="인지 서버 탐지 결과 -> Unity 5009")
     ap.add_argument("--base", default=os.environ.get("HW_DETECT_BASE") or DEFAULT_BASE)
     ap.add_argument("--camera-id", default=os.environ.get("HW_UPLOAD_CAMERA_ID", "go1_front"))
-    ap.add_argument("--unity-ip", default=os.environ.get("HW_UNITY_IP", "192.168.50.244"))
+    ap.add_argument("--unity-ip", default=os.environ.get("HW_UNITY_IP", "192.168.50.244"),
+                    help="받는 곳. 쉼표로 여러 곳, 곳마다 :포트 가능 (Unity 와 다른 뷰어를 같이)")
     ap.add_argument("--unity-port", type=int, default=UNITY_OBSTACLE_PORT)
     ap.add_argument("--hz", type=float, default=float(os.environ.get("HW_DETECT_HZ", "10")))
     ap.add_argument("-q", "--quiet", action="store_true")

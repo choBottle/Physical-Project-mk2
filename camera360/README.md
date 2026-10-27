@@ -16,10 +16,11 @@ set -a && . ./.env && set +a  # 현재 셸에 올리기
 
 | 변수 | 쓰는 곳 | 기본값 |
 |---|---|---|
-| `MK2_SERVER_HOST` | `stream_to_server.py`, `anchor360_bridge.py`, `pro2_auto_bg.py` | `127.0.0.1` |
+| `MK2_SERVER_HOST` | `stream_to_server.py`, `upload_equirect.py`, `anchor360_bridge.py`, `pro2_auto_bg.py` | `127.0.0.1` |
 | `MK2_UPLOAD_URL` | `stream_to_server.py`(첫 번째 업로드), `pro2_auto_bg.py` | `http://$MK2_SERVER_HOST:7866/upload_pano` |
-| `MK2_UPLOAD_STREAM_URL` | `stream_to_server.py`(두 번째 업로드) | `http://$MK2_SERVER_HOST:10001/upload_pano` |
+| `MK2_UPLOAD_STREAM_URL` | `stream_to_server.py`(두 번째 업로드), `upload_equirect.py` | `http://$MK2_SERVER_HOST:10001/upload_pano` |
 | `MK2_ANCHOR360_URL` | `anchor360_bridge.py` | `http://$MK2_SERVER_HOST:7866/anchor360_latest` |
+| `MK2_TWIN_HOSTS` | `anchor360_live.py` 장애물 UDP 받는 곳. 쉼표로 여러 곳(Unity와 다른 뷰어), 곳마다 `:포트` | `--unity-ip` 기본값 |
 | `CONFIG_PATH` | `unidepth_dual_yolo.py` | 스크립트 옆 `unidepth_dual_yolo_config.yaml` |
 | `CONTROL_URL` | `unidepth_dual_yolo.py` | `http://127.0.0.1:7864/command/go1` |
 | `MK2_REDIS_PASSWORD` | `unidepth_dual_yolo.py` | 없음(config `redis.password`, 기본 빈 값) — 비밀값, 커밋 금지 |
@@ -27,6 +28,7 @@ set -a && . ./.env && set +a  # 현재 셸에 올리기
 
 - 명령줄 인자(`--upload`, `--server` 등)는 그대로 쓸 수 있고 환경변수보다 우선한다.
 - `unidepth_dual_yolo_config.yaml` 의 모델 경로는 yaml 파일 폴더 기준 상대경로다. 절대경로·`~/` 로 바꿔도 된다.
+- Insta360 Pro2가 아닌 360 카메라는 `upload_equirect.py`로 올리고, 검출 모델은 config `models.zeroshot_detector.backend`로 바꾼다. [docs/deployment/pluggability.md](../docs/deployment/pluggability.md)
 - 문서 속 `<server-ip>`, `<tailscale-ip-*>`, `<tailnet-host-*>`, `~/` 는 각자 환경의 값으로 바꿔 읽는다.
 
 ## 설치

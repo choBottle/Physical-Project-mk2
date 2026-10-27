@@ -21,7 +21,7 @@ detect_send_3b2_timed.py — 3b-② + zeroshot 소요 시간 측정판
   좌우/각도 미세보정은 Unity(invertX / yawOffsetDeg)에서. 서버는 원본 좌표만 보냄.
 """
 import os, sys, math, json, time, socket, datetime, yaml, cv2
-from ultralytics import YOLOWorld
+from detectors import backend_of, make_detector   # 검출기 교체점 (config models.zeroshot_detector.backend)
 
 img_path = sys.argv[1]
 cfg_path = sys.argv[2]
@@ -71,30 +71,26 @@ def pixel_to_ground(px, py):
 
 # --- 검출 + 필터 (타이밍 측정) ---
 _t_load0 = time.perf_counter()
-model = YOLOWorld(ZS_W)
-model.set_classes(ZS_CLS)
+model = make_detector(ZS_W, ZS_CLS, backend_of(CFG))
 t_model_load = time.perf_counter() - _t_load0          # 모델 로드(1회성)
 
 _t_inf1 = time.perf_counter()
-res = model.predict(img, conf=ZS_CONF, imgsz=imgsz, verbose=False)
+res = model.detect(img, ZS_CONF, imgsz)
 t_infer_first = time.perf_counter() - _t_inf1           # 1차 추론(CUDA 초기화 포함)
 
 _t_inf2 = time.perf_counter()
-_res2 = model.predict(img, conf=ZS_CONF, imgsz=imgsz, verbose=False)
+_res2 = model.detect(img, ZS_CONF, imgsz)
 t_infer_warm = time.perf_counter() - _t_inf2            # 2차 추론(안정 상태)
 
 raw = []
-if res and res[0].boxes is not None:
-    for b in res[0].boxes:
-        cid = int(b.cls[0]); name = ZS_CLS[cid] if cid < len(ZS_CLS) else f"cls{cid}"
-        conf = float(b.conf[0])
-        if conf < min_conf(name):
-            continue
-        grp = GROUP.get(name, "UNKNOWN_OBSTACLE")
-        if grp not in KEEP_GROUPS:
-            continue
-        x1, y1, x2, y2 = [float(v) for v in b.xyxy[0]]
-        raw.append({"name": name, "group": grp, "conf": conf, "bbox": [x1, y1, x2, y2]})
+for cid, conf, (x1, y1, x2, y2) in res:
+    name = ZS_CLS[cid] if cid < len(ZS_CLS) else f"cls{cid}"
+    if conf < min_conf(name):
+        continue
+    grp = GROUP.get(name, "UNKNOWN_OBSTACLE")
+    if grp not in KEEP_GROUPS:
+        continue
+    raw.append({"name": name, "group": grp, "conf": conf, "bbox": [x1, y1, x2, y2]})
 
 # --- NMS ---
 def iou(a, b):
@@ -160,7 +156,7 @@ for d in detections:
           f'D={d["ground_dist_m"]:.2f} size=({d["size_m"]["w"]:.2f},{d["size_m"]["h"]:.2f}) clip={d["ground_clipped"]}')
 
 print("\n[TIMING] zeroshot 소요 시간")
-print(f"  모델 로드(1회성)        : {t_model_load:6.2f}s   ← YOLOWorld 생성 + set_classes")
+print(f"  모델 로드(1회성)        : {t_model_load:6.2f}s   ← 검출기 생성 (detectors.make_detector)")
 print(f"  순수 추론 1회차          : {t_infer_first:6.2f}s   ← 첫 predict (CUDA 초기화 포함)")
 print(f"  순수 추론 2회차(warmup 후): {t_infer_warm:6.2f}s   ← 안정 상태, 실시간 주기에 들어가는 실제 값")
 print(f"  ------------------------------------------")

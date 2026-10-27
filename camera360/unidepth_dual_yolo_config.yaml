@@ -66,6 +66,8 @@ models:
     imgsz: 320
 
   zeroshot_detector:
+    # 검출기 교체: yolo_world (기본, ultralytics AGPL-3.0) | grounding_dino (Apache-2.0) | 모듈:클래스 — detectors.py
+    backend: yolo_world
     weight: yolov8s-world.pt
     conf: 0.12
     imgsz: 320

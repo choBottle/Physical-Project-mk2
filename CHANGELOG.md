@@ -15,9 +15,31 @@ ports, database migrations and image versions.
   server or the Unity PC moves to another host, and how to check it.
 - `hosts.local.json` (real robot and drone addresses for the stream server)
   is ignored by git.
+- **Replaceable 360 detector.** `camera360/detectors.py` builds the detector
+  from `models.zeroshot_detector.backend` in the camera360 config:
+  `yolo_world` (default, Ultralytics, AGPL-3.0), `grounding_dino`
+  (transformers, Apache-2.0) or `module:Class`. `anchor360_live.py` and the
+  `detect_*` scripts use it. With the default backend the output is identical
+  to the previous version.
+- **Any 360 camera.** `camera360/upload_equirect.py` uploads equirectangular
+  JPEGs from files, a watched folder or an RTSP/RTMP/USB stream in the same
+  format as `stream_to_server.py`, without Insta360 Pro2 control.
+- **More than one twin.** `anchor360_live.py --unity-ip` (or
+  `MK2_TWIN_HOSTS`), `HW_UNITY_IP` in `go1_detect_forward.py` and
+  `robot_state_relay.py --unity_ip` accept a comma-separated list of
+  `host[:port]`, so Unity and another viewer can receive the same packets.
+  `hardware/HW-interface/twin_listen.py` is a reference receiver for a
+  non-Unity twin.
+- `docs/deployment/pluggability.md`: what can be swapped by configuration and
+  what is still tied to Unity or to a specific model.
+- `ai/perception-framework`: optional `ultralytics` extra.
 
 ### Changed
 
+- License notices: `THIRD_PARTY_NOTICES.md` lists the models and model
+  libraries and their licenses (Ultralytics, YOLOE and FastSAM AGPL-3.0,
+  UniDepth CC BY-NC 4.0, MobileCLIP research license, MoGe, Grounding DINO,
+  CLIP).
 - Copyright holder: "Sysailab, Hanbat National University, and
   Physical-Project-mk2 contributors" (LICENSE, README, CITATION.cff).
 - **One operator console.** `visualization/viz-debugger` is now the only copy
@@ -42,6 +64,12 @@ ports, database migrations and image versions.
   Unity keeps building obstacles while the server is being switched. The
   copies in the team's Unity projects were updated the same way; their
   file-loading option and case-study logging hook were kept.
+
+### Removed
+
+- `camera360/yolov8s-world.pt` (Ultralytics weights, AGPL-3.0), committed by
+  mistake in `206bd37`. Model weights are now ignored by git; Ultralytics
+  downloads the file on first use.
 
 ### Fixed
 

@@ -19,6 +19,9 @@ otel = ["opentelemetry-sdk>=1.20", "opentelemetry-exporter-otlp-proto-grpc>=1.20
 # K3s provider는 추가 파이썬 의존성 없이 kubectl CLI만 사용한다 (AI-B-10, 원칙 #12).
 # simulator/ 전용 DEVS 엔진 — perception_framework 패키지 자체는 이 의존성을 모른다.
 sim = ["pyjevsim>=2.0"]
+# Ultralytics(YOLO·YOLO-World·FastSAM) — AGPL-3.0, 선택. 가중치·패키지가 없으면 rpn·yolo_world·fastsam
+# provider 만 쓰지 않는다. 라이선스는 저장소 루트 THIRD_PARTY_NOTICES.md
+ultralytics = ["ultralytics>=8.1"]
 
 [tool.setuptools.packages.find]
 where = ["."]

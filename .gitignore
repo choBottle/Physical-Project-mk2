@@ -31,3 +31,11 @@ desktop.ini
 
 # 객체 탐지 스트림 서버의 실제 로봇·드론 주소 (camera360/server_stream_multi_source.py)
 hosts.local.json
+
+# 모델 가중치 — 저장소에 넣지 않는다 (라이선스가 코드와 다르고 크다). 받는 법은 THIRD_PARTY_NOTICES.md
+*.pt
+*.pth
+*.onnx
+*.engine
+*.ckpt
+*.safetensors
