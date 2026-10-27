@@ -7,6 +7,10 @@
 
 [English](README.md)
 
+[설치](#설치) • [빠른 시작](#빠른-시작) • [문서](#문서) • [갤러리](#갤러리) • [기여](CONTRIBUTING.md) • [보안](SECURITY.md)
+
+[![Physical-Project-mk2](docs/assets/readme-hero.jpg)](docs/assets/readme-hero.jpg)
+
 ## 소개
 
 Physical-Project-mk2 는 재난 대응·기반시설 현장을 위한 엣지-클라우드 피지컬 AI 플랫폼이다. 센서, 보행 로봇, 드론,
@@ -39,23 +43,6 @@ OpenTelemetry, Tailscale 은 지금 쓰는 구현이고 고정된 의존이 아�
   계측값이 관제 구독, DB, Prometheus 까지 가는지 확인한다.
 - **회귀 수정.** 통합 저장소와 원래 팀 브랜치를 같은 입력으로 비교해 찾은 것: camera360 설정의 모델 경로, Go1 로봇 노드의
   빈 환경변수, 흐림 처리한 시료 사진의 화질. 자세한 내용은 `CHANGELOG.md`.
-
-## 화면
-
-배포하면 이렇게 보인다. 모두 이 저장소의 코드로 찍은 것이고, 사진 속 얼굴은 흐림 처리했다.
-
-| | |
-|---|---|
-| ![Unity 디지털 트윈](docs/assets/readme-unity-twin.jpg) | ![검출된 장애물을 피하는 로봇 경로](docs/assets/readme-unity-path.jpg) |
-| **Unity 디지털 트윈.** 연구실 모델 안의 360 앵커 카메라 · 드론 · Go1. 360 카메라가 찾은 장애물이 이름 · 거리 구간 · 거리와 함께 놓인다. | **트윈 속 로봇 경로.** Go1 이 카메라가 알려 준 장애물을 피해 경로를 잡는다. 광선과 영역은 로봇과 앵커 카메라가 보는 범위다. |
-| ![360 사진에서 Gazebo 까지](docs/assets/twin-demo-pipeline.jpg) | ![가시화 콘솔의 Gazebo · 360 카메라 · 로봇](docs/assets/twin-demo-console.jpg) |
-| **같은 흐름, 트윈은 Gazebo.** 360 사진 → `anchor360_live.py` 검출 → [트윈 게이트웨이](hardware/twin/README.md) → Gazebo. Unity 가 없어도 된다. | **가시화 콘솔.** `viz-debugger` 에 Gazebo 트윈 · 360 카메라 영상 · 중앙 서버를 거친 로봇이 함께 뜨고, 트윈 화면과 360 영상을 같이 본다. |
-| ![Grafana 백엔드 개요](docs/assets/readme-grafana.jpg) | ![드론 SAR 패스 비교](drone/screenshots/31_SAR_%ED%8C%A8%EC%8A%A4%EB%B9%84%EA%B5%90.png) |
-| **관측.** 중앙 스택의 Grafana: 서비스 상태 · MQTT 수신과 Kafka · TimescaleDB 처리량 · 발행→저장 지연 · WebSocket 접속 · Loki 백엔드 로그. | **드론 SAR.** 콘솔에서 레이더 패스 두 개를 비교한 화면(일치도 · 밝기 변화). |
-
-Unity 프로젝트 자체는 이 저장소 밖에서 관리한다. Unity 가 쓰는 수신 스크립트(예: `camera360/Anchor360ObstacleReceiver.cs`)와
-받는 패킷은 여기 있고 [docs/deployment/pluggability.md](docs/deployment/pluggability.md) 에 적었다. Gazebo · 콘솔 캡처를
-만든 과정은 [docs/deployment/twin-demo.md](docs/deployment/twin-demo.md) 에 단계별로 적었다.
 
 ## 저장소 구성
 
@@ -201,6 +188,34 @@ npm run dev
 버그와 배포 문제는 [GitHub Issues](https://github.com/choBottle/Physical-Project-mk2/issues), 질문과 도입 사례는
 [Discussions](https://github.com/choBottle/Physical-Project-mk2/discussions) 를 쓴다. 개발 환경, 시험 명령, PR 규칙은
 [CONTRIBUTING.md](CONTRIBUTING.md), 메인테이너와 결정 방식은 [GOVERNANCE.md](GOVERNANCE.md) 에 있다.
+
+## 갤러리
+
+#### 디지털 트윈
+
+*Unity 와 Gazebo 가 로봇과 360 카메라에서 같은 패킷을 받는다.*
+
+<a href="docs/assets/readme-unity-twin.jpg"><img src="docs/assets/readme-unity-twin.jpg" width="49%"></a> <a href="docs/assets/readme-unity-path.jpg"><img src="docs/assets/readme-unity-path.jpg" width="49%"></a>
+
+<a href="docs/assets/readme-gazebo.gif"><img src="docs/assets/readme-gazebo.gif" width="49%"></a> <a href="docs/assets/readme-detect.jpg"><img src="docs/assets/readme-detect.jpg" width="49%"></a>
+
+#### 가시화 콘솔
+
+*로봇 · 카메라 · 트윈 화면을 한 콘솔에서 (`visualization/viz-debugger`).*
+
+<a href="docs/assets/readme-console.jpg"><img src="docs/assets/readme-console.jpg" width="49%"></a> <a href="docs/assets/readme-console-devices.jpg"><img src="docs/assets/readme-console-devices.jpg" width="49%"></a>
+
+#### 관측
+
+*함께 배포되는 Grafana 위의 MK2 대시보드 (`deploy/server/grafana/dashboards/`).*
+
+[![](docs/assets/readme-grafana.jpg)](docs/assets/readme-grafana.jpg)
+
+#### 드론 SAR
+
+*드론 레이더 패스를 콘솔에서 비교하고 초점을 맞춘다.*
+
+<a href="drone/screenshots/31_SAR_%ED%8C%A8%EC%8A%A4%EB%B9%84%EA%B5%90.png"><img src="drone/screenshots/31_SAR_%ED%8C%A8%EC%8A%A4%EB%B9%84%EA%B5%90.png" width="49%"></a> <a href="drone/screenshots/13_SAR%EC%98%81%EC%83%81_3_RTK%EC%98%A4%EC%B0%A82cm_%EC%9E%90%EB%8F%99%EC%B4%88%EC%A0%90.png"><img src="drone/screenshots/13_SAR%EC%98%81%EC%83%81_3_RTK%EC%98%A4%EC%B0%A82cm_%EC%9E%90%EB%8F%99%EC%B4%88%EC%A0%90.png" width="49%"></a>
 
 ## 인용
 
