@@ -1,31 +1,51 @@
-# 보안 정책
+# Security policy
 
-## 취약점 신고
+## Supported versions
 
-**공개 이슈로 올리지 않는다.** 이 저장소의 **Security → Report a vulnerability**(GitHub 비공개 취약점 신고)로 알린다.
-재현 절차 · 영향 범위 · 해당 버전/커밋을 적어 주면 좋다.
+Security fixes are applied to the latest release and to the `main` branch.
+Release candidates and older releases may not receive a backport; upgrade to
+the latest release instead.
 
-- 접수 확인: 7일 이내
-- 조치 계획 공유: 14일 이내
-- 수정 배포 뒤 신고자와 협의해 공개(원하면 감사 명단에 이름을 올린다)
+## Reporting a vulnerability
 
-## 지원 버전
+Please do not open a public issue for a suspected vulnerability. Use GitHub's
+private vulnerability reporting for this repository (**Security** tab, then
+**Report a vulnerability**) and include:
 
-| 버전 | 보안 수정 |
-|---|---|
-| 최신 정식 릴리스(1.x) | ✅ |
-| `main` | ✅ |
-| 그 이전 | ❌ — 업그레이드 권장 |
+- the affected version or commit;
+- steps to reproduce the issue;
+- the expected impact; and
+- any suggested mitigation.
 
-## 현재 보안 프로파일 (중요)
+Do not include real credentials, tokens, IP addresses of a deployment, or
+unrelated personal information in the report. The maintainers aim to
+acknowledge a report within seven days and to share an assessment and a plan
+within fourteen days, then coordinate disclosure with the reporter after a
+fix or mitigation is available.
 
-이 플랫폼은 현재 **터널(Tailscale 등) 안의 신뢰된 구성원**을 전제로 한다. MQTT 익명 접속 · 평문 OTLP · Kafka PLAINTEXT 는
-**설계상 알려진 사항**이며 바인딩 주소로 노출을 통제한다. 인증·인가·TLS 는 1.x 로드맵이다. 이런 "알려진 사항" 자체는
-취약점 신고 대상이 아니지만, **문서에 적힌 통제(바인딩 · 토큰 · DB 권한)를 우회하는 방법**은 신고 대상이다.
+## Current security model
 
-상세: [docs/deployment/security.md](docs/deployment/security.md)
+The platform assumes that every client is inside a trusted private network or
+tunnel (Tailscale in the reference deployment). The following are known
+properties of the current design, not vulnerabilities:
 
-## 비밀값을 실수로 커밋했다면
+- MQTT accepts anonymous clients.
+- OTLP and Kafka connections are plaintext.
+- There is no user authentication or role-based access control.
 
-1. 그 값을 **즉시 교체(rotate)** 한다 — 지우는 커밋만으로는 히스토리에 남는다.
-2. 메인테이너에게 비공개로 알린다.
+Exposure is controlled by the bind addresses `MK2_EDGE_BIND` and
+`MK2_ADMIN_BIND`, by tokens on the WebSocket gateway and the capture upload
+endpoint, and by database grants that prevent the application account from
+changing audit and mission records. A way to bypass one of these documented
+controls is in scope for a report. Authentication, RBAC and TLS are on the
+1.x roadmap. See [docs/deployment/security.md](docs/deployment/security.md)
+for the exposure policy and the production checklist.
+
+## If a secret was committed
+
+1. Rotate the secret immediately. A commit that deletes it does not remove it
+   from the history.
+2. Tell the maintainers through a private vulnerability report.
+
+For ordinary bugs and usage questions, use
+[GitHub Issues](https://github.com/choBottle/Physical-Project-mk2/issues).
