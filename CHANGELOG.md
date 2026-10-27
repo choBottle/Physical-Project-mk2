@@ -14,9 +14,21 @@
   `drone/viz-debugger/drone/` → `drone/` 로 옮겼다. `visualization/viz-debugger/drone/` 의 옛 사본(1차 병합분)도 지웠다 —
   그쪽에만 있던 `fc_watch` NaN → null 고침은 `drone/` 에 합쳤다.
 
+### 고침 (가시화 · 객체탐지 · Unity 회귀 시험 — 통합 직후 `6dcd1fb` 와 같은 입력으로 비교, 2026-10-27)
+- camera360: 설정 yaml 의 상대 가중치 경로를 **yaml 폴더 기준**으로 푼다(`anchor360_live.py` · `v2/` · `detect_send_3b2*.py` ·
+  `detect_ground_3b1.py`). 전에는 실행 폴더 기준이라 모델을 못 찾고 ultralytics 가 기본 모델을 새로 받았다. yaml 을 UTF-8 로 연다(한글 Windows).
+- hardware: `HW_UPLOAD_URL=` · `HW_DETECT_BASE=` 처럼 **빈 값이면 기본값**으로(전에는 빈 주소로 매번 실패). 값이 없으면 기동 때
+  경고를 찍고, `install-units.sh` 도 `/etc/hw-robot.env` 에 두 값이 없으면 알린다 — 없으면 Unity(5009 장애물 · 5001 영상)로 아무것도 가지 않는다.
+- 얼굴 흐림 이미지를 **원본과 같은 양자화 표로 다시 저장**했다 — 흐림 영역 밖은 원본과 사실상 같다. (낮은 화질 재저장 때문에
+  `ai/demo` 시료의 박스·위치 추정이 흔들리던 것. 흐림 영역 안의 사람 검출이 줄어드는 것은 의도된 결과다.)
+- viz-debugger: `test:drone` 이 옮긴 `drone/` 을 가리키게, `verify:fake-device` 의 착륙 직후 disarm 판정 경합을 고쳤다.
+
 ### 배포 변경
 - Pi 설치 경로: `pip install -e <저장소>/drone` · `sudo <저장소>/drone/deploy/pi/install.sh` (예전 `…/viz-debugger/drone`).
   `install.sh` 는 제 위치 기준으로 코드를 찾으므로 옵션은 그대로다. 이미 설치한 Pi 는 `install.sh` 를 새 자리에서 한 번 다시 돌리면 된다.
+- **Go1 Pi 를 이 판으로 올릴 때:** `/etc/hw-robot.env` 에 `HW_UPLOAD_URL` · `HW_DETECT_BASE`(인지 서버 주소)를 넣고
+  `hardware/pi/deploy/install-units.sh --user <사용자>` 로 유닛을 다시 깐다. `git pull` 만 하면 옛 유닛은 이 파일을 읽지 않는다.
+- camera360 GPU 서버: Redis 비밀번호가 yaml 에서 빠졌다 — `MK2_REDIS_PASSWORD` 를 설정한다.
 
 ## [1.0.0-rc.1] — 2026-10-26
 

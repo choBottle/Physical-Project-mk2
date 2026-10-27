@@ -14,7 +14,7 @@ detect_ground_3b1.py — 3b-① 바닥평면 깊이 (검증 모드)
   좌표 규약(anchor360): +x 오른쪽, +y 위(바닥 y=0), +z 카메라 정면(슬라이스가 보는 방향)
   수평거리 D = sqrt(x^2 + z^2)  ← 줄자로 잰 '카메라 발밑↔박스 바닥접지' 수평거리와 대조
 """
-import sys, math, yaml, cv2, numpy as np
+import os, sys, math, yaml, cv2, numpy as np
 from ultralytics import YOLOWorld
 
 img_path = sys.argv[1]
@@ -28,8 +28,11 @@ PITCH    = float(sys.argv[6]) if len(sys.argv) > 6 else -35.0    # 하향각(deg
 KEEP_GROUPS = {"HARD_OBSTACLE", "AGENT"}
 
 # --- config ---
-CFG = yaml.safe_load(open(cfg_path))
-ZS_W    = CFG["models"]["zeroshot_detector"]["weight"]
+CFG = yaml.safe_load(open(cfg_path, encoding="utf-8"))
+# 상대 경로는 yaml 폴더 기준 (unidepth_dual_yolo._resolve_model_path 와 같은 규칙) — 없으면 문자열 그대로(모델 이름)
+_w = os.path.expanduser(str(CFG["models"]["zeroshot_detector"]["weight"]))
+_cand = os.path.join(os.path.dirname(os.path.abspath(cfg_path)), _w)
+ZS_W    = _cand if (not os.path.isabs(_w) and os.path.exists(_cand)) else _w
 ZS_CLS  = CFG["classes"]["zeroshot"]
 ZS_CONF = float(CFG["models"]["zeroshot_detector"]["conf"])
 GROUP   = CFG["group_mapping"]

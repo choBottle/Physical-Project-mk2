@@ -166,13 +166,17 @@ def run(cam_id, url, camera_id, fps, quality, verbose):
 def main():
     ap = argparse.ArgumentParser(description="Go1 정면 영상 -> 인지 서버 업로드")
     ap.add_argument("--cam", type=int, default=1, help="Go1 카메라 번호 (1=정면)")
-    ap.add_argument("--url", default=os.environ.get("HW_UPLOAD_URL", DEFAULT_URL))
+    ap.add_argument("--url", default=os.environ.get("HW_UPLOAD_URL") or DEFAULT_URL)
     ap.add_argument("--camera-id", default=os.environ.get("HW_UPLOAD_CAMERA_ID", "go1_front"))
     ap.add_argument("--fps", type=float, default=float(os.environ.get("HW_UPLOAD_FPS", "10")))
     ap.add_argument("--quality", type=int, default=int(os.environ.get("HW_UPLOAD_Q", "5")),
                     help="JPEG q:v. 낮을수록 고화질·고대역폭")
     ap.add_argument("-q", "--quiet", action="store_true")
     a = ap.parse_args()
+    if a.url == DEFAULT_URL and not os.environ.get("HW_UPLOAD_URL"):
+        print("[warn] HW_UPLOAD_URL 미설정: %s 로 올린다. 인지 서버가 다른 기기면 /etc/hw-robot.env 에 "
+              "HW_UPLOAD_URL=http://<server>:7864/upload 를 넣는다 (없으면 Unity 5001 영상·5009 장애물이 끊긴다)"
+              % DEFAULT_URL, flush=True)
     print("[init] cam=%d -> %s camera_id=%s fps=%s q=%d"
           % (a.cam, a.url, a.camera_id, a.fps, a.quality), flush=True)
     run(a.cam, a.url, a.camera_id, a.fps, a.quality, not a.quiet)
