@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: Physical-Project-mk2
+abstract: >-
+  Physical-Project-mk2 is an edge-to-cloud platform for physical AI at
+  disaster-response and infrastructure sites. Sensors, legged robots, drones
+  and 360-degree cameras publish to zone edge nodes; a central server routes
+  business data through MQTT and Kafka into TimescaleDB and MySQL, routes
+  metrics, logs and traces through OpenTelemetry to Prometheus, Loki and
+  Tempo, and pushes live state and video to operator consoles and a Unity
+  digital twin over WebSocket. Interfaces between parts are JSON Schema
+  contracts. The central stack is reproducible with Docker Compose and is
+  rebuilt and checked end to end on every pull request. Version
+  1.0.0-rc.1 is a release candidate without authentication, RBAC or TLS.
+type: software
+authors:
+  - name: "Physical-Project-mk2 contributors"
+repository-code: "https://github.com/choBottle/Physical-Project-mk2"
+license: MIT
+version: 1.0.0-rc.1
+date-released: "2026-10-26"
+keywords:
+  - physical AI
+  - edge computing
+  - digital twin
+  - disaster response
+  - MQTT
+  - Kafka
+  - OpenTelemetry
+  - robotics

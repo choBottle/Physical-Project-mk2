@@ -1,38 +1,50 @@
-# 거버넌스
+# Governance
 
-## 역할
+## Roles
 
-| 역할 | 권한 · 책임 |
-|---|---|
-| **기여자 (Contributor)** | 이슈 · PR · 리뷰 의견. 누구나 |
-| **파트 메인테이너** | 자기 폴더의 PR 승인 · 머지, 파트 로드맵. `.github/CODEOWNERS` 에 등록 |
-| **플랫폼 메인테이너** | 파트를 가로지르는 약속(공통 규격 · 배포 · 릴리스)의 최종 결정, 릴리스 태그 |
+| Role | Responsibilities |
+|------|------------------|
+| Contributor | Opens issues and pull requests and reviews them. Anyone can be a contributor. |
+| Part maintainer | Approves and merges pull requests for one folder and sets that part's roadmap. Listed in `.github/CODEOWNERS`. |
+| Platform maintainer | Makes the final decision on agreements that cross parts (data contracts, deployment, releases) and tags releases. |
 
-## 현재 메인테이너
+## Current maintainers
 
-| 영역 | 폴더 | 메인테이너 |
-|---|---|---|
-| 백엔드 · **공통 데이터 규격** · DB 스키마 | `server/` | @daegyu10 |
-| 하드웨어 · 엣지 노드 | `hardware/` | @choBottle |
+| Area | Folders | Maintainer |
+|------|---------|------------|
+| Backend, common data contracts, database schema | `server/` | @daegyu10 |
+| Hardware and edge nodes | `hardware/` | @choBottle |
 | AI | `ai/` | @JNY03 |
-| 가시화 · 관제 화면 | `visualization/` · `osmocam/` | @khw18033 |
-| 드론 | `drone/` | jhjeong (GitHub 계정 확인 필요) |
-| 360 카메라 | `camera360/` | @daegyu10 |
-| 배포 · 오픈소스 운영 · 릴리스 | `deploy/` · `docs/` · `.github/` | @choBottle (+ 백엔드 메인테이너 공동 리뷰) |
+| Visualization and operator console | `visualization/`, `osmocam/` | @khw18033 |
+| Drone | `drone/` | jhjeong (GitHub account to be confirmed) |
+| 360-degree camera | `camera360/` | @daegyu10 |
+| Deployment, releases, project operations | `deploy/`, `docs/`, `.github/` | @choBottle, with review by the backend maintainer |
 
-메인테이너는 활동 기여자 중에서 기존 메인테이너 과반 합의로 추가한다. 6개월 이상 활동이 없으면 명예 메인테이너로 옮긴다.
+New maintainers are added from active contributors by a majority of the
+current maintainers. A maintainer who has been inactive for six months
+becomes an emeritus maintainer.
 
-## 결정 방식
+## Decisions
 
-1. **파트 안의 결정** — 그 파트 메인테이너가 정한다.
-2. **파트를 가로지르는 결정** (공통 규격 · MQTT/Kafka 토픽 · DB 스키마 · 포트 · 배포 환경변수 · 라이선스)
-   - 이슈에 `rfc` 라벨로 제안 → 영향받는 파트 메인테이너 전원에게 알림 → **7일** 의견 수렴
-   - 반대가 없으면 채택(lazy consensus). 반대가 있으면 메인테이너 회의에서 다수결, 동수면 플랫폼 메인테이너가 정한다.
-   - 공통 데이터 규격의 정본 소유자는 백엔드다(`server/contracts/common/`). 다른 파트는 규격을 따르고, 바꾸려면 위 절차를 밟는다.
-3. 결정 기록은 이슈에 남기고, 설계 문서(아키텍처 기준·통합데이터규약)에 반영한다.
+1. **Within a part.** The part maintainer decides.
+2. **Across parts.** Changes to the common data contracts, MQTT or Kafka
+   topics, the database schema, ports, deployment environment variables or
+   the license follow this process:
+   - Open an issue with the `rfc` label and mention the maintainers of every
+     affected part.
+   - Leave it open for comments for seven days.
+   - If no maintainer objects, the proposal is accepted. If there is an
+     objection, the maintainers vote; a tie is decided by the platform
+     maintainer.
+   - The backend owns the canonical data contracts in
+     `server/contracts/common/`. Other parts follow them and use this process
+     to change them.
+3. Decisions are recorded in the issue and reflected in the design documents.
 
-## 외부 기관의 도입
+## Adopting organizations
 
-다른 기관(공공·국방·연구)이 이 플랫폼을 도입하면 이슈의 `adopter` 라벨로 알려 주기를 권한다. 현장 요구(오프라인 운용 ·
-보안 등급 · 장치 종류)는 로드맵의 1차 근거가 된다. 기관 고유 설정·데이터는 이 저장소에 넣지 않고, 일반화할 수 있는
-개선만 PR 로 받는다.
+Organizations that deploy the platform are encouraged to say so in an issue
+with the `adopter` label. Site requirements such as offline operation,
+security classification and device types are the main input to the roadmap.
+Site-specific configuration and data stay out of this repository; only
+general improvements are accepted as pull requests.

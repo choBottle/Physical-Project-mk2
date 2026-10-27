@@ -1,30 +1,40 @@
-# 행동 강령
+# Code of Conduct
 
-이 프로젝트는 [Contributor Covenant 2.1](https://www.contributor-covenant.org/ko/version/2/1/code_of_conduct/) 을 따른다.
-아래는 요약이며, 해석이 갈리면 원문이 우선한다.
+This project follows the
+[Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+The summary below is for convenience; the original text takes precedence.
 
-## 약속
+## Our pledge
 
-우리는 나이 · 체형 · 장애 · 민족 · 성별 정체성과 표현 · 경험 수준 · 학력 · 사회경제적 지위 · 국적 · 외모 · 인종 · 종교 ·
-성적 지향과 관계없이 누구나 괴롭힘 없이 참여할 수 있는 공동체를 만든다.
+We want participation in this project to be free of harassment for everyone,
+regardless of age, body size, disability, ethnicity, gender identity and
+expression, level of experience, education, socio-economic status,
+nationality, personal appearance, race, religion, or sexual identity and
+orientation.
 
-## 바람직한 행동
+## Expected behavior
 
-- 다른 사람에게 공감하고 친절하게 대한다
-- 다른 의견·관점·경험을 존중한다
-- 건설적인 비판을 주고받고, 실수를 인정하고 배운다
-- 개인이 아니라 공동체 전체에 가장 좋은 것에 집중한다
+- Be considerate and respectful toward other people.
+- Respect differing opinions, viewpoints and experiences.
+- Give and accept constructive feedback, and take responsibility for
+  mistakes.
+- Focus on what is best for the community as a whole.
 
-## 허용되지 않는 행동
+## Unacceptable behavior
 
-- 성적인 언어·이미지, 원치 않는 관심
-- 모욕 · 비하 · 인신공격 · 정치적 공격
-- 공개적·사적 괴롭힘
-- 동의 없이 다른 사람의 개인정보(주소·연락처 등)를 공개하는 것
-- 그 밖에 직업적 환경에서 부적절한 행동
+- Sexualized language or imagery, and unwelcome attention
+- Insults, derogatory comments, and personal or political attacks
+- Public or private harassment
+- Publishing other people's private information, such as an address or
+  contact details, without their permission
+- Other conduct that would be inappropriate in a professional setting
 
-## 적용과 신고
+## Scope and enforcement
 
-이 강령은 저장소 · 이슈 · PR · 토론 등 모든 프로젝트 공간과, 프로젝트를 대표하는 공개 활동에 적용된다.
-위반은 [GOVERNANCE.md](GOVERNANCE.md) 의 메인테이너에게 GitHub 를 통해 비공개로 알린다. 모든 신고는 신속하고 공정하게
-검토하며 신고자의 비밀을 지킨다. 메인테이너는 원문의 단계(정정 → 경고 → 일시 차단 → 영구 차단)에 따라 조치한다.
+This code applies in all project spaces, including the repository, issues,
+pull requests and discussions, and when someone represents the project in
+public. Report violations privately to a maintainer listed in
+[GOVERNANCE.md](GOVERNANCE.md). Reports are reviewed promptly and fairly, and
+the reporter's identity is kept confidential. Maintainers act according to
+the enforcement guidelines of the Covenant: correction, warning, temporary
+ban, permanent ban.

@@ -1,23 +1,24 @@
-name: 제안 (RFC) / Proposal
-description: 기능 제안, 또는 파트를 가로지르는 약속(규격·토픽·DB·포트·환경변수) 변경
+name: Proposal (RFC)
+description: A feature proposal, or a change to an agreement shared by several parts (contracts, topics, database, ports, environment variables)
 labels: ["proposal"]
 body:
   - type: markdown
     attributes:
       value: |
-        공통 규격 · MQTT/Kafka 토픽 · DB 스키마 · 포트 · 배포 환경변수를 바꾸는 제안은 `rfc` 라벨을 붙이고
-        영향받는 파트 메인테이너를 멘션해 주세요. 7일 의견 수렴 후 결정합니다(GOVERNANCE.md).
+        For a change to the data contracts, MQTT or Kafka topics, database schema, ports or deployment environment
+        variables, add the `rfc` label and mention the maintainers of the affected parts. The proposal stays open
+        for seven days of comments before a decision (see GOVERNANCE.md).
   - type: textarea
     id: problem
     attributes:
-      label: 풀려는 문제 (현장 · 기관 요구가 있으면 함께)
+      label: Problem to solve (include site or organization requirements if any)
     validations: { required: true }
   - type: textarea
     id: proposal
     attributes:
-      label: 제안
+      label: Proposal
     validations: { required: true }
   - type: textarea
     id: impact
     attributes:
-      label: 영향 — 어느 파트, 하위 호환, 배포 변경, 과도기
+      label: Impact (affected parts, backward compatibility, deployment changes, transition period)
