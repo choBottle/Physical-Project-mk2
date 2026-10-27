@@ -49,7 +49,7 @@
 - [x] **전 기여자의 MIT 라이선스 동의** (2026-10-26 완료)
 - [x] 하드코딩 제거: 공인 IP · Tailscale 주소 · `/home/<사용자>` 경로 → 환경변수
 - [x] 포트 충돌 3건 해소 ([PORTS.md](PORTS.md))
-- [ ] 사진·스크린샷·영상의 개인정보/정밀 위치 검토
+- [x] 사진·스크린샷·영상의 개인정보/정밀 위치 검토 (2026-10-27 얼굴 흐림 처리 — 처리 전 원본은 히스토리에 남음)
 - [x] 레이더 팀 제공 코드 라이선스 확인 (2026-10-26 MIT 동의)
 - [x] `drone/` ↔ `visualization/` 의 `viz-debugger` 중복 정리 (화면은 `visualization/viz-debugger` 하나, 드론 파이썬은 `drone/`)
 - [x] AI `perception-framework` Dockerfile 수정(없는 `examples/` 참조) · 360 카메라 의존성 명세
