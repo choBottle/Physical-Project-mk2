@@ -1,0 +1,9 @@
+{
+  "_doc": "server_stream_multi_source.py 의 소스 목록. 소스 하나 = 이 기기의 포트 하나. kind: upload(올려 받기만) | mjpeg(video_port+path 의 MJPEG 를 끌어옴) | drone_api(드론 agent 롱폴). mqtt_port 가 있으면 그 주소의 MQTT 전체 토픽을 상태로 받는다(null 이면 안 받음). 주소는 여기 적지 않는다 — hosts.local.json, PD_HOST_<소스>, --host 소스=주소. docs/deployment/pluggability.md",
+  "sources": [
+    {"name": "cam360", "port": 10001, "kind": "upload", "aliases": ["camera", "360"]},
+    {"name": "drone", "port": 10002, "kind": "drone_api", "video_port": 8890, "cam": 1, "mqtt_port": 1883},
+    {"name": "robot1", "port": 10003, "kind": "mjpeg", "video_port": 8090, "path": "/stream/{cam}", "cam": 1, "mqtt_port": 1883},
+    {"name": "robot2", "port": 10004, "kind": "mjpeg", "video_port": 8090, "path": "/stream/{cam}", "cam": 1, "mqtt_port": 1883}
+  ]
+}

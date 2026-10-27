@@ -19,10 +19,13 @@ server_stream_multi_source.py — 로봇·드론·360 카메라 데이터 스트
   안 붙어 와도 그대로 흘린다. 이 파일이 붙이는 것은 저장 번호뿐이다.
 
 포트 = 소스  (어느 경로로 들어오든 그 포트로 들어오면 그 소스다)
-  10001 cam360  영상: 카메라 노트북의 stream_to_server.py 가 POST 로 보낸다 (/upload_pano)
-  10002 drone   영상: pi3 :8890/api/frame 을 계속 받아 온다   상태: pi3 MQTT :1883 전체 구독
-  10003 robot1  영상: pi7 :8090/stream/1 을 계속 읽는다        상태: pi7 MQTT :1883 전체 구독
-  10004 robot2  영상: pi1 :8090/stream/1 을 계속 읽는다        상태: pi1 MQTT :1883 전체 구독
+  소스 목록은 sources.json (없으면 아래 기본 4개). 소스를 더하거나 포트·끌어오는 방식을 바꿀 때
+  코드를 고치지 않고 이 파일만 고친다 (1.0.2 — docs/deployment/pluggability.md). 주소는
+  hosts.local.json · PD_HOST_<소스> · --host 소스=주소 로 준다.
+  10001 cam360  upload     영상: 카메라 노트북의 stream_to_server.py 가 POST 로 보낸다 (/upload_pano)
+  10002 drone   drone_api  영상: pi3 :8890/api/frame 을 계속 받아 온다   상태: pi3 MQTT :1883 전체 구독
+  10003 robot1  mjpeg      영상: pi7 :8090/stream/1 을 계속 읽는다        상태: pi7 MQTT :1883 전체 구독
+  10004 robot2  mjpeg      영상: pi1 :8090/stream/1 을 계속 읽는다        상태: pi1 MQTT :1883 전체 구독
 
 각 포트에 열리는 주소
   POST /upload_pano   360 업로드 (pano_receiver 와 같은 모양: 폼 칸 + file)
@@ -168,17 +171,58 @@ except ImportError:
 
 
 # ---------------------------------------------------------------- 고정값
-SOURCES = {"cam360": 10001, "drone": 10002, "robot1": 10003, "robot2": 10004}
-ALIASES = {"cam360": "cam360", "camera": "cam360", "360": "cam360",
-           "drone": "drone", "robot1": "robot1", "robot2": "robot2"}
+# 소스 목록 — sources.json (이 파일 옆) 이 있으면 그것을, 없으면 아래 기본값을 쓴다 (1.0.2).
+# 소스 하나 = 이 기기의 포트 하나. kind 가 영상을 얻는 방식을 정한다:
+#   upload     포트로 올라오는 것만 받는다 (POST /upload_pano · /upload) — 360 카메라 등
+#   mjpeg      http://<주소>:video_port<path> 의 MJPEG 를 끌어온다 — go1_cam_view.py 등
+#   drone_api  http://<주소>:video_port/api/frame?cam=&since=&wait= 롱폴 (meta JSON + JPEG) — 드론 agent
+# mqtt_port 가 있으면 그 주소의 MQTT 전체 토픽(#)을 상태로 받는다. null 이면 상태를 받지 않는다.
+DEFAULT_SOURCES = [
+    {"name": "cam360", "port": 10001, "kind": "upload", "aliases": ["camera", "360"]},
+    {"name": "drone", "port": 10002, "kind": "drone_api", "video_port": 8890,
+     "cam": 1, "mqtt_port": 1883},       # pi3 에 Arducam(IMX519, CAM0 포트)이 추가되어 imx708 이 1번이 됐다
+    {"name": "robot1", "port": 10003, "kind": "mjpeg", "video_port": 8090, "path": "/stream/{cam}",
+     "cam": 1, "mqtt_port": 1883},       # pi7 (go1-camview 8090 · mosquitto 1883)
+    {"name": "robot2", "port": 10004, "kind": "mjpeg", "video_port": 8090, "path": "/stream/{cam}",
+     "cam": 1, "mqtt_port": 1883},       # pi1
+]
+KINDS = ("upload", "mjpeg", "drone_api")
+SOURCES_FILE = Path(__file__).resolve().parent / "sources.json"
 HOSTS_FILE = Path(__file__).resolve().parent / "hosts.local.json"   # 실제 주소는 여기에 (깃에 올리지 않음)
 
 
-def load_default_hosts():
-    """기본 주소: 환경변수 PD_HOST_<소스> > hosts.local.json > 없음. 명령행 --robot1 / --robot2 / --drone 이 가장 우선."""
-    hosts = {"robot1": None,         # pi7 (go1-camview 8090 · mosquitto 1883)
-             "robot2": None,         # pi1 (go1-camview 8090 · mosquitto 1883)
-             "drone": None}          # pi3 (drone-agent 8890 · mosquitto 1883)
+def load_sources(path=None):
+    """소스 목록: --sources > 환경변수 PD_SOURCES > 이 파일 옆 sources.json > DEFAULT_SOURCES."""
+    path = path or os.environ.get("PD_SOURCES") or (SOURCES_FILE if SOURCES_FILE.is_file() else None)
+    if path:
+        try:
+            raw = json.loads(Path(path).expanduser().read_text(encoding="utf-8"))["sources"]
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            raise SystemExit("소스 목록 %s 을 못 읽었습니다: %s" % (path, e))
+    else:
+        raw = DEFAULT_SOURCES
+    out, ports = [], set()
+    for i, sp in enumerate(raw):
+        sp = dict(sp)
+        name, port, kind = sp.get("name"), sp.get("port"), sp.get("kind")
+        if not isinstance(name, str) or not name or not isinstance(port, int) or kind not in KINDS:
+            raise SystemExit("소스 %d 이 잘못됨 (name · port(정수) · kind(%s) 필요): %r" % (i + 1, " | ".join(KINDS), sp))
+        if port in ports or any(o["name"] == name for o in out):
+            raise SystemExit("소스 이름이나 포트가 겹칩니다: %s :%d" % (name, port))
+        ports.add(port)
+        if kind != "upload" and not isinstance(sp.get("video_port"), int):
+            raise SystemExit("%s: kind %s 에는 video_port(정수)가 필요합니다" % (name, kind))
+        sp.setdefault("cam", 1)
+        sp.setdefault("path", "/stream/{cam}")
+        sp.setdefault("mqtt_port", None if kind == "upload" else 1883)
+        sp.setdefault("aliases", [])
+        out.append(sp)
+    return out
+
+
+def load_default_hosts(names):
+    """기본 주소: 환경변수 PD_HOST_<소스> > hosts.local.json > 없음. 명령행이 가장 우선."""
+    hosts = dict((k, None) for k in names)
     if HOSTS_FILE.is_file():
         try:
             data = json.loads(HOSTS_FILE.read_text(encoding="utf-8"))
@@ -192,11 +236,6 @@ def load_default_hosts():
     return hosts
 
 
-DEFAULT_HOST = load_default_hosts()
-ROBOT_VIDEO_PORT = 8090      # go1_cam_view.py — GET /stream/<카메라 번호> (MJPEG, VZ 카드가 쓰는 주소)
-DRONE_VIDEO_PORT = 8890      # 드론 agent    — GET /api/frame?cam=&since=&wait= (meta JSON + JPEG)
-MQTT_PORT = 1883             # 파이 mosquitto (프로그램용 입구. 9001 은 같은 브로커의 브라우저용 입구)
-DRONE_CAM = 1                # pi3 에 Arducam(IMX519, CAM0 포트)이 추가되어 imx708 이 1번이 됐다
 DRONE_WAIT_S = 2             # 드론 롱폴: 새 장이 없으면 이만큼 기다렸다가 204 로 답한다
 MAX_BODY = 64 * 1024 * 1024  # POST 한 번에 받는 최대 크기
 FORWARD_QUEUE = 300          # 넘기기 대기열. 넘치면 오래된 것부터 버린다 (이 기기 디스크에는 남아 있다)
@@ -656,6 +695,7 @@ class Forwarder:
 class Source:
     def __init__(self, name, port, folder, rel, sink, forwarder):
         self.name, self.port = name, port
+        self.kind = "upload"                    # 영상을 얻는 방식 (소스 목록의 kind)
         self.dir, self.rel = folder, rel        # 저장 폴더 / 헤더에 적는 상대 경로
         self.sink, self.fwd = sink, forwarder
         self.lock = threading.Lock()
@@ -979,7 +1019,7 @@ def make_handler(src, vision=None):
                     sender, image = form_to_frame(split_multipart(body, boundary))
                     if image is None:
                         return self._json(400, {"status": "error", "detail": "파일 칸이 없음"})
-                    key = "video" if src.name == "cam360" else "upload"   # 로봇·드론 포트는 가져오기 상태를 덮지 않는다
+                    key = "video" if src.kind == "upload" else "upload"   # 끌어오는 포트는 가져오기 상태를 덮지 않는다
                     text = "받는 중 (%s ← %s)" % (path, self.client_address[0])
                     if src.status.get(key) != text:
                         src.set_status(key, text)
@@ -1086,15 +1126,14 @@ def read_mjpeg(resp, boundary):
             yield headers, data
 
 
-def robot_video_loop(src, host, cam):
-    path = "/stream/%d" % cam
-    url = "http://%s:%d%s" % (host, ROBOT_VIDEO_PORT, path)
+def robot_video_loop(src, host, port, path):
+    url = "http://%s:%d%s" % (host, port, path)
     fails, receiving = 0, False
     src.set_status("video", "붙는 중 " + url)
     while not STOP.is_set():
         conn = None
         try:
-            conn = http.client.HTTPConnection(host, ROBOT_VIDEO_PORT, timeout=10)
+            conn = http.client.HTTPConnection(host, port, timeout=10)
             conn.request("GET", path)
             resp = conn.getresponse()
             if resp.status != 200:
@@ -1134,8 +1173,8 @@ def robot_video_loop(src, host, cam):
 
 
 # ---------------------------------------------------------------- 가져오는 쪽: 드론 영상 (/api/frame 롱폴)
-def drone_video_loop(src, host, cam):
-    base = "http://%s:%d" % (host, DRONE_VIDEO_PORT)
+def drone_video_loop(src, host, port, cam):
+    base = "http://%s:%d" % (host, port)
     via = "pull:%s/api/frame?cam=%d" % (base, cam)
     since, last_seq, last_img = 0, None, None
     fails, receiving = 0, False
@@ -1145,7 +1184,7 @@ def drone_video_loop(src, host, cam):
         path = "/api/frame?cam=%d&since=%d&wait=%d" % (cam, since, DRONE_WAIT_S)
         try:
             if conn is None:                       # 연결은 열어 두고 계속 쓴다 (매번 새로 열면 느려진다)
-                conn = http.client.HTTPConnection(host, DRONE_VIDEO_PORT, timeout=DRONE_WAIT_S + 8)
+                conn = http.client.HTTPConnection(host, port, timeout=DRONE_WAIT_S + 8)
             conn.request("GET", path)
             resp = conn.getresponse()
             body = resp.read()
@@ -1203,8 +1242,8 @@ def _rc_failed(rc):
     return rc != 0
 
 
-def start_mqtt(src, host):
-    url = "mqtt://%s:%d" % (host, MQTT_PORT)
+def start_mqtt(src, host, port):
+    url = "mqtt://%s:%d" % (host, port)
     if mqtt is None:
         src.set_status("state", "paho-mqtt 패키지 없음 (pip install paho-mqtt)")
         log("%s 상태: paho-mqtt 가 없어 상태는 받지 않습니다 (pip install paho-mqtt)" % src.name)
@@ -1245,7 +1284,7 @@ def start_mqtt(src, host):
     cli.reconnect_delay_set(min_delay=1, max_delay=10)
     src.set_status("state", "붙는 중 " + url)
     try:
-        cli.connect_async(host, MQTT_PORT, keepalive=30)
+        cli.connect_async(host, port, keepalive=30)
         cli.loop_start()
     except Exception as e:
         src.set_status("state", "시작 실패 (%s)" % describe(e))
@@ -1328,7 +1367,7 @@ def report_loop(sources, sink, vision=None, every=10.0):
             f0, s0 = prev[s.name]
             prev[s.name] = (s.got_frames, s.got_states)
             line = "  %-6s 영상 %5.1f장/초 (누적 %d)" % (s.name, (s.got_frames - f0) / dt, s.got_frames)
-            if s.name != "cam360":                  # 360 은 상태가 없다
+            if s.kind != "upload":                  # 올려 받기만 하는 소스(360 등)는 상태가 없다
                 line += "  상태 %5.1f건/초 (누적 %d)" % ((s.got_states - s0) / dt, s.got_states)
             extra = []
             if s.save_fail:
@@ -1369,21 +1408,30 @@ def main():
     except Exception:
         pass
 
+    pre = argparse.ArgumentParser(add_help=False)
+    pre.add_argument("--sources", metavar="파일")
+    specs = load_sources(pre.parse_known_args()[0].sources)
+    by_name = dict((sp["name"], sp) for sp in specs)
+    pull_names = [sp["name"] for sp in specs if sp["kind"] != "upload"]
+    default_host = load_default_hosts(pull_names)
+
     ap = argparse.ArgumentParser(
         description="로봇·드론·360 카메라 데이터를 받아 Redis Stream 으로 흘리고 전부 파일로 저장한다.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="포트: cam360 10001 · drone 10002 · robot1 10003 · robot2 10004\n"
-               "자세한 설명은 파일 맨 위 주석.")
+        epilog="포트: " + " · ".join("%s %d" % (sp["name"], sp["port"]) for sp in specs) + "\n"
+               "소스 목록은 sources.json (없으면 기본 4개). 자세한 설명은 파일 맨 위 주석.")
+    ap.add_argument("--sources", metavar="파일",
+                    help="소스 목록 JSON (기본: 환경변수 PD_SOURCES > 이 파일 옆 sources.json > 기본 4개)")
     ap.add_argument("--on", nargs="+", metavar="소스",
-                    help="켤 소스만 고른다: cam360 drone robot1 robot2 (안 주면 전부)")
-    ap.add_argument("--robot1", default=DEFAULT_HOST["robot1"], metavar="주소",
-                    help="로봇1 파이(pi7) 주소. 기본 hosts.local.json / PD_HOST_* 값")
-    ap.add_argument("--robot2", default=DEFAULT_HOST["robot2"], metavar="주소",
-                    help="로봇2 파이(pi1) 주소. 기본 hosts.local.json / PD_HOST_* 값")
-    ap.add_argument("--drone", default=DEFAULT_HOST["drone"], metavar="주소",
-                    help="드론 파이(pi3) 주소. 기본 hosts.local.json / PD_HOST_* 값")
-    ap.add_argument("--robot-cam", type=int, default=1, choices=range(1, 6), metavar="번호",
-                    help="로봇 카메라: 1 정면 · 2 턱 · 3 왼쪽 · 4 오른쪽 · 5 배 (기본 1)")
+                    help="켤 소스만 고른다: %s (안 주면 전부)" % " ".join(by_name))
+    ap.add_argument("--host", action="append", default=[], metavar="소스=주소",
+                    help="끌어올 소스의 주소. 여러 번 줄 수 있다. 기본 hosts.local.json / PD_HOST_<소스> 값")
+    ap.add_argument("--robot1", metavar="주소", help="= --host robot1=주소 (예전 옵션)")
+    ap.add_argument("--robot2", metavar="주소", help="= --host robot2=주소 (예전 옵션)")
+    ap.add_argument("--drone", metavar="주소", help="= --host drone=주소 (예전 옵션)")
+    ap.add_argument("--robot-cam", type=int, choices=range(1, 6), metavar="번호",
+                    help="mjpeg 소스의 카메라 번호를 덮어쓴다: 1 정면 · 2 턱 · 3 왼쪽 · 4 오른쪽 · 5 배 "
+                         "(기본: 소스 목록의 cam)")
     ap.add_argument("--save", default=str(Path(__file__).resolve().parent / "stream_data"), metavar="폴더",
                     help="저장 폴더 (기본: 이 파일 옆 stream_data)")
     ap.add_argument("--redis", default="redis://127.0.0.1:6380/0", metavar="주소",
@@ -1405,23 +1453,36 @@ def main():
     if args.unpack:
         return unpack(args.unpack)
 
+    aliases = {}
+    for sp in specs:
+        for a in [sp["name"]] + list(sp["aliases"]):
+            aliases[str(a).lower()] = sp["name"]
     if args.on:
         names = []
         for x in args.on:
-            nm = ALIASES.get(x.strip().lower())
+            nm = aliases.get(x.strip().lower())
             if nm is None:
-                raise SystemExit("모르는 소스: %s  (cam360 · drone · robot1 · robot2)" % x)
+                raise SystemExit("모르는 소스: %s  (%s)" % (x, " · ".join(by_name)))
             if nm not in names:
                 names.append(nm)
-        names.sort(key=lambda nm: SOURCES[nm])
+        names.sort(key=lambda nm: by_name[nm]["port"])
     else:
-        names = sorted(SOURCES, key=lambda nm: SOURCES[nm])
-    hosts = {}
-    for k in DEFAULT_HOST:
+        names = sorted(by_name, key=lambda nm: by_name[nm]["port"])
+    given = dict(default_host)
+    for k in ("robot1", "robot2", "drone"):
         if getattr(args, k):
-            hosts[k] = clean_host(getattr(args, k), "--" + k)
+            given[k] = getattr(args, k)
+    for h in args.host:
+        k, sep, v = h.partition("=")
+        if not sep or k.strip() not in by_name:
+            raise SystemExit("--host 는 소스=주소 꼴이어야 합니다 (소스: %s): %s" % (" · ".join(by_name), h))
+        given[k.strip()] = v
+    hosts = {}
+    for k in pull_names:
+        if given.get(k):
+            hosts[k] = clean_host(given[k], k + " 주소")
         elif k in names and not args.no_pull:
-            raise SystemExit("%s 주소가 없습니다: --%s 로 주거나 hosts.local.json / PD_HOST_%s 에 적으세요"
+            raise SystemExit("%s 주소가 없습니다: --host %s=<주소> 로 주거나 hosts.local.json / PD_HOST_%s 에 적으세요"
                              % (k, k, k.upper()))
     fwd_host = clean_host(args.forward, "--forward") if args.forward else None
 
@@ -1430,7 +1491,9 @@ def main():
     redis_mem = sink.ensure_maxmemory(args.redis_maxmemory) if redis_ok else None
     if not redis_ok and str(args.redis_maxmemory).strip().lower() not in ("", "0", "off", "none"):
         sink.maxmemory = args.redis_maxmemory      # 나중에 붙으면 보고 때 건다
-    sources = [Source(nm, SOURCES[nm], None, None, sink, None) for nm in names]
+    sources = [Source(nm, by_name[nm]["port"], None, None, sink, None) for nm in names]
+    for src in sources:
+        src.kind = by_name[src.name]["kind"]
 
     vision = None if args.no_vision else VisionView(args.redis, names)
     servers = []                                   # 포트부터 잡는다 — 못 잡으면 폴더를 만들기 전에 끝낸다
@@ -1475,32 +1538,37 @@ def main():
 
     pulls = []                                     # 요약을 다 찍은 뒤에 시작한다
     for s in sources:
-        if s.name == "cam360":
+        sp = by_name[s.name]
+        if s.kind == "upload":
             s.set_status("video", "기다림 (stream_to_server.py 가 보내야 옴)")
-            print("  cam360 :%d  영상 ← stream_to_server.py --upload http://<이 기기>:%d/upload_pano"
-                  % (s.port, s.port))
+            print("  %-6s :%d  영상 ← stream_to_server.py --upload http://<이 기기>:%d/upload_pano"
+                  % (s.name, s.port, s.port))
         elif args.no_pull:
             s.set_status("video", "기다림 (--no-pull: 넘겨 오는 것만 받음)")
             print("  %-6s :%d  받기만 (--no-pull)" % (s.name, s.port))
         else:
             host = hosts[s.name]
-            if s.name == "drone":
-                video = "http://%s:%d/api/frame?cam=%d" % (host, DRONE_VIDEO_PORT, DRONE_CAM)
-                pulls.append((drone_video_loop, (s, host, DRONE_CAM), s, host))
+            if s.kind == "drone_api":
+                video = "http://%s:%d/api/frame?cam=%d" % (host, sp["video_port"], sp["cam"])
+                pulls.append((drone_video_loop, (s, host, sp["video_port"], sp["cam"]), s, host, sp["mqtt_port"]))
             else:
-                video = "http://%s:%d/stream/%d" % (host, ROBOT_VIDEO_PORT, args.robot_cam)
-                pulls.append((robot_video_loop, (s, host, args.robot_cam), s, host))
+                cam = args.robot_cam if args.robot_cam is not None else sp["cam"]
+                path = str(sp["path"]).format(cam=cam)
+                video = "http://%s:%d%s" % (host, sp["video_port"], path)
+                pulls.append((robot_video_loop, (s, host, sp["video_port"], path), s, host, sp["mqtt_port"]))
             print("  %-6s :%d  영상 ← %s" % (s.name, s.port, video))
-            print("  %-6s %6s  상태 ← mqtt://%s:%d (전체 토픽)" % ("", "", host, MQTT_PORT))
+            if sp["mqtt_port"]:
+                print("  %-6s %6s  상태 ← mqtt://%s:%d (전체 토픽)" % ("", "", host, sp["mqtt_port"]))
     print("  " + "-" * 70)
     print("  보기   http://<이 기기>:<포트>/  (원본 + 비전)  ·  /stream  ·  /vision?model=<모델>  ·  /health")
     print("Ctrl+C 로 끝냅니다. 10초마다 받은 양을 찍습니다.")
     print(bar, flush=True)
 
     clients = []
-    for loop, loop_args, s, host in pulls:
+    for loop, loop_args, s, host, mqtt_port in pulls:
         threading.Thread(target=loop, args=loop_args, daemon=True).start()
-        clients.append(start_mqtt(s, host))
+        if mqtt_port:
+            clients.append(start_mqtt(s, host, mqtt_port))
     threading.Thread(target=report_loop, args=(sources, sink, vision), daemon=True).start()
     try:
         while not STOP.is_set():
