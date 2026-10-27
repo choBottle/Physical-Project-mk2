@@ -1,6 +1,7 @@
 # 드론 파트 — RTK · SAR 직선 패스
 
-viz-debugger(컴퓨터공학과 GUI)에 드론 파트 기능을 붙였다. 화면은 **계획 · 명령 · 감시**만 하고,
+viz-debugger(컴퓨터공학과 GUI — 정본은 [`visualization/viz-debugger/`](../visualization/viz-debugger/))에 드론 파트 기능을 붙였다.
+이 폴더(`drone/`)는 드론 쪽 파이썬만 둔다. 아래 표의 `src/` · `scripts/` 는 `visualization/viz-debugger/` 기준이다. 화면은 **계획 · 명령 · 감시**만 하고,
 비행과 레이더 캡처 트리거(`CAP_ON`)는 드론 위(Raspberry Pi 5)의 `sar_pass` 실행기가 맡는다.
 
 ```
@@ -51,7 +52,7 @@ viz-debugger(컴퓨터공학과 GUI)에 드론 파트 기능을 붙였다. 화�
 ## 빠르게 돌려 보기
 
 ```bash
-cd viz-debugger/drone
+cd drone                                # 저장소 루트에서
 uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -e '.[test]'
 .venv/bin/python -m pytest -q          # 61건 — CAP_ON · 품질/재비행 · 레이더 확인 · RTCM · 상태판 · 데이터 서버 · SAR 영상
 
@@ -599,7 +600,7 @@ HW 브랜치의 공통 틀 `pi/common/` 을 상속한다. **그 파일들은 고
 
 ```bash
 # 1) Pi 에 이 저장소의 drone 폴더를 두고, 에이전트가 쓰는 venv 에 설치 (mavsdk-grpc 도 함께 들어간다)
-~/venv/bin/pip install -e ~/Junho_drone/viz-debugger/drone
+~/venv/bin/pip install -e ~/Physical-Project-mk2/drone
 
 # 2) 실행 명령만 바꾸는 덮어쓰기 파일 — 원래 서비스 파일은 그대로 둔다
 sudo systemctl edit drone-node

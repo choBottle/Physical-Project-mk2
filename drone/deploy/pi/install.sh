@@ -15,7 +15,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DRONE_DIR="$(cd "$HERE/../.." && pwd)"          # viz-debugger/drone
+DRONE_DIR="$(cd "$HERE/../.." && pwd)"          # 저장소의 drone/
 ENV_FILE="${SAR_ENV_FILE:-/etc/sar-drone.env}"
 UNIT_DIR=/etc/systemd/system
 UNITS=(sar-rtk.service sar-ulog.service sar-data.service)

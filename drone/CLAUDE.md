@@ -1,7 +1,9 @@
 # Junho_drone — 드론 파트 (SAR 드론) 작업 안내
 
-이 브랜치는 팀 저장소 `khw18033/Physical-Project-mk2` 의 **드론 파트 담당(Junho)** 브랜치다.
-컴공 팀의 화면 `viz-debugger`(React + Vite + TS)에 드론 · SAR 기능을 더했고, 드론 쪽 파이썬은 `viz-debugger/drone/` 에 있다.
+이 폴더는 모노레포의 **드론 파트(Junho)** 자리다(원래 팀 저장소 `khw18033/Physical-Project-mk2` 의 `Junho_drone` 브랜치).
+컴공 팀의 화면 `viz-debugger`(React + Vite + TS)에 드론 · SAR 기능을 더했다. 2차 병합(2026-10-27)부터 **화면의 정본은
+`visualization/viz-debugger/` 하나**이고, 이 폴더(`drone/`)에는 드론 쪽 파이썬만 둔다(옛 `viz-debugger/drone/` 이 여기로 올라왔다).
+아래 「꼭 지킬 것」의 브랜치 규칙은 원래 브랜치에서 일할 때의 것이다 — 모노레포에서는 저장소 공통 규칙(`CONTRIBUTING.md`)을 따른다.
 사용자는 한국어로 말한다 — 답도 한국어로, 처음 보는 사람도 알기 쉽게.
 
 ## 꼭 지킬 것
@@ -25,23 +27,19 @@ SAR 비행 규칙: 고도 20 m 일정 · 직선 60 m 이상을 3~5 m/s 등속(�
 
 | 위치 | 내용 |
 |---|---|
-| `viz-debugger/src/sar/` · `src/dronedash/` · `src/physical/sar*` `rtcm*` `fcx*` | 화면: SAR 패스 · RTK · 드론 상태판 · 위성 지도 · 영상 보기 |
-| `viz-debugger/drone/sar_pass/` | 패스 비행(MAVSDK) · 캡처 · 판정 · 에이전트 연동 · 수레 시험 · .ulg 회수 |
-| `viz-debugger/drone/rtk_relay/` · `fc_watch/` | RTK 보정 전달 · 상태판 텔레메트리 |
-| `viz-debugger/drone/sar_data/` · `sar_image/` | 데이터 서버 · 노트북 미러 · SAR 영상 파이프라인(백프로젝션 · 자동 초점 · 레버암) |
-| `viz-debugger/drone/deploy/` | Pi 설치(`install.sh`) · 노트북 실행(`sar-laptop.bat`) |
-| `viz-debugger/drone/README.md` · `FIELD_CHECKLIST.md` | 자세한 설명 · 현장 체크리스트 |
+| `visualization/viz-debugger/src/sar/` · `src/dronedash/` · `src/physical/sar*` `rtcm*` `fcx*` `radar*` | 화면: SAR 패스 · RTK · 드론 상태판 · 위성 지도 · 영상 보기 |
+| `drone/sar_pass/` | 패스 비행(MAVSDK) · 캡처 · 판정 · 에이전트 연동 · 수레 시험 · .ulg 회수 |
+| `drone/rtk_relay/` · `fc_watch/` | RTK 보정 전달 · 상태판 텔레메트리 |
+| `drone/sar_data/` · `sar_image/` | 데이터 서버 · 노트북 미러 · SAR 영상 파이프라인(백프로젝션 · 자동 초점 · 레버암) |
+| `drone/deploy/` | Pi 설치(`install.sh`) · 노트북 실행(`sar-laptop.bat`) |
+| `drone/README.md` · `FIELD_CHECKLIST.md` | 자세한 설명 · 현장 체크리스트 |
 
 ## 새 컴퓨터에서 준비
 
 ```bash
 git clone https://github.com/khw18033/Physical-Project-mk2.git && cd Physical-Project-mk2
-git checkout Junho_drone
-# 전체 앱을 띄우려면 컴공 쪽 옆 폴더가 필요하다 — khw_VZ 에서 **읽기만** 해서 꺼낸다(커밋하지 않는다)
-git archive origin/khw_VZ contracts web-dashboard places equipment door_example gen-lab stt-lab | tar -x
-printf '/contracts/\n/web-dashboard/\n/places/\n/equipment/\n/door_example/\n/gen-lab/\n/stt-lab/\n' >> .git/info/exclude
-# 화면 (Node 22)
-cd viz-debugger && npm ci && npm run dev          # http://localhost:5174
+# 화면 (Node 22) — 옆 폴더(contracts · places · equipment …)가 같은 저장소에 다 있어서 따로 꺼낼 것이 없다
+(cd visualization/viz-debugger && npm ci && npm run dev)          # http://localhost:5174
 # 드론 쪽 (Python 3.12)
 cd drone && python -m venv .venv && .venv/bin/pip install -e ".[test,image,base]" && .venv/bin/python -m pytest -q
 ```
@@ -52,7 +50,8 @@ cd drone && python -m venv .venv && .venv/bin/pip install -e ".[test,image,base]
   컴포넌트마다 `useLang()`, 토픽 문자열은 `src/physical` 안에만, 명령은 commandTracker 로만. SAR 쪽은 `npm run verify:sar`
   (드론 Python 상수 · 빔 계산과 화면이 같은지 검사). 환경 탓으로 원래 실패하는 것: `verify:stt-port` · `stt-language` · `service-words` · `gen-prompt`.
 - 줄바꿈: 저장소는 `.gitattributes` 를 따른다. 원래 CRLF 인 파일을 LF 로 통째로 바꾸지 않는다.
-- 드론 쪽 시험: `cd viz-debugger/drone && .venv/bin/python -m pytest -q`. 실제 비행 논리는 PX4 SITL(`sitl/fly_sitl.py`, README 「PX4 SITL 로 시험」)로 확인했다.
+- 화면은 `visualization/viz-debugger` 에서 고친다(드론 화면도 같은 곳). `verify:sar` 는 `../../drone` 의 파이썬 상수를 읽는다.
+- 드론 쪽 시험: `cd drone && .venv/bin/python -m pytest -q`. 실제 비행 논리는 PX4 SITL(`sitl/fly_sitl.py`, README 「PX4 SITL 로 시험」)로 확인했다.
 
 ## 지금까지 정한 것 (2026-10-04)
 
@@ -73,7 +72,7 @@ cd drone && python -m venv .venv && .venv/bin/pip install -e ".[test,image,base]
 
 - **레이더 팀 코드 받음(10/4)** — CANSAR-2: 부대역 8개(5.50~5.87 GHz, 거리 해상도 ≈ 0.4 m), events.csv 로 Pi 시각.
   붙인 것: `sar_image/cansar.py`(어댑터 · 가짜 생성기) · `sar_data/quick.py`(그쪽 quick-look 을 패스마다, 화면 카드) ·
-  정리와 그쪽에 줄 의견은 `viz-debugger/drone/CANSAR_INTEGRATION.md`. 받은 원본은 `tests/data/cansar/`.
+  정리와 그쪽에 줄 의견은 `drone/CANSAR_INTEGRATION.md`. 받은 원본은 `tests/data/cansar/`.
   남은 것: 실제 샘플 데이터로 확인 · 실제 유효 PRF(→ quick 의 dec) · roff · CAP_ON/CAP_ACK 사용 여부 · Pi 의 스크립트 경로
 - **사용자의 백프로젝션 · 자동 초점 코드(GPU)** → `--former` · `--focuser` 로 꽂기 (README 「영상 코드 꽂기」). 리플렉터 없는 방식이면
   리플렉터 보정 영상과 비교하는 기능을 만든다(논문 ①)
