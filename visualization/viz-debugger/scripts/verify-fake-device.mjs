@@ -103,7 +103,8 @@ async function command(c, action, params, waitResult = true, ms = 4000) {
   if (run()?.exitCode !== 0 || progress.phase !== 'landed' || progress.passesDone !== 1 || !progress.ended) {
     failures.push(`비행: 코드 ${run()?.exitCode} 단계 ${progress.phase} 패스 ${progress.passesDone}`);
   }
-  if (fcxReports()['x500-fake']?.armed !== false) failures.push('착륙 뒤에도 arm 상태다');
+  // 실행이 끝난 직후엔 다음 상태 보고(5 Hz) 전이라 armed 가 아직 true 일 수 있다 — 해제 보고를 잠깐 기다린다
+  await until('착륙 뒤 disarm', () => fcxReports()['x500-fake']?.armed === false, 2000);
 
   // 비행 중 중단 — abort=land 로 빨리 내린다
   const again = await command(drone, 'rtk_test_start', { pattern: 1, side: 2, altitude_m: 2, length_m: 2, speed_mps: 2, passes: 2, gap_s: 10,

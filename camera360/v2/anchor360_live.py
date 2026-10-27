@@ -145,14 +145,25 @@ def _on_sigint(signum, frame):
 # =========================================================
 # 설정 로드
 # =========================================================
+def _cfg_relative(cfg_path, p):
+    """config 의 상대 가중치 경로는 config 파일 폴더 기준 (unidepth_dual_yolo._resolve_model_path 와 같은 규칙).
+    거기에 없으면 원래 문자열 그대로 (ultralytics 모델 이름 허용)."""
+    p = os.path.expanduser(str(p))
+    if os.path.isabs(p):
+        return p
+    cand = os.path.join(os.path.dirname(os.path.abspath(cfg_path)), p)
+    return cand if os.path.exists(cand) else p
+
+
 class Config:
     """unidepth_dual_yolo_config.yaml 에서 검출에 필요한 항목만 뽑아 든다."""
 
     def __init__(self, cfg_path, weight_override=None):
-        with open(cfg_path) as f:
+        with open(cfg_path, encoding="utf-8") as f:
             cfg = yaml.safe_load(f)
         self.path = cfg_path
-        self.weight = weight_override or cfg["models"]["zeroshot_detector"]["weight"]
+        self.weight = weight_override or _cfg_relative(
+            cfg_path, cfg["models"]["zeroshot_detector"]["weight"])
         self.classes = cfg["classes"]["zeroshot"]
         self.conf = float(cfg["models"]["zeroshot_detector"]["conf"])
         self.group = cfg["group_mapping"]

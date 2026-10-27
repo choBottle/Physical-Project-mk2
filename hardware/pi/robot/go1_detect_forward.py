@@ -28,7 +28,8 @@ Unity `Go1ObstacleJsonReceiver.Go1ObstaclePacket` 의 필드가 서버 응답과
 timestamp 가 그대로면 보내지 않는다.
 
 사용:
-    cd ~/hw/pi && HW_DETECT_BASE=http://<server-ip>:7864 \n        python3 -m robot.go1_detect_forward --unity-ip <unity-ip>
+    cd ~/hw/pi && HW_DETECT_BASE=http://<server-ip>:7864 \\
+        python3 -m robot.go1_detect_forward --unity-ip <unity-ip>
 """
 import argparse
 import json
@@ -94,13 +95,17 @@ def run(base, camera_id, unity_ip, unity_port, hz, verbose):
 
 def main():
     ap = argparse.ArgumentParser(description="인지 서버 탐지 결과 -> Unity 5009")
-    ap.add_argument("--base", default=os.environ.get("HW_DETECT_BASE", DEFAULT_BASE))
+    ap.add_argument("--base", default=os.environ.get("HW_DETECT_BASE") or DEFAULT_BASE)
     ap.add_argument("--camera-id", default=os.environ.get("HW_UPLOAD_CAMERA_ID", "go1_front"))
     ap.add_argument("--unity-ip", default=os.environ.get("HW_UNITY_IP", "192.168.50.244"))
     ap.add_argument("--unity-port", type=int, default=UNITY_OBSTACLE_PORT)
     ap.add_argument("--hz", type=float, default=float(os.environ.get("HW_DETECT_HZ", "10")))
     ap.add_argument("-q", "--quiet", action="store_true")
     a = ap.parse_args()
+    if a.base == DEFAULT_BASE and not os.environ.get("HW_DETECT_BASE"):
+        print("[warn] HW_DETECT_BASE 미설정: %s 를 본다. 인지 서버가 다른 기기면 /etc/hw-robot.env 에 "
+              "HW_DETECT_BASE=http://<server>:7864 를 넣는다 (없으면 Unity 5009 에 장애물이 안 간다)"
+              % DEFAULT_BASE, flush=True)
     run(a.base, a.camera_id, a.unity_ip, a.unity_port, a.hz, not a.quiet)
 
 

@@ -121,6 +121,18 @@ for u in "${UNITS[@]}"; do
   printf '  ✓ %s\n' "$u"
 done
 
+# 인지 서버 주소가 없으면 go1-front-upload / go1-detect-forward 는 127.0.0.1:7864 를 보고
+# Unity(5009 장애물 · 5001 영상)에는 아무것도 가지 않는다. 조용히 실패하므로 여기서 알린다.
+for u in "${UNITS[@]}"; do
+  case "$u" in
+    go1-front-upload*|go1-detect-forward*)
+      for v in HW_UPLOAD_URL HW_DETECT_BASE; do
+        grep -q "^$v=." /etc/hw-robot.env 2>/dev/null || \
+          echo "  ⚠ /etc/hw-robot.env 에 $v 가 없다 — $u 는 127.0.0.1:7864 를 본다 (hw-robot.env.example 참고)" >&2
+      done ;;
+  esac
+done
+
 if [ "$DO_PRINT" = "1" ]; then
   exit 0
 fi

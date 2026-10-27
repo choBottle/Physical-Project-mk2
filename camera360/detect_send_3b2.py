@@ -14,7 +14,7 @@ detect_send_3b2.py — 3b-② 360 사각지대 장애물 → JSON → UDP 송출
   원점 = 카메라를 바닥에 수직 투영한 점. (높이는 Unity가 바닥으로 강제하므로 여기선 y=0)
   좌우/각도 미세보정은 Unity(invertX / yawOffsetDeg)에서. 서버는 원본 좌표만 보냄.
 """
-import sys, math, json, time, socket, yaml, cv2
+import os, sys, math, json, time, socket, yaml, cv2
 from ultralytics import YOLOWorld
 
 img_path = sys.argv[1]
@@ -28,8 +28,11 @@ JSON_OUT = sys.argv[8]        if len(sys.argv) > 8 else "obstacles_360.json"
 
 KEEP_GROUPS = {"HARD_OBSTACLE", "AGENT"}
 
-CFG = yaml.safe_load(open(cfg_path))
-ZS_W    = CFG["models"]["zeroshot_detector"]["weight"]
+CFG = yaml.safe_load(open(cfg_path, encoding="utf-8"))
+# 상대 경로는 yaml 폴더 기준 (unidepth_dual_yolo._resolve_model_path 와 같은 규칙) — 없으면 문자열 그대로(모델 이름)
+_w = os.path.expanduser(str(CFG["models"]["zeroshot_detector"]["weight"]))
+_cand = os.path.join(os.path.dirname(os.path.abspath(cfg_path)), _w)
+ZS_W    = _cand if (not os.path.isabs(_w) and os.path.exists(_cand)) else _w
 ZS_CLS  = CFG["classes"]["zeroshot"]
 ZS_CONF = float(CFG["models"]["zeroshot_detector"]["conf"])
 GROUP   = CFG["group_mapping"]
