@@ -195,9 +195,15 @@ npm run dev
 
 *Unity 와 Gazebo 가 로봇과 360 카메라에서 같은 패킷을 받는다.*
 
+<a href="docs/assets/g-unity-twin.gif"><img src="docs/assets/g-unity-twin.gif" width="49%"></a> <a href="docs/assets/g-gazebo.gif"><img src="docs/assets/g-gazebo.gif" width="49%"></a>
+
 <a href="docs/assets/readme-unity-twin.jpg"><img src="docs/assets/g-unity-twin.jpg" width="49%"></a> <a href="docs/assets/readme-unity-path.jpg"><img src="docs/assets/g-unity-path.jpg" width="49%"></a>
 
-<a href="docs/assets/g-gazebo.gif"><img src="docs/assets/g-gazebo.gif" width="49%"></a> <a href="docs/assets/g-detect.jpg"><img src="docs/assets/g-detect.jpg" width="49%"></a>
+#### 객체 탐지
+
+*360 사진에서 YOLO-World: 시점이 방을 한 바퀴 돌며 보이는 것마다 검출한다 (`camera360/anchor360_live.py`).*
+
+<a href="docs/assets/g-detect-sweep.gif"><img src="docs/assets/g-detect-sweep.gif" width="32%"></a> <a href="docs/assets/g-detect.jpg"><img src="docs/assets/g-detect.jpg" width="49%"></a>
 
 #### 가시화 콘솔
 

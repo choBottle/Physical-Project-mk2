@@ -49,6 +49,23 @@ Gazebo 화면 ──noVNC 6080──> 콘솔 「3D 가상환경」
 시뮬 로봇에 중앙 MQTT 로 임무(`assign_mission`)를 주자 원을 그리며 달렸고, 콘솔에는 mission 모드 ·
 속도 0.8 m/s 로, Gazebo 에는 위치·방향으로 나타났다.
 
+### 4. 같은 로봇을 Unity 에서
+
+![Unity 트윈에서 주행](../assets/g-unity-twin.gif)
+
+같은 시뮬 로봇의 상태 중계(`robot_state_relay.py`)에 받는 곳을 하나 더 주어(`--unity_ip 127.0.0.1:25201,host.docker.internal:15201`)
+Gazebo 와 Unity 가 같은 패킷을 동시에 받았다. Unity 는 HW 팀 프로젝트(이 저장소 밖)의 `Assets/XRI/lab.unity` 를
+데스크톱용으로 빌드했다 — 다중 로봇 수신(`Go1MultiRobotFeed`, UDP 15201)과 계약 그리기(`TwinEntityView`)를 그대로 썼다.
+360 장애물(UDP 5010)도 같은 검출 결과를 받았다.
+
+녹화용으로 **씬 사본**에만 바꾼 것(원본 씬 · 프로젝트는 그대로): VR 카메라 대신 데스크톱 카메라와 격자 바닥을 두고,
+화면 디버그 글자를 껐다. 그리고 Unity 쪽에 남길 확인 사항 둘:
+
+- `TwinEntityView.drawOnlyMappedRobotTypes` 가 켜져 있고 기종 목록에 `robomaster_ep` 만 있어 `go1_robot` 은 그려지지 않는다.
+  기종 목록에 넣어야 한다.
+- `Assets/prefab/go1.prefab` 의 `Go1WASDLegacyDrive` 가 매 프레임 자세를 덮어써서, 이 프리팹으로 그리면 방향만 바뀌고
+  위치는 안 따라간다. 트윈 표시용으로는 조종 스크립트가 없는 모델을 써야 한다.
+
 ## 이 시연에서 찾아 고친 것
 
 - **게이트웨이 Gazebo 호출 묶음.** 처음 판은 엔티티마다 `gz service` 를 한 번씩 불렀다(호출 하나 ~0.3 s).
