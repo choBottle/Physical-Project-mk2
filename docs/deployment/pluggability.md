@@ -52,9 +52,14 @@ robot1 10003, robot2 10004)은 코드에 있다. 다섯 번째 소스는 `SOURCE
 
 ### 2-1. camera360
 
-검출기는 `camera360/detectors.py`의 `make_detector()`로 만든다. `anchor360_live.py`,
-`detect_send_3b2.py`, `detect_send_3b2_timed.py`, `detect_ground_3b1.py`가 이 함수를 쓴다.
-모델은 `unidepth_dual_yolo_config.yaml`에서 고른다.
+검출기는 `camera360/detectors.py`의 `make_detector()`로 만든다. camera360의 검출 스크립트는
+모두 이 함수를 쓴다(1.0.1). 모델은 각 스크립트의 config에서 고른다.
+
+| 스크립트 | config | 자리 |
+|----------|--------|------|
+| `anchor360_live.py`, `detect_send_3b2.py`, `detect_send_3b2_timed.py`, `detect_ground_3b1.py` | `unidepth_dual_yolo_config.yaml` | `models.zeroshot_detector` |
+| `unidepth_dual_yolo.py` | 같은 파일 | `models.finetune_detector`, `models.zeroshot_detector` |
+| `vision_infer.py` (스트림 서버의 실시간 추론) | `vision_config.yaml` | `models.yoloe` (아래) |
 
 ```yaml
 models:
@@ -79,8 +84,22 @@ models:
 `class_conf`를 그 모델에 맞게 다시 정해야 한다. 2026-10-27에 같은 슬라이스 사진으로
 두 backend 모두 끝까지(검출 → 바닥 투영 → v2 패킷) 도는 것을 확인했다.
 
-아직 고정된 것: `unidepth_dual_yolo.py`(파인튜닝 YOLO + YOLO-World + UniDepth)와
-`vision_infer.py`(YOLOE)는 이 교체점을 쓰지 않는다.
+`vision_infer.py`는 기본으로 YOLOE(검출+분할)를 쓴다. `models.yoloe`에 `backend`를 주면
+그 자리를 다른 검출기가 맡는다. 자리 이름 `yoloe`는 저장 폴더와 Redis 스트림
+(`vision_stream:<기기>:yoloe`)을 받는 쪽이 그대로 쓰도록 남긴 호환용이고, 실제 모델은 결과의
+`backend`와 `model_file`에 적힌다. 다른 검출기는 분할(polygon)을 내지 않는다.
+
+```yaml
+models:
+  yoloe:
+    backend: grounding_dino          # 없으면 YOLOE
+    backend_weight: null             # backend 에 넘길 가중치나 모델 ID (없으면 기본값)
+    classes: [person, chair, door]
+    conf: 0.3
+```
+
+아직 고정된 것: 깊이 모델. `unidepth_dual_yolo.py`는 UniDepth를 직접 쓴다. `vision_infer.py`는
+`unidepth`와 `moge2_aerial` 중에서 고를 수 있지만 다른 깊이 모델을 넣으려면 러너를 코드로 더한다.
 
 ### 2-2. ai/perception-framework
 

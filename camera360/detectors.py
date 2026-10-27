@@ -17,7 +17,7 @@ backend 값
   grounding_dino   Hugging Face transformers 의 Grounding DINO (Apache-2.0).
                    weight = HF 모델 ID (기본 IDEA-Research/grounding-dino-tiny). pip install transformers
   모듈:클래스      직접 만든 검출기. 예) mypkg.det:MyDetector  — 아래 Detector 꼴을 따르면 된다.
-                   생성자는 (weight, classes) 를 받는다.
+                   생성자는 (weight, classes) 를 받는다. device 를 주면 device= 키워드로도 받는다.
 
 어느 backend 든 열린 어휘(open-vocabulary) 검출기여야 한다 — config 의 classes.zeroshot 문장으로
 찾을 대상을 정하기 때문이다. 닫힌 어휘 모델(RT-DETR · YOLOX 등)을 쓰려면 모듈:클래스로 감싸
@@ -35,13 +35,14 @@ import importlib
 class YoloWorldDetector:
     """ultralytics YOLOWorld — 지금까지 쓰던 검출기 그대로."""
 
-    def __init__(self, weight, classes):
+    def __init__(self, weight, classes, device=None):
         from ultralytics import YOLOWorld      # 이 backend 를 고를 때만 필요하다
         self.model = YOLOWorld(weight)
         self.model.set_classes(list(classes))
+        self.kw = {} if device is None else {"device": device}
 
     def detect(self, bgr, conf, imgsz):
-        res = self.model.predict(bgr, conf=conf, imgsz=imgsz, verbose=False)
+        res = self.model.predict(bgr, conf=conf, imgsz=imgsz, verbose=False, **self.kw)
         out = []
         if res and res[0].boxes is not None:
             for b in res[0].boxes:
@@ -55,12 +56,14 @@ class GroundingDinoDetector:
 
     DEFAULT_ID = "IDEA-Research/grounding-dino-tiny"
 
-    def __init__(self, weight, classes):
+    def __init__(self, weight, classes, device=None):
         import torch
         from transformers import AutoModelForZeroShotObjectDetection, AutoProcessor
         model_id = weight if weight and not str(weight).endswith(".pt") else self.DEFAULT_ID
         self.torch = torch
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device is None or device == "cuda" or device == 0:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = device
         self.classes = [c.lower() for c in classes]
         self.processor = AutoProcessor.from_pretrained(model_id)
         self.model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to(self.device).eval()
@@ -108,8 +111,9 @@ BACKENDS = {
 }
 
 
-def make_detector(weight, classes, backend=None):
-    """backend 이름(또는 "모듈:클래스")으로 검출기를 만든다. 없으면 yolo_world."""
+def make_detector(weight, classes, backend=None, device=None):
+    """backend 이름(또는 "모듈:클래스")으로 검출기를 만든다. 없으면 yolo_world.
+    device: 주지 않으면 각 backend 기본값 (ultralytics 는 스스로 고른다)."""
     backend = backend or "yolo_world"
     if backend in BACKENDS:
         cls = BACKENDS[backend]
@@ -119,9 +123,9 @@ def make_detector(weight, classes, backend=None):
     else:
         raise SystemExit("모르는 검출기 backend: %r (쓸 수 있는 것: %s, 또는 모듈:클래스)"
                          % (backend, ", ".join(BACKENDS)))
-    return cls(weight, classes)
+    return cls(weight, classes) if device is None else cls(weight, classes, device=device)
 
 
-def backend_of(cfg):
-    """config 사전에서 backend 이름을 꺼낸다 (models.zeroshot_detector.backend)."""
-    return ((cfg.get("models") or {}).get("zeroshot_detector") or {}).get("backend")
+def backend_of(cfg, slot="zeroshot_detector"):
+    """config 사전에서 backend 이름을 꺼낸다 (models.<slot>.backend)."""
+    return ((cfg.get("models") or {}).get(slot) or {}).get("backend")
