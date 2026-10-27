@@ -240,9 +240,9 @@ the development setup, test commands and pull-request guidelines, and
 
 *Unity and Gazebo receive the same packets from the robots and the 360-degree camera.*
 
-<a href="docs/assets/readme-unity-twin.jpg"><img src="docs/assets/readme-unity-twin.jpg" width="49%"></a> <a href="docs/assets/readme-unity-path.jpg"><img src="docs/assets/readme-unity-path.jpg" width="49%"></a>
+<a href="docs/assets/readme-unity-twin.jpg"><img src="docs/assets/g-unity-twin.jpg" width="49%"></a> <a href="docs/assets/readme-unity-path.jpg"><img src="docs/assets/g-unity-path.jpg" width="49%"></a>
 
-<a href="docs/assets/readme-gazebo.gif"><img src="docs/assets/readme-gazebo.gif" width="49%"></a> <a href="docs/assets/readme-detect.jpg"><img src="docs/assets/readme-detect.jpg" width="49%"></a>
+<a href="docs/assets/g-gazebo.gif"><img src="docs/assets/g-gazebo.gif" width="49%"></a> <a href="docs/assets/g-detect.jpg"><img src="docs/assets/g-detect.jpg" width="49%"></a>
 
 #### Operator console
 
@@ -260,7 +260,7 @@ the development setup, test commands and pull-request guidelines, and
 
 *Synthetic aperture radar passes from the drone, compared and focused in the console.*
 
-<a href="drone/screenshots/31_SAR_%ED%8C%A8%EC%8A%A4%EB%B9%84%EA%B5%90.png"><img src="drone/screenshots/31_SAR_%ED%8C%A8%EC%8A%A4%EB%B9%84%EA%B5%90.png" width="49%"></a> <a href="drone/screenshots/13_SAR%EC%98%81%EC%83%81_3_RTK%EC%98%A4%EC%B0%A82cm_%EC%9E%90%EB%8F%99%EC%B4%88%EC%A0%90.png"><img src="drone/screenshots/13_SAR%EC%98%81%EC%83%81_3_RTK%EC%98%A4%EC%B0%A82cm_%EC%9E%90%EB%8F%99%EC%B4%88%EC%A0%90.png" width="49%"></a>
+<a href="drone/screenshots/31_SAR_%ED%8C%A8%EC%8A%A4%EB%B9%84%EA%B5%90.png"><img src="docs/assets/g-sar-compare.jpg" width="49%"></a> <a href="drone/screenshots/13_SAR%EC%98%81%EC%83%81_3_RTK%EC%98%A4%EC%B0%A82cm_%EC%9E%90%EB%8F%99%EC%B4%88%EC%A0%90.png"><img src="docs/assets/g-sar-image.jpg" width="49%"></a>
 
 ## Citing
 

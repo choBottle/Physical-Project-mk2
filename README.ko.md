@@ -195,9 +195,9 @@ npm run dev
 
 *Unity 와 Gazebo 가 로봇과 360 카메라에서 같은 패킷을 받는다.*
 
-<a href="docs/assets/readme-unity-twin.jpg"><img src="docs/assets/readme-unity-twin.jpg" width="49%"></a> <a href="docs/assets/readme-unity-path.jpg"><img src="docs/assets/readme-unity-path.jpg" width="49%"></a>
+<a href="docs/assets/readme-unity-twin.jpg"><img src="docs/assets/g-unity-twin.jpg" width="49%"></a> <a href="docs/assets/readme-unity-path.jpg"><img src="docs/assets/g-unity-path.jpg" width="49%"></a>
 
-<a href="docs/assets/readme-gazebo.gif"><img src="docs/assets/readme-gazebo.gif" width="49%"></a> <a href="docs/assets/readme-detect.jpg"><img src="docs/assets/readme-detect.jpg" width="49%"></a>
+<a href="docs/assets/g-gazebo.gif"><img src="docs/assets/g-gazebo.gif" width="49%"></a> <a href="docs/assets/g-detect.jpg"><img src="docs/assets/g-detect.jpg" width="49%"></a>
 
 #### 가시화 콘솔
 
@@ -215,7 +215,7 @@ npm run dev
 
 *드론 레이더 패스를 콘솔에서 비교하고 초점을 맞춘다.*
 
-<a href="drone/screenshots/31_SAR_%ED%8C%A8%EC%8A%A4%EB%B9%84%EA%B5%90.png"><img src="drone/screenshots/31_SAR_%ED%8C%A8%EC%8A%A4%EB%B9%84%EA%B5%90.png" width="49%"></a> <a href="drone/screenshots/13_SAR%EC%98%81%EC%83%81_3_RTK%EC%98%A4%EC%B0%A82cm_%EC%9E%90%EB%8F%99%EC%B4%88%EC%A0%90.png"><img src="drone/screenshots/13_SAR%EC%98%81%EC%83%81_3_RTK%EC%98%A4%EC%B0%A82cm_%EC%9E%90%EB%8F%99%EC%B4%88%EC%A0%90.png" width="49%"></a>
+<a href="drone/screenshots/31_SAR_%ED%8C%A8%EC%8A%A4%EB%B9%84%EA%B5%90.png"><img src="docs/assets/g-sar-compare.jpg" width="49%"></a> <a href="drone/screenshots/13_SAR%EC%98%81%EC%83%81_3_RTK%EC%98%A4%EC%B0%A82cm_%EC%9E%90%EB%8F%99%EC%B4%88%EC%A0%90.png"><img src="docs/assets/g-sar-image.jpg" width="49%"></a>
 
 ## 인용
 
