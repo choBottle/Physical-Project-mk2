@@ -196,6 +196,7 @@ stack and the ports used between devices and Unity.
 | [Observability](docs/deployment/observability.md) | Metrics, logs, traces, dashboards, alert rules, edge federation |
 | [Edge](docs/deployment/edge.md) | Zone edge node and device node installation |
 | [End-to-end test](docs/deployment/e2e.md) | Scope, recorded runs, procedure on real hardware |
+| [Changing server addresses](docs/deployment/endpoints.md) | What to update when the perception, stream, anchor or Unity host moves |
 | [Security](docs/deployment/security.md) | Exposure policy, tokens, tunnel, production checklist |
 | [Operations](docs/deployment/operations.md) | Restart, upgrade, backup, response to each alert |
 | [Release policy](docs/RELEASE.md) | Versioning, release procedure, 1.0 criteria, 1.x roadmap |
@@ -230,7 +231,7 @@ If you use this software, cite it with the metadata in
 
 ## License
 
-Copyright (c) 2026 Physical-Project-mk2 contributors
+Copyright (c) 2026 Sysailab, Hanbat National University, and Physical-Project-mk2 contributors
 
 Maintainers: @daegyu10 (backend, camera360), @choBottle (hardware,
 deployment), @JNY03 (AI), @khw18033 (visualization, osmocam), jhjeong (drone)

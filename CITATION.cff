@@ -15,6 +15,7 @@ abstract: >-
 type: software
 authors:
   - name: "Physical-Project-mk2 contributors"
+  - name: "Sysailab, Hanbat National University"
 repository-code: "https://github.com/choBottle/Physical-Project-mk2"
 license: MIT
 version: 1.0.0-rc.1

@@ -12,6 +12,7 @@
 | [edge.md](edge.md) | 구역 엣지 노드(라즈베리파이) 세우기 · 중앙과 연결 |
 | [security.md](security.md) | 노출 정책 · 토큰 · 터널 · 운영 전환 체크리스트 |
 | [operations.md](operations.md) | 운영 런북 — 재기동 · 업그레이드 · 백업 · 알림별 대응 |
+| [endpoints.md](endpoints.md) | 외부 서버 주소가 바뀔 때 — 객체 탐지 스트림·인지·앵커 서버, Unity PC를 옮긴 뒤 바꿀 곳과 확인 |
 | [e2e.md](e2e.md) | 전 구간 시험 — 실제 말단 노드 코드 → 중앙 → 관제 화면 (장비 없이 · 실장비) |
 | [../PORTS.md](../PORTS.md) | 포트 레지스트리(단일 출처) |
 
