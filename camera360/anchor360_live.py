@@ -4,13 +4,13 @@ anchor360_live.py — 360° 앵커 카메라 실시간 장애물 파이프라인
 [무엇을 하나]
   pano_receiver 가 받아 놓은 equirect.jpg 를 감시하다가, 새 사진이 들어오면
     equirect → (메모리) perspective 슬라이스 → zeroshot 검출 → 필터 → NMS
-    → 바닥평면 pos3d/size → JSON → UDP 송출 + 파일 저장
+    → 바닥평면 position/size_m → JSON → UDP 송출 + 파일 저장
   까지를 한 프로세스 안에서 자동으로 수행한다.
 
 [기존 스크립트와의 관계]
   detect_send_3b2.py 를 "상주 + 감시 루프" 형태로 재구성한 것.
-  검출 필터 / NMS / pixel_to_ground 수식 / JSON 스키마는 detect_send_3b2.py 와
-  동일하다. (검증된 수식이라 한 줄도 바꾸지 않음)
+  검출 필터 / NMS / pixel_to_ground 수식은 detect_send_3b2.py 와
+  동일하다. (검증된 수식이라 한 줄도 바꾸지 않음) JSON 칸 이름은 2026-10-14 부터 v2 다(아래).
   detect_ground_3b1.py(시각 검증) / detect_send_3b2.py(수동 1회 송출) 는
   그대로 남겨 두고 병행해서 쓴다.
 
@@ -44,8 +44,21 @@ anchor360_live.py — 360° 앵커 카메라 실시간 장애물 파이프라인
     나타났으며(conf 0.12 box, D=6.88m), 원인은 클래스별 conf 임계값 경계다.
 
 [Unity 쪽]
-  Anchor360ObstacleReceiver.cs (UDP 5010, 스냅샷 방식) 무수정으로 동작.
+  Anchor360ObstacleReceiver.cs (UDP 5010, 스냅샷 방식). 2026-10-14 패킷 이름이 바뀌어 같은 날 v2 판으로 바꾼다.
   검출 0개일 때도 빈 패킷을 보내므로 사라진 장애물의 큐브가 자동으로 지워진다.
+
+[2026-10-14 통합데이터규약 v2 — CAM360-02 · CAM360-03]
+  감시 폴더 기본값 pano_captures/cam360-001_main (예전 pro2_anchor — stream_to_server 의 camera_id 가 바뀌었다).
+  패킷(UDP · anchor360_latest.json) = 규약 §3-6 360 → Unity 패킷:
+    머리   schema_version "2.0" · source_id "anchor360-live" · node_id(이 서버) · zone_id ·
+           timestamp = 원본 프레임 시각 · frame_ref{camera_id, sequence_id, timestamp} · emitted_at(패킷을 만든 순간) ·
+           model "yoloworld" · model_file · width · height(슬라이스 크기) · view{u_deg, v_deg, roll_deg} ·
+           coordinate_frame "anchor360"
+    검출   id · label · group · confidence · bbox · position{x,y,z} · ground_dist_m · size_m{w,h,d} · ground_clipped · wy
+           (예전 name · conf · bbox_xyxy · pos3d · dist_m · size)
+  원본 프레임: pano_receiver 가 같은 폴더에 남긴 equirect.json(meta + 사진 sha1)을 읽는다. 읽은 사진 바이트의 sha1 앞
+  16자가 같을 때만 frame_ref 를 싣고 timestamp = frame_ref.timestamp. 다르거나 json 이 없으면 frame_ref 를 빼고
+  timestamp = 사진 파일 수정 시각.
 
 [CLIP 캐시 주의]
   YOLOWorld.set_classes() 는 CLIP(ViT-B-32, 약 338MB)을 쓰는데, 이 파일은
@@ -79,7 +92,8 @@ import time
 import socket
 import signal
 import argparse
-import datetime
+import hashlib
+import datetime                       # 모듈로 쓴다 (datetime.datetime · datetime.timezone) — 이름을 덮지 않는다
 
 import cv2
 import numpy as np
@@ -90,13 +104,13 @@ from ultralytics import YOLOWorld
 
 # =========================================================
 # 기본값
-# =========================================================
-DEF_WATCH_DIR = os.path.expanduser(
-    "~/capstone-db/image_server/pano_captures/pro2_anchor")
-DEF_CFG = os.path.expanduser(
-    "~/capstone-db/image_server/unidepth_dual_yolo_config.yaml")
-DEF_OUT_DIR = os.path.expanduser("~/capstone-db/docx2026/live_out")
-DEF_SLICE_DIR = os.path.expanduser("~/capstone-db/docx2026/live_out/slices")
+# ========================================================= # anchor360_live.py 94~99줄 교체
+HERE = os.path.dirname(os.path.abspath(__file__))   # .../capstone-db/docx2026
+CAPSTONE_ROOT = os.path.dirname(HERE)                # .../capstone-db
+DEF_WATCH_DIR = os.path.join(CAPSTONE_ROOT, "image_server", "pano_captures", "cam360-001_main")   # 2026-10-14 (예전 pro2_anchor)
+DEF_CFG       = os.path.join(CAPSTONE_ROOT, "image_server", "unidepth_dual_yolo_config.yaml")
+DEF_OUT_DIR   = os.path.join(HERE, "live_out")
+DEF_SLICE_DIR = os.path.join(HERE, "live_out", "slices")
 
 DEF_U_DEG = 50.0        # 왼쪽 복도 슬라이스
 DEF_V_DEG = -35.0       # 하향각. pitch 와 같은 값이어야 한다.
@@ -108,7 +122,18 @@ DEF_POLL = 1.0          # 감시 주기(초)
 
 KEEP_GROUPS = {"HARD_OBSTACLE", "AGENT"}
 
+# 패킷 머리 (규약 §3-1 · §3-6)
+SOURCE_ID = "anchor360-live"          # 결과를 만든 프로그램
+NODE_ID = socket.gethostname()        # 이 프로그램이 도는 컴퓨터
+DEF_ZONE_ID = "zoneA"
+KST = datetime.timezone(datetime.timedelta(hours=9))
+
 _running = True
+
+
+def iso_ms(t=None):
+    """epoch 초 → '2026-10-12T14:10:31.086+09:00'. 밀리초 아래는 버린다 (규약 §2-2)."""
+    return datetime.datetime.fromtimestamp(time.time() if t is None else t, KST).isoformat(timespec="milliseconds")
 
 
 def _on_sigint(signum, frame):
@@ -266,9 +291,10 @@ def slice_equirect(equirect_bgr, u_deg, v_deg, out_size=720):
 # 패킷 조립 — detect_send_3b2.py 스키마와 동일
 # =========================================================
 def build_packet(kept, proj: GroundProjector, u_deg, v_deg,
-                 drop_clipped=False, max_dist=None):
+                 drop_clipped=False, max_dist=None, frame=None, model_file=None, zone_id=DEF_ZONE_ID):
     """
-    검출 리스트 → Unity 전송용 패킷.
+    검출 리스트 → Unity 전송용 패킷 (규약 §3-6 360 → Unity 패킷).
+    frame = {"timestamp": 원본 프레임 시각, "frame_ref": {...} 또는 None, "zone_id": ...} (frame_of 가 만든다)
     dropped 리스트도 함께 반환해 콘솔에 "왜 걸렀는지"를 남긴다.
     """
     accepted, dropped = [], []
@@ -297,27 +323,34 @@ def build_packet(kept, proj: GroundProjector, u_deg, v_deg,
         w_m = (x2 - x1) / proj.fx * D
         h_m = (y2 - y1) / proj.fy * D
         accepted.append({
-            "name": d["name"], "group": d["group"],
-            "pos3d": {"x": round(X, 3), "y": 0.0, "z": round(Z, 3)},
-            "dist_m": round(D, 3),
-            "size": {"w": round(w_m, 3), "h": round(h_m, 3), "d": round(w_m, 3)},
-            "bbox_xyxy": [int(x1), int(y1), int(x2), int(y2)],
+            "label": d["name"], "group": d["group"],
+            "confidence": round(d["conf"], 3),
+            "bbox": [int(x1), int(y1), int(x2), int(y2)],
+            "position": {"x": round(X, 3), "y": 0.0, "z": round(Z, 3)},
+            "ground_dist_m": round(D, 3),
+            "size_m": {"w": round(w_m, 3), "h": round(h_m, 3), "d": round(w_m, 3)},
             "ground_clipped": clipped,
-            "conf": round(d["conf"], 3),
             "wy": round(wy, 3),
         })
 
-    # 필터 후에 id 를 매겨 번호에 구멍이 생기지 않게 한다
-    for i, det in enumerate(accepted, 1):
-        det["id"] = i
+    # 필터 후에 id 를 매겨 번호에 구멍이 생기지 않게 한다 (이 패킷 안의 번호 — 여러 프레임에 걸친 ID 가 아니다)
+    accepted = [dict({"id": i}, **det) for i, det in enumerate(accepted, 1)]
 
-    packet = {
-        "timestamp": f"{time.time():.3f}",
-        "camera_id": "anchor360",
-        "frame": "anchor360",
-        "anchor_dir": {"u_deg": u_deg, "v_deg": v_deg, "roll_deg": 0},
+    frame = frame or {}
+    ts = frame.get("timestamp") or iso_ms()
+    packet = {"schema_version": "2.0", "source_id": SOURCE_ID, "node_id": NODE_ID,
+              "zone_id": frame.get("zone_id") or zone_id, "timestamp": ts}
+    if frame.get("frame_ref"):
+        packet["frame_ref"] = frame["frame_ref"]
+    packet.update({
+        "emitted_at": iso_ms(),                    # 패킷을 만든 순간
+        "model": "yoloworld",
+        "model_file": model_file,
+        "width": proj.W, "height": proj.H,         # 박스 좌표의 기준 = 슬라이스 크기
+        "view": {"u_deg": u_deg, "v_deg": v_deg, "roll_deg": 0},
+        "coordinate_frame": "anchor360",
         "detections": accepted,
-    }
+    })
     return packet, dropped
 
 
@@ -325,11 +358,11 @@ def draw_debug(bgr, packet, out_path):
     """전송한 검출만 그린 시각화 이미지 저장 (detect_ground_3b1 형식)."""
     img = bgr.copy()
     for d in packet["detections"]:
-        x1, y1, x2, y2 = d["bbox_xyxy"]
+        x1, y1, x2, y2 = d["bbox"]
         bcx, bcy = (x1 + x2) // 2, y2
         cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.circle(img, (bcx, bcy), 5, (0, 0, 255), -1)
-        label = f'{d["name"]} {d["conf"]:.2f} D={d["dist_m"]:.2f}m'
+        label = f'{d["label"]} {d["confidence"]:.2f} D={d["ground_dist_m"]:.2f}m'
         cv2.putText(img, label, (x1, max(y1 - 5, 12)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
     cv2.imwrite(out_path, img)
@@ -371,15 +404,51 @@ def wait_stable(path, tries=5, delay=0.3):
 
 
 # =========================================================
+# 원본 프레임 (CAM360-02 · 03)
+# =========================================================
+def frame_of(path, raw, mtime):
+    """읽은 사진 바이트(raw)와 같은 폴더의 equirect.json 으로 원본 프레임 정보를 만든다.
+    json 의 sha1 이 raw 의 sha1 앞 16자와 같을 때만 meta 를 믿는다 — pano_receiver 가 사진과 json 을 차례로
+    바꾸므로 그 사이에 읽으면 둘이 다른 장일 수 있다. 못 믿으면 frame_ref 없이 timestamp = 파일 수정 시각."""
+    out = {"timestamp": iso_ms(mtime), "frame_ref": None, "zone_id": None, "meta": "없음"}
+    jp = os.path.splitext(path)[0] + ".json"
+    try:
+        with open(jp, encoding="utf-8") as f:
+            j = json.load(f)
+    except (OSError, ValueError):
+        return out
+    m = j.get("meta") if isinstance(j, dict) else None
+    if not isinstance(m, dict):
+        return out
+    if j.get("sha1") != hashlib.sha1(raw).hexdigest()[:16]:
+        out["meta"] = "다른 장"
+        return out
+    cam, seq, ts = m.get("camera_id"), m.get("sequence_id"), m.get("timestamp")
+    if isinstance(cam, str) and isinstance(seq, int) and not isinstance(seq, bool) and isinstance(ts, str):
+        out.update(timestamp=ts, frame_ref={"camera_id": cam, "sequence_id": seq, "timestamp": ts}, meta="맞음")
+    if isinstance(m.get("zone_id"), str):
+        out["zone_id"] = m["zone_id"]
+    return out
+
+
+# =========================================================
 # 1회 처리
 # =========================================================
 def process_one(path, det: Detector, sock, args, seq):
     t_all = time.perf_counter()
 
-    equ = cv2.imread(path)                       # BGR
+    try:                                         # 바이트로 읽어 그 바이트를 디코드한다 — sha1 대조가 같은 장이 되게
+        with open(path, "rb") as f:
+            raw = f.read()
+            mtime = os.fstat(f.fileno()).st_mtime
+    except OSError as e:
+        print(f"[live] 읽기 실패, 건너뜀: {path} ({e})")
+        return False
+    equ = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)   # BGR (cv2.imread 와 같다)
     if equ is None:
         print(f"[live] 읽기 실패, 건너뜀: {path}")
         return False
+    frame = frame_of(path, raw, mtime)
     t_read = time.perf_counter()
 
     sl = slice_equirect(equ, args.u, args.v, args.slice_size)
@@ -390,7 +459,9 @@ def process_one(path, det: Detector, sock, args, seq):
 
     proj = GroundProjector(sl.shape[1], sl.shape[0], args.cam_h, args.pitch)
     packet, dropped = build_packet(kept, proj, args.u, args.v,
-                                   args.drop_clipped, args.max_dist)
+                                   args.drop_clipped, args.max_dist,
+                                   frame=frame, model_file=os.path.basename(det.cfg.weight),
+                                   zone_id=args.zone_id)
     payload = json.dumps(packet, ensure_ascii=False)
 
     # UDP 송출 — 검출 0개여도 보낸다(스냅샷: 사라진 큐브 정리)
@@ -427,11 +498,12 @@ def process_one(path, det: Detector, sock, args, seq):
           f"{f' (걸러냄 {n_drop}개)' if n_drop else ''}"
           f"  | read {t_read-t_all:.2f}s  slice {t_slice-t_read:.2f}s"
           f"  infer {t_infer-t_slice:.2f}s  총 {t_end-t_all:.2f}s"
-          f"  | UDP {'OK' if sent else 'FAIL'} → {args.unity_ip}:{args.port}")
+          f"  | UDP {'OK' if sent else 'FAIL'} → {args.unity_ip}:{args.port}"
+          f"  | 원본 {packet.get('frame_ref', {}).get('sequence_id', '-')} (meta {frame['meta']})")
     for d in packet["detections"]:
-        print(f'        {d["name"]:16}{d["group"]:14}'
-              f' pos3d=({d["pos3d"]["x"]:+.2f}, 0, {d["pos3d"]["z"]:+.2f})'
-              f' D={d["dist_m"]:5.2f}  conf={d["conf"]:.2f}  wy={d["wy"]:+.3f}')
+        print(f'        {d["label"]:16}{d["group"]:14}'
+              f' position=({d["position"]["x"]:+.2f}, 0, {d["position"]["z"]:+.2f})'
+              f' D={d["ground_dist_m"]:5.2f}  conf={d["confidence"]:.2f}  wy={d["wy"]:+.3f}')
     for d, why, D in dropped:
         ds = f"D={D:5.2f}" if D is not None else "D=  -  "
         print(f'        [제외:{why:>8}] {d["name"]:16}{ds}  conf={d["conf"]:.2f}')
@@ -445,7 +517,9 @@ def main():
     ap = argparse.ArgumentParser(
         description="360° 앵커 카메라 실시간 장애물 → Unity UDP 파이프라인")
     ap.add_argument("--watch-dir", default=DEF_WATCH_DIR,
-                    help="pano_receiver 저장 루트 (기본: pano_captures/pro2_anchor)")
+                    help="pano_receiver 저장 루트 (기본: pano_captures/cam360-001_main)")
+    ap.add_argument("--zone-id", default=DEF_ZONE_ID,
+                    help="패킷 zone_id — 원본 meta 에 zone_id 가 있으면 그것을 쓴다 (기본 %s)" % DEF_ZONE_ID)
     ap.add_argument("--no-wait-stable", action="store_true",
                     help="원자적 쓰기를 신뢰하고 크기 안정화 대기를 건너뛴다")
     ap.add_argument("--cfg", default=DEF_CFG, help="zeroshot config yaml")

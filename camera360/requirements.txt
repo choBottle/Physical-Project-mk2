@@ -3,7 +3,7 @@
 # 버전은 실제 운영 환경(venv_image_requirements.txt, pip freeze 전체 기록)에서 가져온 값이다.
 # 비전 추론(UniDepth · YOLO)은 requirements-vision.txt 를 따로 설치한다.
 
-# stream_to_server.py · v2/ · preview_probe.py · e2p.py — 촬영 · 투영 · 업로드
+# stream_to_server.py · preview_probe.py · e2p.py — 촬영 · 투영 · 업로드
 requests==2.34.2
 numpy==2.4.6
 opencv-python-headless==5.0.0.93

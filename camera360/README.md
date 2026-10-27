@@ -16,7 +16,7 @@ set -a && . ./.env && set +a  # 현재 셸에 올리기
 
 | 변수 | 쓰는 곳 | 기본값 |
 |---|---|---|
-| `MK2_SERVER_HOST` | `stream_to_server.py`, `v2/stream_to_server.py`, `anchor360_bridge.py`, `pro2_auto_bg.py` | `127.0.0.1` |
+| `MK2_SERVER_HOST` | `stream_to_server.py`, `anchor360_bridge.py`, `pro2_auto_bg.py` | `127.0.0.1` |
 | `MK2_UPLOAD_URL` | `stream_to_server.py`(첫 번째 업로드), `pro2_auto_bg.py` | `http://$MK2_SERVER_HOST:7866/upload_pano` |
 | `MK2_UPLOAD_STREAM_URL` | `stream_to_server.py`(두 번째 업로드) | `http://$MK2_SERVER_HOST:10001/upload_pano` |
 | `MK2_ANCHOR360_URL` | `anchor360_bridge.py` | `http://$MK2_SERVER_HOST:7866/anchor360_latest` |
