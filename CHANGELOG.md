@@ -14,6 +14,13 @@
   `drone/viz-debugger/drone/` → `drone/` 로 옮겼다. `visualization/viz-debugger/drone/` 의 옛 사본(1차 병합분)도 지웠다 —
   그쪽에만 있던 `fc_watch` NaN → null 고침은 `drone/` 에 합쳤다.
 
+### 바뀜 — 360 → Unity 줄을 통합데이터규약 v2 로 (2026-10-27)
+- `camera360/v2/` 의 `anchor360_live.py` · `pano_receiver.py` 를 정본(`camera360/`)으로 올리고 `v2/` 폴더를 없앴다
+  (`stream_to_server.py` · 수신 C# 은 두 곳이 같았다). 팀 문서(261014 v2 적용 매뉴얼)의 「넷을 한 날에 바꾼다」를 실행한 것.
+- `detect_send_3b2(_timed).py` 도 v2 패킷(`label` · `position` · `ground_dist_m` · `size_m` · `bbox` · `confidence` + 공통 머리)을 보낸다.
+- `Anchor360ObstacleReceiver.cs` 는 v2 를 읽고 **옛 v1 패킷도 받는다**(서버를 바꾸는 동안 큐브가 끊기지 않게). Unity 프로젝트의
+  같은 스크립트도 같은 판으로 바꿨다(파일 불러오기 · 사례 기록 훅은 각 프로젝트에 그대로).
+
 ### 고침 (가시화 · 객체탐지 · Unity 회귀 시험 — 통합 직후 `6dcd1fb` 와 같은 입력으로 비교, 2026-10-27)
 - camera360: 설정 yaml 의 상대 가중치 경로를 **yaml 폴더 기준**으로 푼다(`anchor360_live.py` · `v2/` · `detect_send_3b2*.py` ·
   `detect_ground_3b1.py`). 전에는 실행 폴더 기준이라 모델을 못 찾고 ultralytics 가 기본 모델을 새로 받았다. yaml 을 UTF-8 로 연다(한글 Windows).
@@ -28,6 +35,8 @@
   `install.sh` 는 제 위치 기준으로 코드를 찾으므로 옵션은 그대로다. 이미 설치한 Pi 는 `install.sh` 를 새 자리에서 한 번 다시 돌리면 된다.
 - **Go1 Pi 를 이 판으로 올릴 때:** `/etc/hw-robot.env` 에 `HW_UPLOAD_URL` · `HW_DETECT_BASE`(인지 서버 주소)를 넣고
   `hardware/pi/deploy/install-units.sh --user <사용자>` 로 유닛을 다시 깐다. `git pull` 만 하면 옛 유닛은 이 파일을 읽지 않는다.
+- 360 서버: `anchor360_live.py` · `pano_receiver.py` 를 새 판으로 바꾸면 패킷이 v2 가 된다 — Unity 쪽 수신 스크립트를 먼저(또는 같이) 바꾼다.
+  수신 스크립트는 v1 도 받으므로 Unity 를 먼저 바꾸는 순서가 안전하다.
 - camera360 GPU 서버: Redis 비밀번호가 yaml 에서 빠졌다 — `MK2_REDIS_PASSWORD` 를 설정한다.
 
 ## [1.0.0-rc.1] — 2026-10-26

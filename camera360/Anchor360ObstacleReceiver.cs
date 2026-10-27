@@ -18,7 +18,13 @@ using UnityEngine;
 ///  4) 큐브가 실제 장애물과 어긋나면 Inspector에서 yawOffsetDeg / invertX / distanceScale 조정.
 /// </summary>
 public class Anchor360ObstacleReceiver : MonoBehaviour
-{
+{   
+    [Header("File Load (정적 환경용 / 슬라이스 시험용)")]
+    [Tooltip("true면 UDP 대신 아래 JSON 파일을 읽어 큐브 생성.")]
+    public bool loadFromFile = false;
+    [Tooltip("Project에서 .json 파일을 여기로 끌어다 놓으면 됨.")]
+    public TextAsset jsonFile;
+
     [Header("Network")]
     public int listenPort = 5010;                 // 기존 5009와 다른 포트
 
@@ -54,30 +60,49 @@ public class Anchor360ObstacleReceiver : MonoBehaviour
     [Header("Debug")]
     public bool printReceivedJson = false;
 
-    // ---- JSON 구조 (서버 anchor360_live.py 의 패킷 — 2026-10-14 통합데이터규약 v2, CAM360-04) ----
-    // 옛 이름: name → label · pos3d → position · dist_m → ground_dist_m · size → size_m · bbox_xyxy → bbox · conf → confidence
-    // 서버(anchor360_live.py v2)와 같은 날 바꾼다 — 옛 서버 패킷은 이 판에서 큐브가 생기지 않는다.
+    // ---- JSON 구조 — 통합데이터규약 v2 (서버 anchor360_live.py · 2026-10-27 전환) ----
+    // v2 이름: label · position · ground_dist_m · size_m · bbox · confidence (+ 패킷 머리 schema_version · source_id)
+    // 옛 v1 이름(name · pos3d · dist_m · size · bbox_xyxy · conf)도 받는다 — 서버를 바꾸는 동안 큐브가 끊기지 않게.
+    // JsonUtility 는 빠진 중첩 객체를 null 이 아니라 빈 객체로 만든다 → v2/v1 판정은 label 문자열로 한다.
     [Serializable] public class Pos3D { public float x, y, z; }
     [Serializable] public class Size  { public float w, h, d; }
     [Serializable]
     public class Det360
     {
-        public int id;                 // 이 패킷 안의 번호 (1부터). 여러 프레임에 걸친 ID 가 아니다
-        public string label;
+        public int id;
         public string group;
+        public bool ground_clipped;
+        // v2
+        public string label;
         public float confidence;
-        public float[] bbox;           // [x1, y1, x2, y2] 픽셀 (슬라이스 기준). 소수가 와도 깨지지 않게 float
-        public Pos3D position;         // anchor 로컬 (m)
+        public float[] bbox;
+        public Pos3D position;
         public float ground_dist_m;
         public Size size_m;
-        public bool ground_clipped;
+        // v1 (옛 서버)
+        public string name;
+        public Pos3D pos3d;
+        public float dist_m;
+        public Size size;
+        public int[] bbox_xyxy;
+
+        public bool IsV2   => !string.IsNullOrEmpty(label);
+        public string Label => IsV2 ? label : name;
+        public Pos3D Pos    => IsV2 ? position : pos3d;
+        public Size Dim     => IsV2 ? size_m : size;
     }
     [Serializable]
     public class Anchor360Packet
     {
-        public string timestamp;       // 원본 프레임 시각 (ISO). 쓰지 않는다 — 디버그 출력용
-        public string emitted_at;      // 패킷을 만든 순간 (ISO). 쓰지 않는다
+        public string schema_version;  // v2: "2.0"
+        public string source_id;       // v2: 보낸 쪽 (v1 의 camera_id 자리)
+        public string timestamp;
+        public string emitted_at;
+        public string camera_id;       // v1
+        public string frame;           // v1
         public Det360[] detections;
+
+        public string Source => !string.IsNullOrEmpty(source_id) ? source_id : camera_id;
     }
 
     // ---- UDP ----
@@ -95,7 +120,20 @@ public class Anchor360ObstacleReceiver : MonoBehaviour
     {
         if (anchorTransform == null) anchorTransform = transform;
         root = new GameObject("Anchor360_Obstacles");
-        StartReceiver();
+        if (loadFromFile) LoadFromFileOnce();
+        else StartReceiver();
+    }
+
+    void LoadFromFileOnce()
+    {
+        if (jsonFile == null) { Debug.LogError("[Anchor360] jsonFile 슬롯이 비어있음"); return; }
+        try {
+            var pkt = JsonUtility.FromJson<Anchor360Packet>(jsonFile.text);
+            if (pkt?.detections == null) { Debug.LogWarning("[Anchor360] 파싱 실패/빈 detections"); return; }
+            if (printReceivedJson) Debug.Log("[Anchor360] FILE: " + jsonFile.text);
+            RebuildObstacles(pkt);
+            Debug.Log($"[Anchor360] '{jsonFile.name}'에서 {pkt.detections.Length}개 로드");
+        } catch (System.Exception e) { Debug.LogError("[Anchor360] 로드 실패: " + e.Message); }
     }
 
     void StartReceiver()
@@ -155,24 +193,25 @@ public class Anchor360ObstacleReceiver : MonoBehaviour
 
         foreach (var det in pkt.detections)
         {
-            if (det.position == null) continue;
+            var p3 = det.Pos;
+            if (p3 == null) continue;
 
             // anchor 로컬 좌표(가로만 사용). y는 뒤에서 바닥으로 강제.
-            float lx = det.position.x * (invertX ? -1f : 1f) * distanceScale;
-            float lz = det.position.z * distanceScale;
+            float lx = p3.x * (invertX ? -1f : 1f) * distanceScale;
+            float lz = p3.z * distanceScale;
             Vector3 local = yawFix * new Vector3(lx, 0f, lz);
 
             Vector3 world = anchorTransform.TransformPoint(local);
 
             // 크기
-            Vector3 scale = ComputeScale(det.size_m);
+            Vector3 scale = ComputeScale(det.Dim);
             // 바닥에 세우기: 높이는 맵 바닥으로 강제, 큐브 중심은 절반 위로
             Vector3 pos = new Vector3(world.x, floorWorldY + scale.y * 0.5f, world.z);
 
             GameObject obj = (obstaclePrefab != null)
                 ? Instantiate(obstaclePrefab)
                 : GameObject.CreatePrimitive(PrimitiveType.Cube);
-            obj.name = $"Obs360_{det.label}_{det.id}";
+            obj.name = $"Obs360_{det.Label}_{det.id}";
             obj.transform.SetParent(root.transform, true);
             obj.transform.position = pos;
             obj.transform.localScale = scale;

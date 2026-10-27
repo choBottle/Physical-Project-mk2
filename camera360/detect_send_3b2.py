@@ -14,7 +14,7 @@ detect_send_3b2.py — 3b-② 360 사각지대 장애물 → JSON → UDP 송출
   원점 = 카메라를 바닥에 수직 투영한 점. (높이는 Unity가 바닥으로 강제하므로 여기선 y=0)
   좌우/각도 미세보정은 Unity(invertX / yawOffsetDeg)에서. 서버는 원본 좌표만 보냄.
 """
-import os, sys, math, json, time, socket, yaml, cv2
+import os, sys, math, json, time, socket, datetime, yaml, cv2
 from ultralytics import YOLOWorld
 
 img_path = sys.argv[1]
@@ -107,19 +107,23 @@ for i, d in enumerate(kept, 1):
     w_m = (x2 - x1) / fx * D
     h_m = (y2 - y1) / fy * D
     detections.append({
-        "id": i, "name": d["name"], "group": d["group"],
-        "pos3d": {"x": round(X, 3), "y": 0.0, "z": round(Z, 3)},
-        "dist_m": round(D, 3),
-        "size": {"w": round(w_m, 3), "h": round(h_m, 3), "d": round(w_m, 3)},
-        "bbox_xyxy": [int(x1), int(y1), int(x2), int(y2)],
+        # 통합데이터규약 v2 이름 (anchor360_live.py 와 같은 모양 — 옛 v1: name · pos3d · dist_m · size · bbox_xyxy · conf)
+        "id": i, "label": d["name"], "group": d["group"],
+        "confidence": round(d["conf"], 3),
+        "bbox": [int(x1), int(y1), int(x2), int(y2)],
+        "position": {"x": round(X, 3), "y": 0.0, "z": round(Z, 3)},
+        "ground_dist_m": round(D, 3),
+        "size_m": {"w": round(w_m, 3), "h": round(h_m, 3), "d": round(w_m, 3)},
         "ground_clipped": bool(y2 >= H - 2),
     })
 
+_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).isoformat(timespec="milliseconds")
 packet = {
-    "timestamp": f"{time.time():.3f}",
-    "camera_id": "anchor360",
-    "frame": "anchor360",
-    "anchor_dir": {"u_deg": -60, "v_deg": PITCH, "roll_deg": 0},
+    "schema_version": "2.0", "source_id": "detect-send-3b2", "node_id": socket.gethostname(),
+    "zone_id": "zoneA", "timestamp": _now, "emitted_at": _now,
+    "width": W, "height": H,                   # 박스 좌표의 기준 = 슬라이스 크기
+    "view": {"u_deg": -60, "v_deg": PITCH, "roll_deg": 0},
+    "coordinate_frame": "anchor360",
     "detections": detections,
 }
 payload = json.dumps(packet, ensure_ascii=False)
@@ -135,5 +139,5 @@ sock.close()
 
 print(f"검출/필터 통과 {len(detections)}개 → UDP {UNITY_IP}:{PORT} 송출, JSON 저장: {JSON_OUT}")
 for d in detections:
-    print(f'  {d["name"]:14}{d["group"]:14} pos3d=({d["pos3d"]["x"]:+.2f},0,{d["pos3d"]["z"]:+.2f}) '
-          f'D={d["dist_m"]:.2f} size=({d["size"]["w"]:.2f},{d["size"]["h"]:.2f}) clip={d["ground_clipped"]}')
+    print(f'  {d["label"]:14}{d["group"]:14} position=({d["position"]["x"]:+.2f},0,{d["position"]["z"]:+.2f}) '
+          f'D={d["ground_dist_m"]:.2f} size=({d["size_m"]["w"]:.2f},{d["size_m"]["h"]:.2f}) clip={d["ground_clipped"]}')
