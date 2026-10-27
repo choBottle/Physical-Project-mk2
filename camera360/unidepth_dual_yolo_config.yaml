@@ -61,6 +61,7 @@ models:
     infer_imgsz: [320, 240]
 
   finetune_detector:
+    backend: yolo_world        # 검출기 교체 — detectors.py
     weight: best_finetune_train3.pt
     conf: 0.25
     imgsz: 320

@@ -21,6 +21,8 @@ vision_infer.py — 스트림 프레임에 비전 모델 추론 (YOLOE · UniDep
 모델 (--models, 여러 개 동시에 가능)
   yoloe          YOLOE 검출+분할. 기본 prompt-free (내장 어휘 4585종, exclude/include 로 조정)
                  config models.yoloe.prompt.mode: text 면 classes 에 적은 클래스만 텍스트 프롬프트로 찾는다
+                 config models.yoloe.backend 를 주면 YOLOE 대신 다른 검출기가 이 자리를 맡는다
+                 (yolo_world | grounding_dino | 모듈:클래스 — detectors.py, docs/deployment/pluggability.md)
   unidepth       UniDepth V2 metric depth (m)
   moge2_aerial   MoGe2-Aerial — MoGe-2 ViT-L + 항공 LoRA (AerialMetric, ECCV 2026), metric depth (m)
   depth 모델을 고르면 depth 결과에 검출별 거리가 붙는다 (config fusion. yoloe 를 안 골라도 결합용으로 적재).
@@ -398,6 +400,48 @@ class YoloeRunner:
         return {"infer_ms": round(ms, 1), "weight": Path(self.weight).name, "prompt": self.mode}, dets
 
 
+class DetectorRunner:
+    """models.yoloe.backend 가 있고 yoloe 가 아니면 이 러너가 yoloe 자리를 맡는다 (detectors.py 교체점).
+         backend   yolo_world | grounding_dino | 모듈:클래스
+         classes   찾을 클래스 (없으면 prompt.classes)
+         weight    backend 에 넘길 가중치 경로나 모델 ID (없으면 backend 기본값)
+       자리 이름 yoloe 는 저장 폴더·Redis 스트림(vision_stream:<기기>:yoloe)과 받는 쪽을 그대로 두려는 호환용이다.
+       실제 모델은 결과의 backend · model_file 로 안다. 분할(polygon)은 내지 않는다."""
+    name = "yoloe"
+
+    def __init__(self, cfg, device):
+        from detectors import make_detector
+        pr = cfg.get("prompt") or {}
+        self.cfg = cfg
+        self.backend = str(cfg["backend"])
+        self.classes = [str(c).strip() for c in (cfg.get("classes") or pr.get("classes") or []) if str(c).strip()]
+        if not self.classes:
+            raise SystemExit("models.yoloe.backend 가 %s 이면 models.yoloe.classes 가 필요합니다" % self.backend)
+        self.weight = cfg.get("backend_weight")
+        self.model = make_detector(self.weight, self.classes, self.backend, device=device)
+        log("  검출기 %s %d종: %s" % (self.backend, len(self.classes), ", ".join(self.classes)))
+        self(np.zeros((480, 640, 3), np.uint8))  # 첫 장 지연을 미리 치른다
+
+    def __call__(self, bgr):
+        c = self.cfg
+        t0 = time.perf_counter()
+        raw = self.model.detect(bgr, c.get("conf", 0.25), c.get("imgsz", 640))
+        ms = (time.perf_counter() - t0) * 1000
+        raw = sorted(raw, key=lambda r: -r[1])[:int(c.get("max_det", 100))]
+        dets = [{"cls": int(k), "name": self.classes[k] if 0 <= k < len(self.classes) else "cls%d" % k,
+                 "conf": round(float(sc), 4), "xyxy": [round(float(v), 1) for v in b]}
+                for k, sc, b in raw]
+        return {"infer_ms": round(ms, 1), "weight": Path(str(self.weight)).name if self.weight else self.backend,
+                "prompt": "text", "backend": self.backend}, dets
+
+
+def make_runner(name, mcfg, device):
+    """yoloe 자리는 backend 가 있으면 DetectorRunner, 없으면(기본) YoloeRunner."""
+    if name == "yoloe" and mcfg.get("backend") not in (None, "", "yoloe"):
+        return DetectorRunner(mcfg, device)
+    return RUNNERS[name](mcfg, device)
+
+
 # ---------------------------------------------------------------- 모델: depth 공통
 def resize_long(bgr, long_side):
     h, w = bgr.shape[:2]
@@ -643,8 +687,13 @@ def label_token(tok, d, dec):
 
 
 def class_color(cls):
-    from ultralytics.utils.plotting import colors
-    return colors(int(cls), True)                      # BGR, ultralytics 와 같은 색
+    try:
+        from ultralytics.utils.plotting import colors
+        return colors(int(cls), True)                  # BGR, ultralytics 와 같은 색
+    except ImportError:                                # ultralytics 없이 다른 검출기만 쓸 때
+        h = (int(cls) * 47) % 180
+        b, g, r = cv2.cvtColor(np.uint8([[[h, 200, 255]]]), cv2.COLOR_HSV2BGR)[0, 0]
+        return int(b), int(g), int(r)
 
 
 def draw_dets(img, dets, ocfg, kind):
@@ -1240,7 +1289,7 @@ def main():
     for m in load:
         t0 = time.time()
         log("모델 적재: %s" % m)
-        runners[m] = RUNNERS[m](cfg["models"][m], gpu)
+        runners[m] = make_runner(m, cfg["models"][m], gpu)
         log("  %s 준비 (%.1fs)" % (m, time.time() - t0))
 
     if live:

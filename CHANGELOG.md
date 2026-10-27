@@ -32,6 +32,13 @@ ports, database migrations and image versions.
   non-Unity twin.
 - `docs/deployment/pluggability.md`: what can be swapped by configuration and
   what is still tied to Unity or to a specific model.
+- **(1.0.1) Every camera360 detector uses the swap point.**
+  `unidepth_dual_yolo.py` builds its fine-tuned and zero-shot detectors with
+  `make_detector()` (`models.finetune_detector.backend`,
+  `models.zeroshot_detector.backend`). In `vision_infer.py`,
+  `models.yoloe.backend` lets another detector fill the `yoloe` slot; the
+  slot name, output folders and Redis stream names are unchanged. Overlay
+  colors no longer need Ultralytics.
 - `ai/perception-framework`: optional `ultralytics` extra.
 
 ### Changed

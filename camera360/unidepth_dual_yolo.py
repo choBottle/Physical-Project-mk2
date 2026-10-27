@@ -33,7 +33,7 @@ import torch
 import yaml
 
 from multiprocessing import Process, Queue, Event, set_start_method
-from ultralytics import YOLOWorld
+from detectors import backend_of, make_detector   # 검출기 교체점 (config models.<finetune|zeroshot>_detector.backend)
 from unidepth.models import UniDepthV2
 from torchvision.ops import nms
 
@@ -562,18 +562,11 @@ def get_class_min_conf(source, class_name):
 
 
 def parse_yolo_results(results, class_list, source, frame_shape):
+    """results = detectors 의 detect() 결과 [(cls_idx, conf, (x1, y1, x2, y2)), ...]"""
     detections = []
-    if len(results) == 0 or results[0].boxes is None:
-        return detections
-    for box in results[0].boxes:
-        x1, y1, x2, y2 = clamp_bbox(
-            box.xyxy[0][0], box.xyxy[0][1],
-            box.xyxy[0][2], box.xyxy[0][3],
-            frame_shape,
-        )
-        cls_id = int(box.cls[0])
+    for cls_id, conf, (bx1, by1, bx2, by2) in results:
+        x1, y1, x2, y2 = clamp_bbox(bx1, by1, bx2, by2, frame_shape)
         name   = safe_class_name(class_list, cls_id)
-        conf   = float(box.conf[0]) if box.conf is not None else 0.0
         min_conf = get_class_min_conf(source, name)
         if conf < min_conf:
             continue
@@ -719,11 +712,10 @@ def worker_task(worker_id, in_queue, out_queue, stop_event):
 
     print(f"[Worker {worker_id}] Loading Models...")
 
-    finetune_model = YOLOWorld(FINETUNE_WEIGHT_PATH)
-    finetune_model.set_classes(FINETUNE_CLASSES)
-
-    zeroshot_model = YOLOWorld(ZEROSHOT_WEIGHT_PATH)
-    zeroshot_model.set_classes(ZEROSHOT_CLASSES)
+    finetune_model = make_detector(FINETUNE_WEIGHT_PATH, FINETUNE_CLASSES,
+                                   backend_of(CFG, "finetune_detector"), device=yolo_device)
+    zeroshot_model = make_detector(ZEROSHOT_WEIGHT_PATH, ZEROSHOT_CLASSES,
+                                   backend_of(CFG, "zeroshot_detector"), device=yolo_device)
 
     depth_model = UniDepthV2.from_pretrained(UNIDEPTH_MODEL_NAME).to(device).eval()
 
@@ -806,20 +798,14 @@ def worker_task(worker_id, in_queue, out_queue, stop_event):
 
             # ── Finetune YOLO: 매 프레임 ───────────────────────────────────
             _t = time.perf_counter()
-            f_res = finetune_model.predict(
-                frame, conf=FINETUNE_CONF,
-                imgsz=FINETUNE_IMGSZ, device=yolo_device, verbose=False,
-            )
+            f_res = finetune_model.detect(frame, FINETUNE_CONF, FINETUNE_IMGSZ)
             finetune_dets = parse_yolo_results(f_res, FINETUNE_CLASSES, "finetune", frame.shape)
             profiler.stage("finetune", time.perf_counter() - _t)
 
             # ── Zeroshot YOLO: interval 기반 ──────────────────────────────
             if frame_count % ZEROSHOT_INTERVAL == 0 or frame_count == 1:
                 _t = time.perf_counter()
-                z_res = zeroshot_model.predict(
-                    frame, conf=ZEROSHOT_CONF,
-                    imgsz=ZEROSHOT_IMGSZ, device=yolo_device, verbose=False,
-                )
+                z_res = zeroshot_model.detect(frame, ZEROSHOT_CONF, ZEROSHOT_IMGSZ)
                 last_zeroshot_dets = parse_yolo_results(
                     z_res, ZEROSHOT_CLASSES, "zeroshot", frame.shape,
                 )
