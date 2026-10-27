@@ -90,6 +90,10 @@ pi/
 └─ pi_base_setup.sh        멱등 프로비저닝 (--role sensor|robot|actuator)
 ```
 
+`twin/twin_gateway.py` 는 Unity 로 가는 트윈 패킷을 받아 엔진 중립(ENU) 모델로 바꿔 Gazebo 등
+다른 트윈으로 내보낸다 — [twin/README.md](twin/README.md). `HW-interface/twin_listen.py` 는 그 패킷을
+풀어 찍는 참조 수신기다.
+
 ## 채널(토픽) 구조
 
 `{zone}/{type}/{entity}/{channel}` — 예: `zoneA/sensor/wl-001`, `zoneA/robot/rb-01`,

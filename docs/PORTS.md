@@ -58,6 +58,7 @@
 | camera360 | 10001 ~ 10004 | 소스별 수집(360 · 드론 · 로봇) |
 | camera360 | 6380 | Redis Stream |
 | camera360 | UDP 5010 | 360 장애물 → 트윈(Unity 등) |
+| hardware | UDP 25201 · 25010 · 25009 (예) → 25500 | 트윈 게이트웨이 받기 (Unity와 같은 기기일 때) → 중립 JSON 내보내기. `hardware/twin/twin.example.json` |
 | camera360 | 1935 | RTMP(카메라 → 노트북) |
 | osmocam | 38090 | MJPEG `/stream` |
 

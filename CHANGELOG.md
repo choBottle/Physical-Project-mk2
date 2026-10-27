@@ -48,6 +48,13 @@ ports, database migrations and image versions.
   `PD_HOST_<NAME>` or `hosts.local.json`, and `vision_infer.py` takes its
   device list from the same file. `--robot1/--robot2/--drone` and
   `--robot-cam` still work.
+- **(1.0.3) Engine-neutral twin gateway.** `hardware/twin/twin_gateway.py`
+  receives the existing twin packets (robot state 15201, 360 obstacles 5010,
+  Go1 detection and motion 5009), converts them to building ENU and sends
+  them to Gazebo (gz sim create, set_pose, remove), to a neutral JSON UDP
+  stream or to a `module:Class` sink. Senders and Unity are unchanged; the
+  gateway is one more destination. Neutral entities follow
+  `hardware/HW-interface/twin-entity.schema.json`.
 - `ai/perception-framework`: optional `ultralytics` extra.
 
 ### Changed

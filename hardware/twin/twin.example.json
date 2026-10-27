@@ -1,0 +1,11 @@
+{
+  "_doc": "twin_gateway.py 설정 예. listen = 받을 UDP 포트 (Unity 와 같은 기기면 Unity 포트와 다르게). anchors = 360 카메라 자리 (ENU m, heading_deg = 슬라이스 정면 방위, +x(동) 기준 반시계). sinks = 내보낼 트윈.",
+  "listen": {"robots": 25201, "anchor360": 25010, "go1": 25009},
+  "anchors": {
+    "default": {"x": 0.0, "y": 0.0, "heading_deg": 90.0}
+  },
+  "sinks": [
+    {"type": "gazebo", "world": "empty", "max_hz": 5},
+    {"type": "udp", "dest": "127.0.0.1:25500"}
+  ]
+}
