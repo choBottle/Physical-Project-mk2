@@ -99,7 +99,8 @@ import cv2
 import numpy as np
 import yaml
 import py360convert
-from ultralytics import YOLOWorld
+
+from detectors import backend_of, make_detector   # 검출기 교체점 (config models.zeroshot_detector.backend)
 
 
 # =========================================================
@@ -115,7 +116,7 @@ DEF_SLICE_DIR = os.path.join(HERE, "live_out", "slices")
 DEF_U_DEG = 50.0        # 왼쪽 복도 슬라이스
 DEF_V_DEG = -35.0       # 하향각. pitch 와 같은 값이어야 한다.
 DEF_CAM_H = 1.85        # 렌즈중심 높이(m)
-DEF_UNITY_IP = "192.168.50.246"
+DEF_UNITY_IP = os.environ.get("MK2_TWIN_HOSTS") or "192.168.50.246"   # 쉼표로 여러 곳 (Unity·다른 뷰어)
 DEF_PORT = 5010
 DEF_IMGSZ = 640
 DEF_POLL = 1.0          # 감시 주기(초)
@@ -155,6 +156,18 @@ def _cfg_relative(cfg_path, p):
     return cand if os.path.exists(cand) else p
 
 
+def parse_dests(hosts, default_port):
+    """"a,b:6000" → [("a", 기본포트), ("b", 6000)]. 트윈(Unity 등)을 여러 곳에 동시에 보낼 때 쉼표로 잇는다."""
+    out = []
+    for h in str(hosts).split(","):
+        h = h.strip()
+        if not h:
+            continue
+        host, _, port = h.rpartition(":") if h.count(":") == 1 else (h, "", "")
+        out.append((host, int(port)) if port else (h, int(default_port)))
+    return out
+
+
 class Config:
     """unidepth_dual_yolo_config.yaml 에서 검출에 필요한 항목만 뽑아 든다."""
 
@@ -164,6 +177,7 @@ class Config:
         self.path = cfg_path
         self.weight = weight_override or _cfg_relative(
             cfg_path, cfg["models"]["zeroshot_detector"]["weight"])
+        self.backend = backend_of(cfg)
         self.classes = cfg["classes"]["zeroshot"]
         self.conf = float(cfg["models"]["zeroshot_detector"]["conf"])
         self.group = cfg["group_mapping"]
@@ -217,36 +231,29 @@ class Detector:
         self.cfg = cfg
         self.imgsz = imgsz
         t0 = time.perf_counter()
-        self.model = YOLOWorld(cfg.weight)
-        self.model.set_classes(cfg.classes)
+        self.model = make_detector(cfg.weight, cfg.classes, cfg.backend)
         self.load_s = time.perf_counter() - t0
 
     def warmup(self, size=720):
         """더미 프레임 1회 추론. CUDA 초기화 비용을 기동 시점으로 당긴다."""
         dummy = np.zeros((size, size, 3), dtype=np.uint8)
         t0 = time.perf_counter()
-        self.model.predict(dummy, conf=self.cfg.conf, imgsz=self.imgsz, verbose=False)
+        self.model.detect(dummy, self.cfg.conf, self.imgsz)
         return time.perf_counter() - t0
 
     def detect(self, bgr):
         """검출 → 클래스별 conf 하한 → 그룹 필터 → NMS. bbox 리스트 반환."""
-        res = self.model.predict(bgr, conf=self.cfg.conf,
-                                 imgsz=self.imgsz, verbose=False)
         raw = []
-        if res and res[0].boxes is not None:
-            for b in res[0].boxes:
-                cid = int(b.cls[0])
-                name = (self.cfg.classes[cid] if cid < len(self.cfg.classes)
-                        else f"cls{cid}")
-                conf = float(b.conf[0])
-                if conf < self.cfg.min_conf(name):
-                    continue
-                grp = self.cfg.group.get(name, "UNKNOWN_OBSTACLE")
-                if grp not in KEEP_GROUPS:
-                    continue
-                x1, y1, x2, y2 = [float(v) for v in b.xyxy[0]]
-                raw.append({"name": name, "group": grp, "conf": conf,
-                            "bbox": [x1, y1, x2, y2]})
+        for cid, conf, (x1, y1, x2, y2) in self.model.detect(bgr, self.cfg.conf, self.imgsz):
+            name = (self.cfg.classes[cid] if cid < len(self.cfg.classes)
+                    else f"cls{cid}")
+            if conf < self.cfg.min_conf(name):
+                continue
+            grp = self.cfg.group.get(name, "UNKNOWN_OBSTACLE")
+            if grp not in KEEP_GROUPS:
+                continue
+            raw.append({"name": name, "group": grp, "conf": conf,
+                        "bbox": [x1, y1, x2, y2]})
         return self._nms(raw, self.cfg.iou)
 
     @staticmethod
@@ -467,7 +474,8 @@ def process_one(path, det: Detector, sock, args, seq):
     # UDP 송출 — 검출 0개여도 보낸다(스냅샷: 사라진 큐브 정리)
     sent = True
     try:
-        sock.sendto(payload.encode("utf-8"), (args.unity_ip, args.port))
+        for dst in parse_dests(args.unity_ip, args.port):
+            sock.sendto(payload.encode("utf-8"), dst)
     except Exception as e:
         sent = False
         print(f"[live] UDP 송출 실패: {e}")
@@ -535,7 +543,8 @@ def main():
     ap.add_argument("--pitch", type=float, default=None,
                     help="바닥평면 계산용 하향각(deg). 기본은 --v 와 동일")
 
-    ap.add_argument("--unity-ip", default=DEF_UNITY_IP)
+    ap.add_argument("--unity-ip", default=DEF_UNITY_IP,
+                    help="받는 곳. 쉼표로 여러 곳, 곳마다 :포트 가능 (환경변수 MK2_TWIN_HOSTS)")
     ap.add_argument("--port", type=int, default=DEF_PORT)
     ap.add_argument("--imgsz", type=int, default=DEF_IMGSZ)
     ap.add_argument("--poll", type=float, default=DEF_POLL, help="감시 주기(초)")

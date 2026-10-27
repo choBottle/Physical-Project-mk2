@@ -29,6 +29,18 @@ DEFAULT_UNITY_PORT = 15201
 TAG = "ROBOT"
 
 
+def parse_dests(hosts, default_port):
+    """"a,b:6000" → [("a", 기본포트), ("b", 6000)]. 트윈(Unity 등)을 여러 곳에 동시에 보낼 때 쉼표로 잇는다."""
+    out = []
+    for h in str(hosts).split(","):
+        h = h.strip()
+        if not h:
+            continue
+        host, _, port = h.rpartition(":") if h.count(":") == 1 else (h, "", "")
+        out.append((host, int(port)) if port else (h, int(default_port)))
+    return out
+
+
 def parse_incoming(text, default_type, default_robot_id):
     """수신 한 줄 -> (robot_type, robot_id, payload 10필드 문자열). 실패 시 None."""
     parts = text.strip().split()
@@ -64,7 +76,8 @@ def main():
     ap = argparse.ArgumentParser(description="온보딩 파이 -> Unity 로봇 상태 릴레이")
     ap.add_argument("--node_id", required=True,
                     help="이 파이의 식별자. 예: pi1, pi7")
-    ap.add_argument("--unity_ip", default="192.168.50.244")
+    ap.add_argument("--unity_ip", default="192.168.50.244",
+                    help="받는 곳. 쉼표로 여러 곳, 곳마다 :포트 가능 (Unity 와 다른 뷰어를 같이)")
     ap.add_argument("--unity_port", type=int, default=DEFAULT_UNITY_PORT)
     ap.add_argument("--ingress_port", type=int, default=DEFAULT_INGRESS_PORT)
     ap.add_argument("--default_type", default="go1",
@@ -79,10 +92,10 @@ def main():
     rx.bind(("0.0.0.0", args.ingress_port))
     rx.settimeout(1.0)
     tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    dst = (args.unity_ip, args.unity_port)
+    dests = parse_dests(args.unity_ip, args.unity_port)
 
-    print(f"[relay] node={args.node_id} ingress=:{args.ingress_port} "
-          f"-> unity={dst[0]}:{dst[1]}", flush=True)
+    print(f"[relay] node={args.node_id} ingress=:{args.ingress_port} -> "
+          + ", ".join(f"{h}:{p}" for h, p in dests), flush=True)
 
     seen = {}          # (type, id) -> 마지막 수신 시각
     n_in = n_out = n_bad = 0
@@ -106,7 +119,8 @@ def main():
                 rtype, rid, payload = parsed
                 seen[(rtype, rid)] = time.time()
                 msg = " ".join([TAG, args.node_id, rtype, rid] + payload)
-                tx.sendto(msg.encode("ascii", "replace"), dst)
+                for dst in dests:
+                    tx.sendto(msg.encode("ascii", "replace"), dst)
                 n_out += 1
 
         now = time.time()

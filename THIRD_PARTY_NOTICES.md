@@ -20,6 +20,29 @@ does not replace them.
 | DJI RoboMaster SDK (hardware, EP) | Apache-2.0 | Installed from a fork via git. |
 | Deployment images: Kafka (Apache-2.0), Mosquitto (EPL-2.0/EDL-1.0), MySQL (GPL-2.0, used only as a server), TimescaleDB (Timescale License, Community edition), Prometheus (Apache-2.0), Loki, Tempo and Grafana (AGPL-3.0), OpenTelemetry Collector (Apache-2.0) | Per image | The images are run unmodified. If you modify Grafana, Loki, Tempo (AGPL) or TimescaleDB and offer them as a service, review those licenses separately. |
 
+## Models and model libraries
+
+No model weights are included in this repository; `*.pt`, `*.pth`,
+`*.onnx`, `*.engine`, `*.ckpt` and `*.safetensors` files are ignored by git.
+Weights are downloaded by the libraries on first use or obtained by the
+operator. The licenses below apply to whoever installs and runs them, and
+some of them are more restrictive than the MIT License of this repository.
+
+| Component | Used by | License | What it means for a deployment |
+|-----------|---------|---------|--------------------------------|
+| Ultralytics (`ultralytics` package, YOLOv8, YOLO-World and RT-DETR weights it downloads) | `camera360/` detectors, `ai/perception-framework` (`yolo_world_provider.py`, `fastsam_provider.py`, `rpn_propose.py`) | AGPL-3.0, or a commercial Ultralytics license | Optional. If you modify it, or offer a network service built on it, AGPL-3.0 obligations apply to that combined work. Use another detector (see [docs/deployment/pluggability.md](docs/deployment/pluggability.md)) if that is not acceptable. |
+| Ultralytics YOLOE | `camera360/vision_infer.py` | AGPL-3.0 | Same as Ultralytics. |
+| FastSAM | `ai/perception-framework` (`fastsam_provider.py`) | AGPL-3.0 | Same as Ultralytics. |
+| MobileCLIP weights (`mobileclip_blt.ts`, downloaded by Ultralytics for YOLOE text prompts) | `camera360/vision_infer.py` | Apple Machine Learning Research Model license (code MIT) | The weights are released for research use. Review the license before any other use. |
+| UniDepth | `camera360/unidepth_dual_yolo.py`, `camera360/vision_infer.py`, `ai/perception-framework` (`self_localization.py`) | CC BY-NC 4.0 | Non-commercial use only. Do not use it in a commercial deployment. |
+| MoGe | `camera360/vision_infer.py` | MIT (code) | Check the license on the model card of the weights you download. |
+| Grounding DINO (`IDEA-Research/grounding-dino-tiny` via Hugging Face transformers) | `camera360/detectors.py` (`grounding_dino` backend), `ai/perception-framework` (`grounding_dino_provider.py`) | Apache-2.0 | No additional obligations beyond the notice. |
+| OpenAI CLIP ViT-B/32 | `ai/perception-framework` (`clip_dictionary_provider.py`, `open_vocabulary.py`); YOLO-World text encoder | MIT | No additional obligations beyond the notice. |
+
+A copy of `yolov8s-world.pt` was committed by mistake in `206bd37` and
+removed in the following release; it was the unmodified Ultralytics release
+asset (AGPL-3.0) and is available from Ultralytics.
+
 ## Trademarks
 
 DJI, Osmo, Unitree, RoboMaster and Insta360 are trademarks of their

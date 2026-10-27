@@ -15,7 +15,7 @@ detect_send_3b2.py — 3b-② 360 사각지대 장애물 → JSON → UDP 송출
   좌우/각도 미세보정은 Unity(invertX / yawOffsetDeg)에서. 서버는 원본 좌표만 보냄.
 """
 import os, sys, math, json, time, socket, datetime, yaml, cv2
-from ultralytics import YOLOWorld
+from detectors import backend_of, make_detector   # 검출기 교체점 (config models.zeroshot_detector.backend)
 
 img_path = sys.argv[1]
 cfg_path = sys.argv[2]
@@ -64,20 +64,17 @@ def pixel_to_ground(px, py):
     return wx * t, wz * t     # (X, Z) 바닥좌표(m)
 
 # --- 검출 + 필터 ---
-model = YOLOWorld(ZS_W); model.set_classes(ZS_CLS)
-res = model.predict(img, conf=ZS_CONF, imgsz=imgsz, verbose=False)
+model = make_detector(ZS_W, ZS_CLS, backend_of(CFG))
+res = model.detect(img, ZS_CONF, imgsz)
 raw = []
-if res and res[0].boxes is not None:
-    for b in res[0].boxes:
-        cid = int(b.cls[0]); name = ZS_CLS[cid] if cid < len(ZS_CLS) else f"cls{cid}"
-        conf = float(b.conf[0])
-        if conf < min_conf(name):
-            continue
-        grp = GROUP.get(name, "UNKNOWN_OBSTACLE")
-        if grp not in KEEP_GROUPS:
-            continue
-        x1, y1, x2, y2 = [float(v) for v in b.xyxy[0]]
-        raw.append({"name": name, "group": grp, "conf": conf, "bbox": [x1, y1, x2, y2]})
+for cid, conf, (x1, y1, x2, y2) in res:
+    name = ZS_CLS[cid] if cid < len(ZS_CLS) else f"cls{cid}"
+    if conf < min_conf(name):
+        continue
+    grp = GROUP.get(name, "UNKNOWN_OBSTACLE")
+    if grp not in KEEP_GROUPS:
+        continue
+    raw.append({"name": name, "group": grp, "conf": conf, "bbox": [x1, y1, x2, y2]})
 
 # --- NMS ---
 def iou(a, b):

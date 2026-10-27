@@ -38,7 +38,9 @@
 | 파트 | 포트 | 무엇 |
 |---|---|---|
 | hardware | UDP 5004 | RTP/JPEG 미디어 |
-| hardware | UDP 15200 → 15201 | 트윈 중계 → Unity |
+| hardware | UDP 15200 → 15201 | 로봇 상태 중계 → 트윈(Unity 등) |
+| hardware | UDP 5009 | Go1 장애물·모션 → 트윈 |
+| hardware | UDP 15100 · 15110 → 15101 · 15102 | 트윈 → Go1 명령·경로, Go1 상태·미러 → 트윈 (`unity_bridge.py`) |
 | hardware | 8090 · 8091 · 8443 | MJPEG 카메라 뷰 |
 | hardware | 9105 | 엣지 가용성 참조 구현 `/metrics` |
 | ai | 8775 | `perception-framework` status UI (`tools/status_ui/serve.py`, 이미지 기본 명령) |
@@ -55,7 +57,7 @@
 | camera360 | 7866 | 파노라마 수신 |
 | camera360 | 10001 ~ 10004 | 소스별 수집(360 · 드론 · 로봇) |
 | camera360 | 6380 | Redis Stream |
-| camera360 | UDP 5010 | Unity 장애물 |
+| camera360 | UDP 5010 | 360 장애물 → 트윈(Unity 등) |
 | camera360 | 1935 | RTMP(카메라 → 노트북) |
 | osmocam | 38090 | MJPEG `/stream` |
 
