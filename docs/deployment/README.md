@@ -12,6 +12,7 @@
 | [edge.md](edge.md) | 구역 엣지 노드(라즈베리파이) 세우기 · 중앙과 연결 |
 | [security.md](security.md) | 노출 정책 · 토큰 · 터널 · 운영 전환 체크리스트 |
 | [operations.md](operations.md) | 운영 런북 — 재기동 · 업그레이드 · 백업 · 알림별 대응 |
+| [e2e.md](e2e.md) | 전 구간 시험 — 실제 말단 노드 코드 → 중앙 → 관제 화면 (장비 없이 · 실장비) |
 | [../PORTS.md](../PORTS.md) | 포트 레지스트리(단일 출처) |
 
 ---
@@ -92,6 +93,8 @@ docker compose up -d --build --wait
 ```
 
 마지막 줄이 `결과: 통과 32 · 실패 0` 이면 배포가 끝난 것이다.
+
+말단 장치까지 이어 보려면 `./scripts/e2e-sim.sh` — 실제 노드 코드를 가짜 센서로 붙여 관제 화면 구독까지 본다([e2e.md](e2e.md)).
 
 ### 처음 기동할 때 자동으로 일어나는 일
 
@@ -183,6 +186,6 @@ docker compose up -d     # 바뀐 서비스만 재생성된다
 |---|---|---|
 | 2026-10-26 | Windows 11 · Docker Desktop 29.5 (볼륨 전부 삭제 후 이 문서 §3 그대로) | 13개 서비스 healthy · `healthcheck.sh` **32/32** · 백엔드 회귀 `pytest` **351 passed, 2 skipped, 0 failed** · 백업 → 복구 왕복 후 32/32. (앞선 회차에서 타이밍 의존 시험 1건이 한 번 실패 — [operations.md](operations.md#알려진-사항)) |
 | 2026-10-26 | 같은 환경 · `deploy/edge` | 엣지 Collector 로 보낸 log 가 중앙 Loki 에 `zone_id`·`agg_layer=edge` 로 도착 |
-| 매 PR | GitHub Actions `ubuntu-latest` | [`deploy-smoke`](../../.github/workflows/deploy-smoke.yml) — 빈 러너에서 `up --wait` → `healthcheck.sh` |
+| 매 PR | GitHub Actions `ubuntu-latest` | [`deploy-smoke`](../../.github/workflows/deploy-smoke.yml) — 빈 러너에서 `up --wait` → `healthcheck.sh` → `e2e-sim.sh` |
 
 **"우리 개발 환경에서는 되는데 새 환경에서는 안 된다"를 사람이 아니라 CI 가 매번 확인한다.**

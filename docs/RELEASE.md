@@ -53,7 +53,8 @@
 - [x] 레이더 팀 제공 코드 라이선스 확인 (2026-10-26 MIT 동의)
 - [x] `drone/` ↔ `visualization/` 의 `viz-debugger` 중복 정리 (화면은 `visualization/viz-debugger` 하나, 드론 파이썬은 `drone/`)
 - [x] AI `perception-framework` Dockerfile 수정(없는 `examples/` 참조) · 360 카메라 의존성 명세
-- [ ] 실 하드웨어(센서 1 · 로봇 1)로 엣지 → 중앙 → 관제 화면 E2E 1회 기록
+- [x] 장비 없는 E2E — 실제 말단 노드 코드(가짜 센서) → 중앙 → 관제 화면 구독 · 저장 · 관측 ([e2e.md](deployment/e2e.md), CI 매 PR)
+- [ ] 실 하드웨어(센서 1 · 로봇 1)로 엣지 → 중앙 → 관제 화면 E2E 1회 기록 — 절차 [e2e.md §2](deployment/e2e.md#2-실장비-e2e-10-체크리스트--아직-기록-없음)
 
 ## 4. 1.x 로드맵
 

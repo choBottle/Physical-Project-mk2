@@ -1,15 +1,15 @@
 # 배포 스모크 테스트 — "우리 환경에서는 되는데 새 환경에서는 안 된다"를 매 PR 마다 잡는다.
 #
 # 빈 러너(이전 상태 없음)에서 문서(docs/deployment/README.md §3)의 절차를 그대로 실행한다:
-#   init-env → up --build --wait → seed-demo → healthcheck(업무 관통 · 관측 3종 · 권한) → 백엔드 회귀 pytest
+#   init-env → up --build --wait → seed-demo → healthcheck(업무 관통 · 관측 3종 · 권한) → e2e-sim(실제 말단 노드) → 백엔드 회귀 pytest
 name: deploy-smoke
 
 on:
   pull_request:
-    paths: ["deploy/**", "server/**", ".github/workflows/deploy-smoke.yml"]
+    paths: ["deploy/**", "server/**", "hardware/pi/**", ".github/workflows/deploy-smoke.yml"]
   push:
     branches: [main]
-    paths: ["deploy/**", "server/**", ".github/workflows/deploy-smoke.yml"]
+    paths: ["deploy/**", "server/**", "hardware/pi/**", ".github/workflows/deploy-smoke.yml"]
   workflow_dispatch:
 
 concurrency:
@@ -35,6 +35,9 @@ jobs:
 
       - name: ④ 헬스체크 — 흐르는가
         run: ./scripts/healthcheck.sh
+
+      - name: ④-2 전 구간 — 실제 말단 노드 코드(가짜 센서) → 중앙 → 관제 구독
+        run: ./scripts/e2e-sim.sh
 
       - name: ⑤ 백엔드 회귀 (게이트웨이 컨테이너 안에서 — 시험이 127.0.0.1 의 WS 입구를 쓴다)
         run: |
