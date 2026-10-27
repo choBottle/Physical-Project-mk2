@@ -42,6 +42,10 @@ run the platform only inside a private network or tunnel (see
   names (`label`, `position`, `ground_dist_m`, `size_m`, `bbox`,
   `confidence`). The receiver still accepts v1 packets so that the server
   and Unity can be updated on different days.
+- **Replaceable parts.** The detector is chosen in configuration, any
+  equirectangular 360 camera can upload, stream-server sources come from
+  `camera360/sources.json`, and a twin gateway feeds Gazebo or another twin
+  next to Unity. See [docs/deployment/pluggability.md](docs/deployment/pluggability.md).
 - **One operator console.** The drone team's copy of the console was merged
   into `visualization/viz-debugger`, and the drone Python packages moved to
   [`drone/`](drone/).
@@ -53,6 +57,27 @@ run the platform only inside a private network or tunnel (see
   original team branches: model paths in the camera360 configuration, empty
   environment variables on the Go1 robot node, and image quality of the
   blurred sample photos. `CHANGELOG.md` lists the details.
+
+## Screenshots
+
+What a deployment looks like. All captures are from this repository's code;
+the photos in them have faces blurred.
+
+| | |
+|---|---|
+| ![Unity digital twin](docs/assets/readme-unity-twin.jpg) | ![Unity path planning around detected obstacles](docs/assets/readme-unity-path.jpg) |
+| **Unity digital twin.** The 360-degree anchor camera, a drone and a Go1 robot in a lab model; obstacles detected by the 360 camera are placed with their label, distance band and range. | **Robot path in the twin.** The Go1 plans around obstacles reported by the camera; rays and coverage show what the robot and the anchor camera can see. |
+| ![360 photo to detection to Gazebo](docs/assets/twin-demo-pipeline.jpg) | ![Operator console with Gazebo, 360 camera and robot](docs/assets/twin-demo-console.jpg) |
+| **Same pipeline, Gazebo as the twin.** A 360 photo goes through `anchor360_live.py` detection and the [twin gateway](hardware/twin/README.md) into Gazebo. Unity is not required. | **Operator console.** The `viz-debugger` console lists the Gazebo twin, the 360 camera stream and a robot reported through the central server, and shows the twin screen and the 360 video together. |
+| ![Grafana backend overview](docs/assets/readme-grafana.jpg) | ![Drone SAR pass comparison](drone/screenshots/31_SAR_%ED%8C%A8%EC%8A%A4%EB%B9%84%EA%B5%90.png) |
+| **Observability.** Grafana on the central stack: service health, MQTT ingest and Kafka/TimescaleDB throughput, publish-to-store latency, WebSocket clients and backend logs from Loki. | **Drone SAR.** Comparison of two radar passes in the console (coherence and brightness change). |
+
+The Unity project itself is maintained outside this repository; its receiver
+scripts (for example `camera360/Anchor360ObstacleReceiver.cs`) and the packets
+it consumes are here and documented in
+[docs/deployment/pluggability.md](docs/deployment/pluggability.md). The run
+behind the Gazebo and console captures is described step by step in
+[docs/deployment/twin-demo.md](docs/deployment/twin-demo.md).
 
 ## Repository layout
 

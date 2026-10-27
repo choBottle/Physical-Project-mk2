@@ -15,6 +15,9 @@ ports, database migrations and image versions.
   Gazebo; the operator console shows the Gazebo screen (in the slot used for
   Unity), the 360 camera stream and a simulated robot reported through the
   central stack. `hardware/twin/demo/run-demo.sh` starts the Gazebo side.
+- README and README.ko: a screenshots section (Unity twin, Gazebo twin,
+  operator console, Grafana, drone SAR) so new users can see what a
+  deployment looks like.
 
 ### Fixed
 
