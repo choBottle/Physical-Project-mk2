@@ -9,7 +9,7 @@
 |---|---|---|
 | 엣지 공용 스택 | Mosquitto · OTel Collector(Agent) · 엣지 Prometheus | [`deploy/edge/`](../../deploy/edge/) (이 문서) |
 | 장치 노드 | 센서 · 로봇(Go1/RoboMaster EP) · 액추에이터 · 탐지 브리지 | [`hardware/pi/deploy/`](../../hardware/pi/deploy/) — systemd 유닛 + `hw-robot` 이미지 · 설치 안내 [`hardware/docs/EDGE_SETUP.md`](../../hardware/docs/EDGE_SETUP.md) |
-| 드론 컴패니언 | SAR 패스 · RTK 중계 · 비행 로그 | [`drone/viz-debugger/drone/deploy/pi/`](../../drone/viz-debugger/drone/deploy/pi/) · [`FIELD_CHECKLIST.md`](../../drone/viz-debugger/drone/FIELD_CHECKLIST.md) |
+| 드론 컴패니언 | SAR 패스 · RTK 중계 · 비행 로그 | [`drone/deploy/pi/`](../../drone/deploy/pi/) · [`FIELD_CHECKLIST.md`](../../drone/FIELD_CHECKLIST.md) |
 
 ## 2. 순서
 

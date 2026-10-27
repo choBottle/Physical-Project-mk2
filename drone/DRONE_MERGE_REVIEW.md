@@ -1,5 +1,10 @@
 # 드론 파트 → khw_VZ 전달 (2차)
 
+> **반영됨 (2026-10-27, 모노레포).** 아래 방법 그대로 기준점 `1426932` 에서 `Junho_drone`(`1361ad3`)까지의 화면 차이를
+> `visualization/viz-debugger` 에 3-way 로 얹었다(겹침 없이 깨끗이 들어감). 그 뒤 `drone/viz-debugger` 화면 사본은 지웠고,
+> 드론 파이썬은 `drone/viz-debugger/drone/` → `drone/` 로 올렸다. 아래 본문의 `viz-debugger/drone/…` 경로는 이제 `drone/…` 이다.
+> 이 문서는 전달 기록으로 남긴다.
+
 1차(Junho_drone `1d7cfcc`)는 컴공 팀이 `khw_VZ` 에 합쳐 주셨습니다(`cb6c805`) — 감사합니다.
 그 뒤 컴공 쪽에서 고친 것(상태판 · RTK · SAR 패스의 `deviceId` · `readOnly`, 드론 상세보기 탭, 3D 화면)은
 **Junho_drone 에 그대로 받아 두었습니다**(`a841cef`). 그래서 지금 Junho_drone 의 viz-debugger 는

@@ -233,3 +233,43 @@
 .sar-pass-dl{display:inline-flex;flex-wrap:wrap;gap:6px;margin-left:auto}
 .sar-pass-open{border-top:1px dashed #e1e5eb;padding-top:8px;display:grid;gap:8px}
 .sar-table th{white-space:nowrap}
+/* 간단 / 자세히 */
+.sar-modebar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.sar-modebar .sar-lead{flex:1 1 320px;margin:0}
+.sar-modebar .sar-seg button{min-width:72px}
+.sar-guide.is-simple .sar-next{font-size:17px;padding:14px 16px}
+.sar-guide.is-simple .sar-actions button{font-size:18px;padding:14px 26px}
+/* 알림 · 연결 끊김 · 새 영상 */
+.sar-alerts{position:fixed;right:16px;bottom:16px;z-index:60;display:grid;gap:6px;max-width:min(380px,calc(100vw - 32px))}
+.sar-alert{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:#fff;border:1px solid #dde3ea;border-left:5px solid #1768c5;box-shadow:0 6px 18px #17202b26;font-size:14px}
+.sar-alert.is-good{border-left-color:#1f8a4d}
+.sar-alert.is-warn{border-left-color:#d08a00}
+.sar-alert.is-bad{border-left-color:#c62f35;background:#fff6f6}
+.sar-alert button{border:0;background:none;font-size:18px;line-height:1;cursor:pointer;color:#5a6878}
+.sar-alerts .sar-alert-sound{justify-self:end;font-size:12px;border:1px solid #cbd3de;border-radius:999px;background:#fff;padding:3px 10px}
+.sar-linkbanner{display:grid;gap:2px;padding:12px 16px;border-radius:10px;background:#c62f35;color:#fff}
+.sar-linkbanner b{font-size:17px}
+.sar-linkbanner small{opacity:.9}
+.sar-linkbanner.is-calm{background:#5a6878}
+.sar-latest{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:10px 12px;border:1px solid #9bd4b1;border-radius:10px;background:#f3fbf6}
+.sar-latest-thumb{width:120px;height:68px;object-fit:cover;border-radius:6px;background:#1b2430;display:block}
+.sar-latest-body{display:grid;gap:2px;flex:1 1 200px}
+.sar-latest-open{flex-basis:100%}
+@media (prefers-reduced-motion:no-preference){.sar-alert{animation:sar-alert-in .18s ease-out}}
+@keyframes sar-alert-in{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+
+/* 리플렉터 변위 표 */
+.sar-disp { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.sar-disp table { border-collapse: collapse; font-size: 13px; width: 100%; max-width: 560px; }
+.sar-disp th, .sar-disp td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line, #e3e6ea); }
+.sar-disp td b { font-variant-numeric: tabular-nums; }
+.sar-disp tr.is-moved td { background: rgba(230, 140, 20, .10); }
+.sar-disp tr.is-ref td:first-child { font-weight: 600; }
+
+/* 레이더 팀 quick-look */
+.sar-cq { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid #b9c7e6; border-radius: 10px; background: #f5f8fe; }
+.sar-cq-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sar-cq-badge { font-size: 11px; font-weight: 700; letter-spacing: .04em; padding: 2px 7px; border-radius: 999px; background: #e7ecf8; color: #33507f; }
+.sar-cq-img { display: block; width: 100%; max-width: 560px; image-rendering: pixelated; background: #000; border-radius: 6px; }
+
+.rtcm-line--external { color: #33507f; }

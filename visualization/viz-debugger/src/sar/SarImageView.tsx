@@ -163,14 +163,16 @@ export function ComparePanel({ base, flight, passes }: { base: string; flight: s
   const [a, setA] = useState(passes[0] ?? 0);
   const [b, setB] = useState(passes[1] ?? 0);
   const [res, setRes] = useState<{ png: string; dir: string; coherence_bright_median: number; coherence_all_median: number;
-    baseline: { cross_mean_m: number; cross_std_m: number; height_mean_m: number; height_std_m: number } } | null>(null);
+    baseline: { cross_mean_m: number; cross_std_m: number; height_mean_m: number; height_std_m: number };
+    displacement?: Displacement } | null>(null);
+  const [moved, setMoved] = useState<readonly string[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   if (passes.length < 2) return null;
-  const run = async () => {
+  const run = async (mv: readonly string[] = moved) => {
     setBusy(true); setErr(null);
     try {
-      const r = await fetch(`${base}/api/flights/${encodeURIComponent(flight)}/compare?a=${a}&b=${b}`);
+      const r = await fetch(`${base}/api/flights/${encodeURIComponent(flight)}/compare?a=${a}&b=${b}&moved=${encodeURIComponent(mv.join(','))}`);
       const j = await r.json();
       if (!r.ok) setErr(j.error ?? String(r.status)); else setRes(j);
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
@@ -192,7 +194,40 @@ export function ComparePanel({ base, flight, passes }: { base: string; flight: s
       </div>
       <img className="sar-img-full" src={`${base}/api/flights/${encodeURIComponent(flight)}/images/${res.dir}/${res.png}?v=${a}${b}${Date.now() % 1e6}`} alt={t('img.cmp.title')} />
       <small className="sar-hint">{t('img.cmp.hint')}</small>
+      {res.displacement && <DisplacementTable d={res.displacement} moved={moved}
+        onToggle={(n) => { const mv = moved.includes(n) ? moved.filter((x) => x !== n) : [...moved, n]; setMoved(mv); void run(mv); }} />}
     </>}
+  </div>;
+}
+
+type Displacement = {
+  error?: string; wavelength_m?: number; ambiguity_mm?: number; reference?: string | null; method?: string | null;
+  stable_rms_mm?: number | null; notes?: readonly string[];
+  reflectors?: readonly { name: string; reference: boolean; moved_flag: boolean; los_mm: number; sigma_mm: number | null;
+    incidence_deg?: number | null }[];
+};
+
+/** 리플렉터별 시선 변위(mm) — 드론 쪽 sar_image/displacement.py. 움직인 리플렉터를 표시하면 나머지로 궤적 오차를 지운다. */
+function DisplacementTable({ d, moved, onToggle }: { d: Displacement; moved: readonly string[]; onToggle: (name: string) => void }) {
+  useLang();
+  if (d.error) return <small className="sar-bad">{d.error}</small>;
+  const rows = d.reflectors ?? [];
+  if (rows.length === 0) return <small className="sar-hint">{t('disp.none')}</small>;
+  return <div className="sar-disp">
+    <b>{t('disp.title')}</b>
+    <small className="sar-hint">{t('disp.how', { amb: (d.ambiguity_mm ?? 0).toFixed(1) })}</small>
+    <table><thead><tr><th>{t('disp.cr')}</th><th>{t('disp.los')}</th><th>{t('disp.sigma')}</th><th>{t('disp.inc')}</th><th>{t('disp.moved')}</th></tr></thead>
+      <tbody>{rows.map((r) => <tr key={r.name} className={r.moved_flag ? 'is-moved' : r.reference ? 'is-ref' : ''}>
+        <td>{r.name}{r.reference ? ` · ${t('disp.ref')}` : ''}</td>
+        <td><b>{r.los_mm >= 0 ? '+' : ''}{r.los_mm.toFixed(2)}</b></td>
+        <td>{r.sigma_mm === null ? '—' : `± ${r.sigma_mm.toFixed(2)}`}</td>
+        <td>{r.incidence_deg === null || r.incidence_deg === undefined ? '—' : `${r.incidence_deg.toFixed(0)}°`}</td>
+        <td><input type="checkbox" checked={moved.includes(r.name)} onChange={() => onToggle(r.name)} aria-label={t('disp.moved')} /></td>
+      </tr>)}</tbody></table>
+    <small className="sar-hint">{d.method === 'plane' || d.method === 'line'
+      ? t('disp.planeOk', { rms: d.stable_rms_mm === null || d.stable_rms_mm === undefined ? '—' : d.stable_rms_mm.toFixed(2) })
+      : d.method === 'none' ? t('disp.noRef') : t('disp.refOnly')}</small>
+    {(d.notes ?? []).length > 0 && <small className="sar-hint">{t('disp.notes', { n: (d.notes ?? []).length })}</small>}
   </div>;
 }
 
@@ -210,5 +245,22 @@ export function ImagingStatus({ imaging, mirror }: { imaging: Imaging; mirror: M
     <b>{t('sar.data.image')}</b>
     <small>{mirror === null ? t('img.readyLocal') : t('img.ready', { src: mirror.source, n: mirror.fetched_passes })}</small>
     {mirror !== null && mirror.last_error !== null && <small className="sar-bad">{t('img.mirrorErr', { why: mirror.last_error })}</small>}
+  </div>;
+}
+
+/** 「새 SAR 영상」 — 맨 위에 작게. 누르면 그 자리에서 영상 전체를 연다(결과 단계까지 내려가지 않아도 된다). */
+export function LatestImage({ base, flight, pass, found, total }: { base: string; flight: string; pass: number; found: number; total: number }) {
+  useLang();
+  const [open, setOpen] = useState(false);
+  const dir = `${base}/api/flights/${encodeURIComponent(flight)}/images/pass${String(pass).padStart(2, '0')}`;
+  return <div className="sar-latest">
+    <a href={`${dir}/full.png`} target="_blank" rel="noreferrer"><img src={`${dir}/full_map.png?v=${flight}${pass}`} alt="" className="sar-latest-thumb" /></a>
+    <div className="sar-latest-body">
+      <b>{t('img.latest', { n: pass })}</b>
+      <span className={total > 0 && found === total ? 'sar-ok' : total > 0 ? 'sar-warn' : 'sar-hint'}>
+        {total > 0 ? t('img.found', { f: found, n: total }) : t('img.noReflectors')}</span>
+    </div>
+    <button type="button" className={open ? 'is-on' : ''} onClick={() => setOpen(!open)}>{open ? t('img.close') : t('img.view')}</button>
+    {open && <div className="sar-latest-open"><SarImageView base={base} flight={flight} pass={pass} /></div>}
   </div>;
 }

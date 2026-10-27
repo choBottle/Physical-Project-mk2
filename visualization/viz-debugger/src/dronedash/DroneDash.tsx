@@ -11,12 +11,14 @@
  */
 
 import { liveBeam, readAntenna, readReflectors, reflectorMarkers } from '../sar/liveBeam.ts';
+import { LinkBanner, SarAlerts } from '../sar/alerts.tsx';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useLang } from '../shared/language.ts';
 import { t } from '../i18n/dict.ts';
 import { telemetryValue, useDeviceTelemetry, isTelemetryStale } from '../shared/deviceTelemetry.ts';
 import { isFcxStale, useFcxReports, type FcxReport, type FcxSample } from '../shared/fcxStatus.ts';
 import { useSarReports } from '../shared/sarStatus.ts';
+import { radarLevel, useRadarReports } from '../shared/radarStatus.ts';
 import { useRtcmReports } from '../shared/rtcmStatus.ts';
 import { rtkLevel } from '../sar/rtk.ts';
 import { RtkBadge, RtcmLine } from '../sar/RtkView.tsx';
@@ -109,6 +111,7 @@ function Chip({ level, label, value, title }: { level: Level; label: string; val
 function StatusBar({ v, compact }: { v: View; compact?: boolean }) {
   useLang();
   const rtcm = useRtcmReports()[v.deviceId];
+  const radarRep = useRadarReports()[v.deviceId];
   const f = v.extended ? v.fcx : null;
   const linkLevel: Level = v.linkAgeS === null ? 'bad' : v.linkAgeS < 2 ? 'good' : v.linkAgeS < 5 ? 'warn' : 'bad';
   const batLevel: Level = v.batteryPct === null ? 'unknown' : v.batteryPct > 30 ? 'good' : v.batteryPct > 15 ? 'warn' : 'bad';
@@ -123,6 +126,21 @@ function StatusBar({ v, compact }: { v: View; compact?: boolean }) {
     <Chip level={batLevel} label={t('dash.battery')} value={`${fmt(v.batteryV, 2)}V · ${v.batteryPct === null ? '—' : `${Math.round(v.batteryPct)}%`}`} />
     {!compact && f?.rc && <Chip level={f.rc.rssi === null ? 'unknown' : f.rc.rssi > 50 ? 'good' : f.rc.rssi > 20 ? 'warn' : 'bad'} label="RC" value={f.rc.rssi === null ? '—' : `${f.rc.rssi}%`} />}
     {!compact && <RtcmLine report={rtcm} />}
+    {radarRep && (() => {
+      const rl = radarLevel(radarRep, readAntenna().prfHz);
+      return <Chip level={rl.level} label={t('dash.radar')} title={rl.reasonKey ? t(rl.reasonKey) : undefined}
+        value={[t(`radar.state.${radarRep.state}`), radarRep.pulsesPerS === null ? null : t('radar.pps', { v: radarRep.pulsesPerS.toFixed(0) }),
+          radarRep.tempC === null ? null : `${radarRep.tempC.toFixed(0)}°C`].filter(Boolean).join(' · ')} />;
+    })()}
+    {f?.companion && <Chip level={f.companion.level === 'ok' ? 'good' : f.companion.level === 'warn' ? 'warn' : f.companion.level === 'bad' ? 'bad' : 'unknown'}
+      label={t('dash.pi')} title={t('dash.piTitle', { load: fmt(f.companion.load1, 2), disk: fmt(f.companion.diskFreeGb, 1) })
+        + (f.companion.eth ? ' · ' + (f.companion.eth.up ? t('dash.piEth', { mbps: fmt(f.companion.eth.speedMbps, 0), err: fmt(f.companion.eth.rxErrors, 0) }) : t('dash.piEthDown')) : '')
+        + (f.companion.wifi?.connected ? ' · ' + t('dash.piWifi', { mhz: fmt(f.companion.wifi.freqMhz, 0), dbm: fmt(f.companion.wifi.signalDbm, 0) }) : '')}
+      value={[f.companion.cpuTempC === null ? null : `${fmt(f.companion.cpuTempC, 0)}°C`,
+        f.companion.throttledNow ? t('dash.piThrottle') : null, f.companion.undervolt ? t('dash.piUndervolt') : null,
+        f.companion.diskFreeGb !== null && f.companion.diskFreeGb < 5 ? t('dash.piDisk', { gb: fmt(f.companion.diskFreeGb, 1) }) : null,
+        wifiNote(f.companion.wifi)]
+        .filter(Boolean).join(' · ') || '—'} />}
     {!compact && f?.clockOffsetS !== null && f?.clockOffsetS !== undefined &&
       <Chip level={Math.abs(f.clockOffsetS) <= 1 ? 'good' : 'bad'} label={t('dash.clock')} value={`${f.clockOffsetS >= 0 ? '+' : ''}${fmt(f.clockOffsetS, 2)}s`} />}
   </div>;
@@ -424,6 +442,7 @@ export function DroneDashZoom({ deviceId }: { deviceId?: string } = {}) {
   useLang();
   useTick(500);
   const views = useDroneViews();
+  const sarAll = useSarReports();
   const [pick, setPick] = useState<string | null>(null);
   const v = deviceId !== undefined ? views.find((x) => x.deviceId === deviceId) : views.find((x) => x.deviceId === pick) ?? views[0];
   const homeBearing = useMemo(() => {
@@ -441,6 +460,8 @@ export function DroneDashZoom({ deviceId }: { deviceId?: string } = {}) {
     </div>
     <StatusBar v={v} />
     {!v.extended && <p className="sar-hint">{t('dash.howTo')}</p>}
+    <SarAlerts prfHz={readAntenna().prfHz} />
+    <LinkBanner report={sarAll[v.deviceId]} />
     <SarStrip deviceId={v.deviceId} />
     <div className="dash-top">
       <Panel title={t('dash.map')}><DashMap v={v} /></Panel>
@@ -499,4 +520,14 @@ function DashMap({ v }: { v: View }) {
   markers.push(...reflectorMarkers(reflectors, beam.lit));
   return <SatMap track={track} drone={at} height={470}
     droneYaw={v.yawDeg} sarLine={sarLine} capturing={sar?.capturing} markers={markers} areas={beam.area ? [beam.area] : []} />;
+}
+
+/** Pi WiFi 를 칩에 짧게 — 문제가 있을 때만(레이더 대역 · 5 GHz · 약함 · 끊김). 드론 쪽 fc_watch/pihealth.py 의 wifi_problem 과 같은 기준 */
+function wifiNote(w: { connected: boolean; freqMhz: number | null; signalDbm: number | null } | null | undefined): string | null {
+  if (!w) return null;
+  if (!w.connected) return t('dash.piWifiNone');
+  if (w.freqMhz !== null && w.freqMhz >= 5650 && w.freqMhz <= 5950) return t('dash.piWifiRadar', { mhz: w.freqMhz.toFixed(0) });
+  if (w.freqMhz !== null && w.freqMhz >= 4900) return t('dash.piWifi5g');
+  if (w.signalDbm !== null && w.signalDbm < -75) return t('dash.piWifiWeak', { dbm: w.signalDbm.toFixed(0) });
+  return null;
 }

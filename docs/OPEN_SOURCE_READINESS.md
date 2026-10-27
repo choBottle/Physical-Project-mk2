@@ -46,9 +46,11 @@
 ### drone
 - ✅ `radar_team/cansar_pi.py` 등 레이더 팀 코드 — 원 저작자가 MIT 공개에 동의(2026-10-26) · [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
 - 🟡 `screenshots/` 38장 — 확인 결과 UI·SAR 결과 캡처. 일부에 시험 장소의 위성 지도가 보인다(인물 없음) — 시험 장소 공개 여부 결정
-- ❌ `viz-debugger/` 전체 사본이 `visualization/` 과 중복(약 183개 파일이 다름). `drone/` 은 드론 모듈(`viz-debugger/drone/`)만 정본으로 두고
-  UI 는 `visualization/` 하나로 합치는 것을 제안 — `DRONE_MERGE_REVIEW.md` 의 2차 병합과 같은 일
-- 🟢 CI 워크플로를 저장소 루트로 옮겼다(`.github/workflows/drone.yml` — 하위 폴더의 워크플로는 GitHub 가 실행하지 않는다)
+- ✅ 화면 사본 중복 정리(2026-10-27, `DRONE_MERGE_REVIEW.md` 의 2차 병합) — 화면은 `visualization/viz-debugger` 하나, 드론 파이썬은
+  `drone/` 바로 아래(옛 `drone/viz-debugger/drone/`). 드론 쪽에만 있던 화면 변경 23개 파일은 기준점 `1426932` 에서 3-way 로 옮겼고,
+  `visualization/viz-debugger/drone/` 의 옛 파이썬 사본도 지웠다(`verify:sar` 는 `../../drone` 을 읽는다)
+- 🟢 CI 워크플로를 저장소 루트로 옮겼다(`.github/workflows/drone.yml` — 하위 폴더의 워크플로는 GitHub 가 실행하지 않는다).
+  `web` 잡은 이제 `visualization/viz-debugger` 를 타입 검사 · 빌드한다(알려진 실패 해소)
 
 ### camera360
 - 🟡 의존성 명세 추가(`requirements.txt` 촬영·전송·수신 / `requirements-vision.txt` GPU 추론). Docker · systemd 는 아직 없음

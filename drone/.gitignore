@@ -1,25 +1,16 @@
-# Junho_drone — 드론 파트. 팀 저장소(khw_VZ)의 「연 폴더 안에서 막는 것」 규칙을 그대로 따른다.
+# 드론 파트(drone/) — 드론 쪽 파이썬만 둔다. 화면(Node · TS)은 visualization/viz-debugger 가 정본이라 그쪽 규칙을 따른다.
 
 # Office 임시 잠금 파일
 ~$*
 
-# Node
-node_modules/
-dist/
-dist-standalone/
 *.log
 
-# 검증 스크립트가 대조군 사본을 만드는 자리 (viz-debugger/scripts/lib/scratch.mjs)
-viz-debugger/**/.verify-*/
-
-# TypeScript 증분 빌드 캐시
-*.tsbuildinfo
-
-# Python 가상환경 · 바이트코드 · 시험 캐시
+# Python 가상환경 · 바이트코드 · 시험 캐시 · 설치 메타데이터
 .venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+*.egg-info/
 
 # 임무 기록 · SAR 패스 로그 — 판마다 남는 무거운 산출물
 mission-history/

@@ -19,6 +19,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const load = (...p) => import(pathToFileURL(join(root, ...p)).href);
 const read = (...p) => readFileSync(join(root, ...p), 'utf8').replace(/\r\n/g, '\n');
+// 드론 쪽 파이썬의 정본은 저장소 루트의 `drone/` 이다(화면 사본 정리 — 261027). 화면 폴더 안에 사본을 두지 않는다.
+const DRONE_ROOT = process.env.DRONE_ROOT ?? join(root, '..', '..', 'drone');
+const readDrone = (...p) => readFileSync(join(DRONE_ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');
 
 const { parseSarStatus, sarChannel, SAR_TOPIC } = await load('src', 'physical', 'sarFeed.ts');
 const { noteSarStatus, resetSarStatus, sarReports } = await load('src', 'shared', 'sarStatus.ts');
@@ -184,7 +187,7 @@ const params = plan.toStartParams({
 
 // ── 6. 화면과 드론의 숫자가 같다 ────────────────────────────────────────────
 {
-  const py = read('drone', 'sar_pass', 'mission.py');
+  const py = readDrone('sar_pass', 'mission.py');
   const pyNum = (name) => Number(py.match(new RegExp(`^${name}\\s*=\\s*([0-9.]+)`, 'm'))?.[1]);
   const pairs = [['MIN_LINE_M', 'minLineM'], ['MIN_SPEED', 'minSpeed'], ['MAX_SPEED', 'maxSpeed'], ['MIN_PASSES', 'minPasses'], ['MIN_GAP_S', 'minGapS']];
   for (const [p, j] of pairs) {
@@ -287,7 +290,7 @@ const params = plan.toStartParams({
   check(!cov.checkReflector(a, start, end, 20, at(40, -20)).ok, '안테나 반대쪽 리플렉터를 보인다고 한다');
   check(!cov.checkReflector(a, start, end, 20, at(3, 20)).ok, '선 끝에 붙은 리플렉터(개구 부족)를 보인다고 한다');
   check(!cov.checkReflector(a, start, end, 20, at(40, 70)).ok, '관측 띠 밖 리플렉터를 보인다고 한다');
-  const py = read('drone', 'sar_image', 'example_radar.json');
+  const py = readDrone('sar_image', 'example_radar.json');
   const ex = JSON.parse(py);
   check(ex.depression_deg === a.depressionDeg && ex.el_beamwidth_deg === a.elBeamwidthDeg && ex.az_beamwidth_deg === a.azBeamwidthDeg
     && ex.range_max_m === a.rangeMaxM && ex.side === a.side, '화면 기본 안테나 값이 drone/sar_image/example_radar.json 과 다르다');
@@ -313,6 +316,56 @@ const params = plan.toStartParams({
   check(cov.reflectorInBeam(a, start, 20, { yawDeg: 45, pitchDeg: 0, rollDeg: 0 }, at(0, 20)).lit && !cov.reflectorInBeam(a, start, 20, { yawDeg: 45, pitchDeg: 0, rollDeg: 0 }, at(0, -20)).lit,
     '바로 옆 리플렉터가 빔 안 · 반대쪽은 밖이어야 한다');
   console.log('✅ 실시간 빔 — 빔 각 · 자세 회전 · 빔 자국이 드론 쪽 식과 같다');
+
+  // 재처리용 기록 — 화면이 펼친 키를 드론이 같은 이름으로 다시 모아야 한다
+  const prov = cov.provenanceParams([{ lat: 1, lon: 2 }, { lat: 3, lon: 4 }], { ...a, gnssFwdM: 0, gnssRightM: 0, gnssDownM: -0.1 });
+  const mission = readDrone('sar_pass', 'mission.py');
+  check(prov.cr_n === 2 && prov.cr1_lon === 4 && /f"cr\{i\}_lat"/.test(mission) && mission.includes('"cr_n"'), '리플렉터 기록 키가 드론과 다르다');
+  for (const k of Object.keys(prov).filter((k) => k.startsWith('ant_') && !k.startsWith('ant_off_') && k !== 'ant_side')) {
+    check(mission.includes(`"${k}"`), `안테나 기록 키 ${k} 를 드론(RADAR_PARAM_KEYS)이 모른다`);
+  }
+  check(mission.includes('f"ant_off_{a}"') && mission.includes('f"gnss_off_{a}"') && mission.includes('"ant_side"'), '레버암 · 보는 쪽 기록 키가 드론과 다르다');
+  console.log('✅ 재처리용 기록 — 리플렉터 · 안테나 키가 드론과 같다');
+
+  // 리플렉터 측량 — 3 초 창 안의 점만 평균, 흩어짐(m)
+  const base = { lat: 37.5665, lon: 126.978 };
+  const pts = [0.02, -0.02, 0.0, 0.01, -0.01].map((d, i) => ({ ...plan.toGlobal(base, d, 0), atMs: 10_000 + i * 200 }));
+  const sv = cov.surveyPoint([{ ...plan.toGlobal(base, 5, 0), atMs: 1000 }, ...pts], 11_000);
+  const off = plan.toLocal(base, sv.point);
+  check(sv.n === 5 && Math.abs(off.n) < 0.001 && sv.spreadM > 0.005 && sv.spreadM < 0.03, `리플렉터 측량 평균이 이상하다: ${JSON.stringify(sv)}`);
+  check(cov.surveyPoint(pts.slice(0, 2), 11_000) === null, '점이 3개보다 적으면 측량하지 않아야 한다');
+  console.log('✅ 리플렉터 측량 — 최근 3 초 평균 · 오래된 점 제외 · 흩어짐');
+
+  // 레이더 상태 — 드론 쪽 radar_status.py 가 내는 칸 이름을 화면이 읽는다
+  const rf = await load('src', 'physical', 'radarFeed.ts');
+  const rs = await load('src', 'shared', 'radarStatus.ts');
+  const pyRadar = readDrone('sar_pass', 'radar_status.py');
+  for (const k of ['state', 'recording', 'file', 'pulses_per_s', 'dropped', 'buffer_pct', 'temp_c', 'time_source', 'pps_locked', 'last_error', 'disk_free_gb']) {
+    check(pyRadar.includes(`"${k}"`), `레이더 상태 칸 ${k} 를 드론 쪽 규약(FIELDS)이 모른다`);
+  }
+  check(/SCHEMA = "radar-0\.1"/.test(pyRadar), '레이더 상태 schema 이름이 다르다');
+  const body = { schema_version: 'radar-0.1', source_id: 'x500-001', state: 'recording', recording: true, pulses_per_s: 150, dropped: 0, time_source: 'pps', pps_locked: true };
+  const st = rf.parseRadarStatus(body, 'zoneA/drone/x500-001/radar');
+  check(st !== null && st.recording && st.pulsesPerS === 150, '레이더 상태를 못 읽는다');
+  const now = Date.now();
+  check(rs.radarLevel({ ...st, receivedAtMs: now }, 200, now).reasonKey === 'radar.why.prf', 'PRF 200 에 펄스 150 이면 주의여야 한다');
+  check(rs.radarLevel({ ...st, pulsesPerS: 199, receivedAtMs: now }, 200, now).level === 'good', '정상 레이더를 주의라고 한다');
+  check(rs.radarLevel({ ...st, receivedAtMs: now - 6000 }, 200, now).level === 'bad', '6 초 끊긴 레이더를 정상이라고 한다');
+  check(rf.parseRadarStatus({ ...body, state: 'busy' }) === null, '규약에 없는 state 를 받아들인다');
+  console.log('✅ 레이더 상태 — 드론 쪽 칸 · 판정(끊김 · PRF · PPS)');
+
+  // 알림 — 바뀐 것만, 처음 보고에서는 울리지 않는다
+  const al = await load('src', 'sar', 'alertEvents.ts');
+  const s0 = { state: 'accel', capturing: false, stale: false, passes: [], radar: 'good', batteryPct: 60, imagesDone: 0 };
+  check(al.detectEvents('x', undefined, s0).length === 0, '첫 보고에서 알림을 낸다');
+  const keys = (prev, cur) => al.detectEvents('x', prev, cur).map((e) => e.textKey).sort().join(',');
+  check(keys(s0, { ...s0, capturing: true }) === 'alert.capOn', '캡처 시작을 못 알린다');
+  check(keys({ ...s0, capturing: true }, { ...s0, state: 'decel', passes: [{ passNo: 1, valid: false }] }) === 'alert.capOff,alert.passBad', '캡처 끝 · 패스 무효를 못 알린다');
+  check(keys(s0, { ...s0, stale: true }) === 'alert.stale' && keys({ ...s0, stale: true }, s0) === 'alert.back', '끊김 · 다시 붙음을 못 알린다');
+  check(keys(s0, { ...s0, batteryPct: 25 }) === 'alert.battery' && keys({ ...s0, batteryPct: 25 }, { ...s0, batteryPct: 24 }) === '', '배터리 알림이 매번 울린다');
+  check(keys(s0, { ...s0, state: 'done', imagesDone: 1 }) === 'alert.end.done,alert.image', '임무 완료 · 새 영상을 못 알린다');
+  check(keys(s0, s0) === '', '바뀐 게 없는데 알린다');
+  console.log('✅ 알림 — 캡처 · 패스 무효 · 끊김 · 배터리 · 임무 끝 · 새 영상, 바뀐 것만');
 
   // 바람 영향 — 북쪽으로 4 m/s 날며 북풍 3 m/s(맞바람) → 공기 속도 7 m/s · 앞 숙임 · 빔은 뒤로. 서풍은 동쪽(오른쪽)으로 밀어 왼쪽으로 기울여 버틴다
   const head = plan.windEffect(0, 4, { speedMps: 3, fromDeg: 0 }, 45, 40, 30);
