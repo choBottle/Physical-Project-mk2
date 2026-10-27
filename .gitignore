@@ -28,3 +28,6 @@ desktop.ini
 .idea/
 *.swp
 /.claude/worktrees/
+
+# 객체 탐지 스트림 서버의 실제 로봇·드론 주소 (camera360/server_stream_multi_source.py)
+hosts.local.json

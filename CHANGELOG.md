@@ -8,8 +8,18 @@ ports, database migrations and image versions.
 
 ## [Unreleased]
 
+### Added
+
+- `docs/deployment/endpoints.md`: what to change on each device when the
+  object-detection stream server, the perception server, the 360 anchor
+  server or the Unity PC moves to another host, and how to check it.
+- `hosts.local.json` (real robot and drone addresses for the stream server)
+  is ignored by git.
+
 ### Changed
 
+- Copyright holder: "Sysailab, Hanbat National University, and
+  Physical-Project-mk2 contributors" (LICENSE, README, CITATION.cff).
 - **One operator console.** `visualization/viz-debugger` is now the only copy
   of the console. The drone team's copy in `drone/viz-debugger` was removed
   after its drone-only features were ported: radar status, simple SAR mode,
