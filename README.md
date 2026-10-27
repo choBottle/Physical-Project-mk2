@@ -240,9 +240,15 @@ the development setup, test commands and pull-request guidelines, and
 
 *Unity and Gazebo receive the same packets from the robots and the 360-degree camera.*
 
+<a href="docs/assets/g-unity-twin.gif"><img src="docs/assets/g-unity-twin.gif" width="49%"></a> <a href="docs/assets/g-gazebo.gif"><img src="docs/assets/g-gazebo.gif" width="49%"></a>
+
 <a href="docs/assets/readme-unity-twin.jpg"><img src="docs/assets/g-unity-twin.jpg" width="49%"></a> <a href="docs/assets/readme-unity-path.jpg"><img src="docs/assets/g-unity-path.jpg" width="49%"></a>
 
-<a href="docs/assets/g-gazebo.gif"><img src="docs/assets/g-gazebo.gif" width="49%"></a> <a href="docs/assets/g-detect.jpg"><img src="docs/assets/g-detect.jpg" width="49%"></a>
+#### Object detection
+
+*YOLO-World on a 360-degree photo: the view turns through the room and each view is detected (`camera360/anchor360_live.py`).*
+
+<a href="docs/assets/g-detect-sweep.gif"><img src="docs/assets/g-detect-sweep.gif" width="32%"></a> <a href="docs/assets/g-detect.jpg"><img src="docs/assets/g-detect.jpg" width="49%"></a>
 
 #### Operator console
 
