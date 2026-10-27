@@ -16,6 +16,7 @@ import { deviceTelemetry, isTelemetryStale, telemetryValue, useDeviceTelemetry }
 import { SAR_FINISHED, isSarStale, useSarReports, type SarReport, type SarState } from '../shared/sarStatus.ts';
 import { isRtcmReportStale, useRtcmReports } from '../shared/rtcmStatus.ts';
 import { useFcxReports } from '../shared/fcxStatus.ts';
+import { radarLevel, useRadarReports } from '../shared/radarStatus.ts';
 import { connectionAddress, useConnections } from '../shared/connections.ts';
 import { physicalWsUrls } from '../physical/PhysicalClient.ts';
 import {
@@ -29,9 +30,12 @@ import { RTK_LABEL_KEY, rtkLevel } from './rtk.ts';
 import { RtkBadge } from './RtkView.tsx';
 import { useTick } from './useTick.ts';
 import { SatMap, type Area, type Marker } from '../dronedash/SatMap.tsx';
-import { checkReflector, defaultAntenna, radarJson, swathPolygon, type AntennaDraft } from './coverage.ts';
+import { checkReflector, defaultAntenna, provenanceParams, surveyPoint, radarJson, swathPolygon, type AntennaDraft } from './coverage.ts';
 import { ANT_KEY, CR_KEY, liveBeam } from './liveBeam.ts';
 import { PassInspector } from './PassInspector.tsx';
+import { LatestImage } from './SarImageView.tsx';
+import { CansarQuickCard } from './cansarQuick.tsx';
+import { LinkBanner, SarAlerts } from './alerts.tsx';
 import { ComparePanel, ImageButton, ImagingStatus, SarImageView, type ImageSummary, type Imaging, type MirrorState } from './SarImageView.tsx';
 import './sar.css';
 
@@ -87,12 +91,12 @@ const MARK: Record<Level, string> = { good: '✓', warn: '!', bad: '✕', unknow
 
 // ── 데이터 서버 (Pi 의 drone/sar_data) ──────────────────────────────────────
 
-/** 연결 관리에 적은 주소, 없으면 드론 브로커 주소의 호스트 + :8765. */
+/** 연결 관리에 적은 주소, 없으면 드론 브로커 주소의 호스트 + :8766. */
 export function dataServerUrl(): string {
   const set = connectionAddress('drone-data', 'http').trim();
   if (set !== '') return set.replace(/\/+$/, '');
   for (const ws of physicalWsUrls()) {
-    try { return `http://${new URL(ws).hostname}:8765`; } catch { /* 다음 줄 */ }
+    try { return `http://${new URL(ws).hostname}:8766`; } catch { /* 다음 줄 */ }
   }
   return '';
 }
@@ -198,6 +202,7 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
   const { link, deviceId, report } = useSarView(pinned);
   const rtcm = useRtcmReports();
   const fcx = useFcxReports();
+  const radar = useRadarReports();
   const [draft, setDraftState] = useState<SarPlanDraft>(loadDraft);
   const [pickNext, setPickNext] = useState<'start' | 'end'>(() => (loadDraft().start === null ? 'start' : 'end'));
   const [mapMode, setMapMode] = useState<'line' | 'reflector'>('line');
@@ -209,6 +214,31 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
   const [busy, setBusy] = useState<'start' | 'abort' | null>(null);
   const [outcome, setOutcome] = useState<{ action: 'start' | 'abort'; result: SarIssueOutcome } | null>(null);
   const data = useDataServer(true);
+  const [tileMsg, setTileMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // 새 SAR 영상 — 가장 최근 비행에서 영상이 끝난 마지막 패스 (데이터 서버 목록에서)
+  const imagesDone = data.flights.reduce((n, f) => n + f.passes.filter((p) => p.image?.state === 'done').length, 0);
+  const latest = (() => {
+    for (const f of data.flights) {
+      const done = f.passes.filter((p) => p.image?.state === 'done');
+      if (done.length) { const p = done[done.length - 1]!; return { flight: f.id, pass: p.pass_no, found: p.image!.found, total: p.image!.reflectors }; }
+    }
+    return null;
+  })();
+  // 간단 모드 — 현장에서 지금 할 일 · 지도 · 큰 버튼 · 진행 · 결과만. 리플렉터 · 안테나 · 고급 설정은 숨긴다(값은 그대로 쓴다)
+  const [simple, setSimpleState] = useState<boolean>(() => { try { return localStorage.getItem(SIMPLE_KEY) === '1'; } catch { return false; } });
+  const setSimple = (v: boolean) => { setSimpleState(v); try { localStorage.setItem(SIMPLE_KEY, v ? '1' : '0'); } catch { /* */ } };
+  // 현장(인터넷 없음)용 — 지금 보이는 구역을 노트북 데이터 서버에 받아 둔다 (drone/sar_data/tiles.py)
+  const prefetchTiles = async (box: { s: number; w: number; n: number; e: number }, z: number) => {
+    const base = dataServerUrl();
+    if (base === '') { setTileMsg({ ok: false, text: t('map.prefetchNoServer') }); return; }
+    const zmin = Math.max(12, z - 1); const zmax = Math.min(20, Math.max(z + 2, 19));
+    try {
+      const r = await fetch(`${base}/api/tiles/prefetch?layer=satellite&s=${box.s}&w=${box.w}&n=${box.n}&e=${box.e}&zmin=${zmin}&zmax=${zmax}`);
+      const j = await r.json() as { total?: number; error?: string };
+      setTileMsg(r.status === 202 ? { ok: true, text: t('map.prefetchStarted', { n: j.total ?? 0, url: `${base}/tiles/satellite/{z}/{x}/{y}.png` }) }
+        : { ok: false, text: t('map.prefetchFail', { why: j.error ?? String(r.status) }) });
+    } catch (e) { setTileMsg({ ok: false, text: t('map.prefetchFail', { why: e instanceof Error ? e.message : String(e) }) }); }
+  };
 
   const setDraft = (next: SarPlanDraft) => { setDraftState(next); saveDraft(next); setConfirmed(false); };
 
@@ -222,6 +252,7 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
     : rtkLevel(telemetryValue(deviceId, 'gps.fix_type'), telemetryValue(deviceId, 'gps.fix'));
   const tel = deviceId === null ? null : deviceTelemetry(deviceId);
   const rtcmReport = deviceId === null ? undefined : rtcm[deviceId];
+  const radarRep = deviceId === null ? undefined : radar[deviceId];
   const fcxReport = deviceId === null ? undefined : fcx[deviceId];
   const clock = report?.clockOffsetS ?? fcxReport?.clockOffsetS ?? null;
 
@@ -240,9 +271,11 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
       fix: t('sar.check.stateFix') },
     { key: 'rtk', level: rtk === 'fixed' ? 'good' : rtk === 'float' ? 'warn' : draft.requireRtk ? 'bad' : 'warn', label: t('sar.check.rtk'),
       detail: t(RTK_LABEL_KEY[rtk]), fix: t('sar.check.rtkFix') },
-    { key: 'rtcm', level: rtcmReport === undefined || isRtcmReportStale(rtcmReport) ? 'warn' : rtcmReport.receiving ? 'good' : 'bad',
+    { key: 'rtcm', level: rtcmReport === undefined || isRtcmReportStale(rtcmReport) ? 'warn'
+        : rtcmReport.mode === 'external' ? 'good' : rtcmReport.receiving ? 'good' : 'bad',
       label: t('sar.check.rtcm'),
       detail: rtcmReport === undefined || isRtcmReportStale(rtcmReport) ? t('rtcm.unknown')
+        : rtcmReport.mode === 'external' ? t('rtcm.external')
         : rtcmReport.receiving ? t('rtcm.on', { fps: (rtcmReport.framesPerS ?? 0).toFixed(1), age: (rtcmReport.ageS ?? 0).toFixed(1) })
           : t('rtcm.off', { age: (rtcmReport.ageS ?? 0).toFixed(0) }),
       fix: t('sar.check.rtcmFix') },
@@ -253,6 +286,14 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
     { key: 'radar', level: report === null ? 'unknown' : report.capAck === null ? 'warn' : 'good', label: t('sar.check.radar'),
       detail: report === null ? t('sar.check.radarUnknown') : report.capAck === null ? t('sar.check.radarNone') : t('sar.check.radarOk'),
       fix: t('sar.check.radarFix') },
+    // 레이더 자체 상태(radar-0.1) — 레이더 팀이 내기 시작하면 보인다. 안 내면 칸을 세우지 않는다
+    ...(radarRep === undefined ? [] : [(() => {
+      const rl = radarLevel(radarRep, antenna.prfHz);
+      return { key: 'radarHealth', level: rl.level as Level, label: t('sar.check.radarHealth'),
+        detail: [t(`radar.state.${radarRep.state}`), radarRep.pulsesPerS === null ? null : t('radar.pps', { v: radarRep.pulsesPerS.toFixed(0) }),
+          rl.reasonKey ? t(rl.reasonKey) : null].filter(Boolean).join(' · '),
+        fix: t('sar.check.radarHealthFix') };
+    })()]),
     { key: 'data', level: data.ok === true ? 'good' : data.base === '' ? 'warn' : data.ok === false ? 'warn' : 'unknown', label: t('sar.check.data'),
       detail: data.ok === true ? t('sar.check.dataOk', { url: data.base, free: data.freeBytes === null ? '—' : bytes(data.freeBytes) })
         : data.base === '' ? t('sar.check.dataNoUrl') : t('sar.check.dataFail', { url: data.base }),
@@ -276,7 +317,7 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
 
   async function start() {
     setBusy('start');
-    try { setOutcome({ action: 'start', result: await issueSarStart(toStartParams(draft), link) }); }
+    try { setOutcome({ action: 'start', result: await issueSarStart({ ...toStartParams(draft), ...provenanceParams(reflectors, antenna) }, link) }); }
     finally { setBusy(null); setConfirmed(false); }
   }
   async function abort() {
@@ -326,6 +367,8 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
   if (draft.start && !draft.end) markers.push({ ...draft.start, kind: 'pick', label: t('map.capStart') });
   const crChecks = reflectors.map((cr) => (draft.start && draft.end && Number.isFinite(draft.altM)
     ? checkReflector(antenna, draft.start, draft.end, draft.altM, cr) : null));
+  // 리플렉터 자리 측량 — 드론 · RTK 수신기의 최근 3 초 평균 (RTK Fixed 일 때만)
+  const survey = rtk === 'fixed' && fcxReport ? surveyPoint(fcxReport.history, fcxReport.receivedAtMs) : null;
   // 비행 중이면 지금 빔 자국을 그리고, 빔 안에 든 리플렉터는 빛난다
   const beam = liveBeam(antenna, {
     at: here, altM: num(deviceId === null ? null : telemetryValue(deviceId, 'altitude.relative_m')), yawDeg: yaw,
@@ -346,12 +389,23 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
         onChange={(e) => setAntenna({ ...antenna, [key]: e.target.value === '' ? null : Number(e.target.value) })} />
       <small>{unit}</small></label>;
 
-  return <div className="sar-zoom sar-guide">
-    <p className="sar-lead">{t('sar.lead')}</p>
+  return <div className={`sar-zoom sar-guide${simple ? ' is-simple' : ''}`}>
+    <div className="sar-modebar">
+      {!simple && <p className="sar-lead">{t('sar.lead')}</p>}
+      <div className="sar-seg" role="group" aria-label={t('sar.simple.label')}>
+        <button type="button" className={simple ? 'active' : ''} onClick={() => setSimple(true)}>{t('sar.simple.on')}</button>
+        <button type="button" className={!simple ? 'active' : ''} onClick={() => setSimple(false)}>{t('sar.simple.off')}</button>
+      </div>
+    </div>
+    <SarAlerts prfHz={antenna.prfHz} imagesDone={data.ok === true ? imagesDone : undefined} />
+    <LinkBanner report={report} />
     <div className={`sar-next${running ? ' is-running' : ''}`}><b>{t('sar.next.title')}</b><span>{next}</span></div>
+    {latest !== null && <LatestImage base={data.base} flight={latest.flight} pass={latest.pass} found={latest.found} total={latest.total} />}
+    {data.base !== '' && <CansarQuickCard base={data.base} />}
 
     <Step n={1} title={t('sar.step.check')} help={t('sar.step.checkHelp')} level={step1} open={step1 !== 'good'}>
-      <CheckList items={checks} />
+      {simple && checks.every((c) => c.level === 'good') ? <p className="sar-ok">{t('sar.simple.allGood', { n: checks.length })}</p>
+        : <CheckList items={simple ? checks.filter((c) => c.level !== 'good') : checks} />}
     </Step>
 
     <Step n={2} title={t('sar.step.line')} help={t('sar.step.lineHelp')} level={step2 === 'unknown' ? 'now' : step2} open>
@@ -368,7 +422,9 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
         onPick={pick}
         pickHint={mapMode === 'reflector' ? t('cr.pick') : pickNext === 'start' ? t('sar.pick.start') : t('sar.pick.end')}
         height={360}
+        onPrefetch={(box, z) => void prefetchTiles(box, z)}
       />
+      {tileMsg !== null && <p className={tileMsg.ok ? 'sar-hint' : 'sar-warn'}>{tileMsg.text}</p>}
       <div className="sar-line-tools">
         <button type="button" disabled={here === null} onClick={() => { if (here) { setDraft({ ...draft, start: here }); setPickNext('end'); } }}>{t('sar.plan.useHere')}</button>
         <button type="button" disabled={!draft.start || !draft.end} onClick={() => setDraft({ ...draft, start: draft.end, end: draft.start })}>{t('sar.plan.reverse')}</button>
@@ -377,6 +433,7 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
         <button type="button" onClick={() => { setDraft({ ...draft, start: null, end: null }); setPickNext('start'); }}>{t('sar.plan.clear')}</button>
       </div>
       {line && <p className={step2 === 'bad' ? 'sar-bad' : 'sar-ok'}>{t('sar.plan.lineInfo', { m: line.lengthM.toFixed(1), deg: line.headingDeg.toFixed(0), lead: lead.toFixed(0) })}</p>}
+      {!simple && <>
       <div className="sar-cr">
         <div className="sar-cr-head"><b>{t('cr.title')}</b><small>{t('cr.help')}</small></div>
         {reflectors.length === 0 ? <p className="sar-hint">{t('cr.none')}</p> : <table className="sar-table"><tbody>
@@ -389,6 +446,11 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
           </tr>; })}
         </tbody></table>}
         <div className="sar-line-tools">
+          <button type="button" disabled={survey === null || survey.spreadM > SURVEY_MAX_SPREAD_M} title={t('cr.surveyHint')}
+            onClick={() => { if (survey && survey.spreadM <= SURVEY_MAX_SPREAD_M) setReflectors([...reflectors, survey.point]); }}>
+            {survey === null ? t('cr.surveyNone')
+              : survey.spreadM > SURVEY_MAX_SPREAD_M ? t('cr.surveyMoving')
+                : t('cr.survey', { n: survey.n, cm: (survey.spreadM * 100).toFixed(0) })}</button>
           <button type="button" disabled={reflectors.length === 0} onClick={() => setReflectors([])}>{t('cr.clear')}</button>
           <a className="sar-btn" download="reflectors.csv" href={`data:text/csv;charset=utf-8,${encodeURIComponent(crCsv)}`}>{t('cr.csv')}</a>
           <a className="sar-btn" download="radar.json" href={`data:application/json;charset=utf-8,${encodeURIComponent(radarJson(antenna))}`}>{t('cr.radarJson')}</a>
@@ -432,6 +494,7 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
         {coordField('sar.plan.start', draft.start, (p) => setDraft({ ...draft, start: p }))}
         {coordField('sar.plan.end', draft.end, (p) => setDraft({ ...draft, end: p }))}
       </details>
+      </>}
     </Step>
 
     <Step n={3} title={t('sar.step.cond')} help={t('sar.step.condHelp')} level={step3} open={step3 !== 'good'}>
@@ -446,9 +509,11 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
           <label className="sar-check"><input type="checkbox" checked={draft.requireRtk} onChange={(e) => setDraft({ ...draft, requireRtk: e.target.checked })} />{t('sar.plan.requireRtk')}</label>
           <label className="sar-check"><input type="checkbox" checked={draft.rtlOnAbort} onChange={(e) => setDraft({ ...draft, rtlOnAbort: e.target.checked })} />{t('sar.plan.rtlOnAbort')}</label>
           <label className="sar-check"><input type="checkbox" checked={draft.rtlOnDone} onChange={(e) => setDraft({ ...draft, rtlOnDone: e.target.checked })} />{t('sar.plan.rtlOnDone')}</label>
+          <label className="sar-check" title={t('sar.plan.geofenceHint')}><input type="checkbox" checked={draft.geofence !== false} onChange={(e) => setDraft({ ...draft, geofence: e.target.checked })} />{t('sar.plan.geofence')}</label>
         </div>
       </div>
       <PlanBudget draft={draft} wind={fcxReport?.wind ?? null} antenna={antenna} />
+      {!simple && <>
       <details className="sar-more"><summary>{t('sar.plan.advanced')}</summary>
         <p className="sar-hint">{t('sar.plan.advancedHelp')}</p>
         <div className="sar-plan-grid">
@@ -468,6 +533,7 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
           </div>
         </div>
       </details>
+      </>}
       {problems.length > 0
         ? <ul className="sar-problems">{problems.map((p) => <li key={p.key}>{t(p.key, p.vars)}</li>)}</ul>
         : <p className="sar-ok">{t('sar.plan.ok')}</p>}
@@ -516,6 +582,9 @@ export function SarPassZoom({ deviceId: pinned, readOnly = false }: { deviceId?:
 }
 
 const ENDURANCE_KEY = 'viz.sar.enduranceMin.v1';
+const SIMPLE_KEY = 'viz.sar.simple.v1';
+/** 측량 3 초 동안 위치가 이만큼 넘게 흩어지면 움직이는 중 — 리플렉터로 쓰지 않는다 */
+const SURVEY_MAX_SPREAD_M = 0.3;
 
 /** 바람이 빔에 주는 영향 · 배터리 예산 — 계획을 바꾸면 바로 다시 계산한다. */
 function PlanBudget({ draft, wind, antenna }: { draft: SarPlanDraft; wind: { speedMps: number | null; fromDeg: number | null } | null; antenna: AntennaDraft }) {

@@ -32,7 +32,7 @@ export type AntennaDraft = {
 /** 예시 값 — 레이더 팀이 실제 사양으로 바꾼다 (drone/sar_image/example_radar.json 과 같다). */
 export function defaultAntenna(): AntennaDraft {
   return { side: 'right', depressionDeg: 45, elBeamwidthDeg: 40, azBeamwidthDeg: 30, rangeMinM: 5, rangeMaxM: 60,
-    wavelengthM: 0.03123, bandwidthHz: 300e6, prfHz: 200,
+    wavelengthM: 0.051688, bandwidthHz: 50e6, prfHz: 200,     // 5.8 GHz · AD9361 SDR (drone/sar_image/example_radar_sdr.json)
     antFwdM: 0, antRightM: 0, antDownM: 0, gnssFwdM: null, gnssRightM: null, gnssDownM: null };
 }
 
@@ -204,4 +204,42 @@ export function reflectorInBeam(a: AntennaDraft, at: LatLon, hM: number, att: At
   const lit = db > 0 && Math.abs(azDeg) <= a.azBeamwidthDeg / 2 && Math.abs(elDeg) <= a.elBeamwidthDeg / 2
     && slantM >= a.rangeMinM && slantM <= a.rangeMaxM;
   return { lit, azDeg, elDeg, slantM };
+}
+
+/**
+ * 재처리용 기록을 `sar_start` 파라미터로 — 규약이 숫자 사전이라 목록을 숫자 키로 펼친다.
+ * 드론 `sar_pass.mission.reflectors_from_params` · `radar_from_params` 가 다시 모은다(키 이름은 verify:sar 가 맞춰 본다).
+ */
+export function provenanceParams(reflectors: readonly LatLon[], a: AntennaDraft): Record<string, number> {
+  const out: Record<string, number> = { cr_n: Math.min(reflectors.length, 32) };
+  reflectors.slice(0, 32).forEach((p, i) => { out[`cr${i}_lat`] = p.lat; out[`cr${i}_lon`] = p.lon; });
+  out.ant_side = a.side === 'right' ? 1 : -1;
+  out.ant_depression_deg = a.depressionDeg;
+  out.ant_el_bw_deg = a.elBeamwidthDeg;
+  out.ant_az_bw_deg = a.azBeamwidthDeg;
+  out.ant_range_min_m = a.rangeMinM;
+  out.ant_range_max_m = a.rangeMaxM;
+  if (a.wavelengthM != null) out.ant_wavelength_m = a.wavelengthM;
+  if (a.bandwidthHz != null) out.ant_bandwidth_hz = a.bandwidthHz;
+  if (a.prfHz != null) out.ant_prf_hz = a.prfHz;
+  out.ant_off_f = a.antFwdM ?? 0; out.ant_off_r = a.antRightM ?? 0; out.ant_off_d = a.antDownM ?? 0;
+  if (a.gnssFwdM != null && a.gnssRightM != null && a.gnssDownM != null) {
+    out.gnss_off_f = a.gnssFwdM; out.gnss_off_r = a.gnssRightM; out.gnss_off_d = a.gnssDownM;
+  }
+  return out;
+}
+
+/**
+ * 리플렉터 자리 측량 — 드론(또는 RTK 수신기)을 리플렉터 옆에 세워 두고 최근 몇 초 위치를 평균한다.
+ * 위성 사진은 실제와 1~3 m 어긋나기 쉽다. 이 방법은 RTK Fixed 면 cm 단위다. 흩어짐(표준편차, m)도 같이 낸다.
+ */
+export function surveyPoint(samples: readonly { lat: number | null; lon: number | null; atMs: number }[], nowMs: number, windowMs = 3000):
+  { point: LatLon; n: number; spreadM: number } | null {
+  const pts = samples.filter((s): s is { lat: number; lon: number; atMs: number } => s.lat !== null && s.lon !== null && nowMs - s.atMs <= windowMs);
+  if (pts.length < 3) return null;
+  const lat = pts.reduce((a, p) => a + p.lat, 0) / pts.length;
+  const lon = pts.reduce((a, p) => a + p.lon, 0) / pts.length;
+  const c = { lat, lon };
+  const d2 = pts.map((p) => { const d = toLocal(c, p); return d.n * d.n + d.e * d.e; });
+  return { point: c, n: pts.length, spreadM: Math.sqrt(d2.reduce((a, b) => a + b, 0) / pts.length) };
 }
