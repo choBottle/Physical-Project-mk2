@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/choBottle/Physical-Project-mk2/hardware/HW-interface/twin-entity.schema.json",
+  "title": "Twin entity (engine neutral)",
+  "description": "hardware/twin/twin_gateway.py 가 내보내는 트윈 엔티티 한 건. 좌표는 건물 기준 ENU (x 동, y 북, z 위, m), yaw 는 +x 기준 반시계 + (rad). coordinate-contract.md 부록.",
+  "type": "object",
+  "required": ["op"],
+  "oneOf": [
+    {
+      "properties": {"op": {"const": "upsert"}},
+      "required": ["op", "id", "kind", "pose"]
+    },
+    {
+      "properties": {"op": {"const": "remove"}},
+      "required": ["op", "id"]
+    },
+    {
+      "properties": {"op": {"const": "attrs"}},
+      "required": ["op", "source", "attrs"]
+    }
+  ],
+  "properties": {
+    "op": {"enum": ["upsert", "remove", "attrs"]},
+    "id": {"type": "string", "description": "로봇: robot_<node>_<type>_<robot_id>, 360 장애물: obs_<source>_<id>"},
+    "kind": {"enum": ["robot", "obstacle"]},
+    "label": {"type": "string"},
+    "source": {"type": "string", "description": "보낸 쪽 (중계 파이 node_id, 360 source_id/camera_id, Go1 camera_id)"},
+    "pose": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {
+        "x": {"type": "number"},
+        "y": {"type": "number"},
+        "z": {"type": "number"},
+        "yaw": {"type": "number"}
+      }
+    },
+    "size": {
+      "type": "object",
+      "properties": {"x": {"type": "number"}, "y": {"type": "number"}, "z": {"type": "number"}}
+    },
+    "attrs": {"type": "object", "description": "로봇: vx, vy, wz(반시계 +), estop, mode, seq. 장애물: confidence, group. op attrs: moving, near_obstacle, detections"},
+    "ts": {"type": "number", "description": "게이트웨이가 받은 시각 (epoch s)"}
+  }
+}

@@ -11,7 +11,7 @@
 | 검출 모델 (camera360 전체) | 설정만으로 된다 | config의 `backend` 한 줄 |
 | AI 프레임워크 provider | 설정 파일 + 함수 하나 | `ai/perception-framework` 의 `model_config` |
 | 트윈 추가 (Unity와 함께 다른 뷰어) | 설정만으로 된다 | 받는 곳을 쉼표로 추가 |
-| 트윈 교체 (Unity 없이) | 받는 쪽 코드 필요, 보내는 쪽은 그대로 | `hardware/HW-interface/twin_listen.py` 참고 |
+| 트윈 교체 (Gazebo 등, Unity 없이) | 설정만으로 된다 (1.0.3) | `hardware/twin/twin_gateway.py` (§3-2) |
 | 로봇 명령을 Unity가 아닌 곳에서 | 아직 Unity 프로토콜 | §3-3 |
 
 ## 1. 360 카메라
@@ -153,7 +153,22 @@ HW_UNITY_IP=<unity-pc>,<viewer-pc>
 `hardware/HW-interface/twin_listen.py`는 이 세 포트를 받아 풀어 찍는 참조 수신기다.
 Unity가 아닌 뷰어를 만들 때 출발점으로 쓴다.
 
-### 3-2. 패킷 형식과 좌표
+### 3-2. Gazebo 등 다른 트윈 — 트윈 게이트웨이 (1.0.3)
+
+`hardware/twin/twin_gateway.py`가 위 세 패킷을 받아 엔진 중립 모델(건물 기준 ENU)로 바꾸고,
+고른 트윈으로 내보낸다. 송신기는 받는 곳을 하나 더 줄 뿐 그대로다.
+
+| sink | 하는 일 |
+|------|---------|
+| `gazebo[:월드]` | gz sim(Harmonic 이상)에 모델을 만들고(`create`) 옮기고(`set_pose`) 지운다(`remove`) |
+| `udp:주소:포트` | 중립 엔티티 JSON을 한 줄씩 보낸다 — 웹 3D 뷰어, ROS 2 브리지 등 |
+| `모듈:클래스` | `handle(entity)` 하나를 가진 직접 만든 트윈 |
+
+중립 엔티티 형식은 `hardware/HW-interface/twin-entity.schema.json`, 실행과 확인 기록은
+[hardware/twin/README.md](../../hardware/twin/README.md). 2026-10-27에 Gazebo Harmonic(gz sim 8.11)
+에서 로봇 생성·이동, 360 장애물 생성·삭제를 확인했다.
+
+### 3-3. 패킷 형식과 좌표
 
 | 포트 | 내용 | 형식 정의 |
 |------|------|-----------|
@@ -167,18 +182,19 @@ Unity가 아닌 뷰어를 만들 때 출발점으로 쓴다.
 `position`은 카메라 슬라이스 기준 상대 좌표라서, 월드에 놓으려면 받는 쪽이 카메라 위치와
 방위를 더해야 한다(Unity에서는 `Anchor360ObstacleReceiver`의 `yawOffsetDeg`).
 
-### 3-3. 아직 Unity에 묶인 것 (1.x 로드맵)
+### 3-4. 아직 Unity에 묶인 것 (1.x 로드맵)
 
-- **좌표 규약.** 송신기가 Unity 월드 좌표로 보낸다. 트윈을 바꿔도 로봇 코드는 안 바뀌게
-  건물 기준 ENU로 옮기는 계획이 `coordinate-contract.md` 부록에 있다. 지금 바꾸면 현재
-  Unity 씬이 깨지므로 1.0에서는 하지 않는다.
-- **로봇 명령 경로.** `unity_bridge.py`(UDP 15100, 15110 → 15101, 15102)의 명령 형식은
-  Unity 코드에서 뽑아낸 것이고 `YAW_CALIB` 같은 Unity 전용 명령이 있다. 다른 트윈에서
-  로봇을 움직이려면 이 형식을 그대로 보내야 한다. 장기적으로는 서버의 MQTT 명령 경로
-  (`hardware/schema/physical_command.proto`, `ai/interface-spec`)로 옮긴다.
+- **좌표 규약.** 송신기가 Unity 월드 좌표로 보낸다. 다른 트윈은 게이트웨이(§3-2)가 ENU로
+  바꿔 주므로 영향이 없다. 송신기 자체를 ENU로 옮기는 계획은 `coordinate-contract.md` 부록에
+  있고, Unity 씬과 함께 바꿔야 해서 1.x에서 한다.
+- **트윈 → 로봇 명령.** 게이트웨이는 트윈으로 보내기만 한다. `unity_bridge.py`(UDP 15100,
+  15110 → 15101, 15102)의 명령 형식은 Unity 코드에서 뽑아낸 것이고 `YAW_CALIB` 같은 Unity 전용
+  명령이 있다. Gazebo에서 로봇을 움직이려면 이 형식을 그대로 보내야 한다. 장기적으로는 서버의
+  MQTT 명령 경로(`hardware/schema/physical_command.proto`, `ai/interface-spec`)로 옮긴다.
 - **5009 한 포트에 두 종류.** 장애물과 모션을 필드 유무로 가른다. 새 수신기도 같은 규칙을
   따라야 한다.
-- **JSON Schema가 없는 패킷.** 5009와 15201은 문서로만 정의돼 있다.
+- **JSON Schema가 없는 송신 패킷.** 5009와 15201은 문서로만 정의돼 있다. 게이트웨이가
+  내보내는 중립 엔티티에는 스키마가 있다.
 
 ## 4. 라이선스
 
