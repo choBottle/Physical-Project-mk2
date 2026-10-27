@@ -39,6 +39,15 @@ ports, database migrations and image versions.
   `models.yoloe.backend` lets another detector fill the `yoloe` slot; the
   slot name, output folders and Redis stream names are unchanged. Overlay
   colors no longer need Ultralytics.
+- **(1.0.2) Stream server sources from a file.** `server_stream_multi_source.py`
+  reads its sources from `camera360/sources.json` (or `--sources`,
+  `PD_SOURCES`): name, port, `kind` (`upload`, `mjpeg`, `drone_api`), device
+  video port and path, camera number and MQTT port. Without the file it uses
+  the same four sources as before. Pull and MQTT ports are no longer fixed in
+  code, addresses for any source come from `--host name=addr`,
+  `PD_HOST_<NAME>` or `hosts.local.json`, and `vision_infer.py` takes its
+  device list from the same file. `--robot1/--robot2/--drone` and
+  `--robot-cam` still work.
 - `ai/perception-framework`: optional `ultralytics` extra.
 
 ### Changed

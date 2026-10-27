@@ -100,6 +100,7 @@ import argparse
 import contextlib
 import fcntl
 import json
+import os
 import signal
 import socket
 import sys
@@ -114,9 +115,27 @@ import yaml
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from geo import DiskStates, GeoLocator, frame_ts, redis_lookup, to_epoch  # noqa: E402
-DEVICES = ("cam360", "drone", "robot1", "robot2")
+
+
+def _load_devices():
+    """기기 목록 = 스트림 서버의 소스 목록 (환경변수 PD_SOURCES > sources.json > 기본 4개).
+    sources.json 은 이 파일 옆이나 한 단계 위(data_stream/vision/ 배치)에서 찾는다."""
+    names, aliases = ["cam360", "drone", "robot1", "robot2"], {"camera": "cam360", "360": "cam360"}
+    env = os.environ.get("PD_SOURCES")
+    for f in ([Path(env)] if env else [HERE / "sources.json", HERE.parent / "sources.json"]):
+        if f.is_file():
+            try:
+                srcs = json.loads(f.read_text(encoding="utf-8"))["sources"]
+                names = [str(x["name"]) for x in srcs]
+                aliases = dict((str(a).lower(), str(x["name"])) for x in srcs for a in x.get("aliases") or [])
+            except (OSError, ValueError, KeyError, TypeError) as e:
+                raise SystemExit("소스 목록 %s 을 못 읽었습니다: %s" % (f, e))
+            break
+    return tuple(names), aliases
+
+
+DEVICES, DEVICE_ALIASES = _load_devices()
 MODELS = ("yoloe", "unidepth", "moge2_aerial")
-DEVICE_ALIASES = {"camera": "cam360", "360": "cam360"}
 MODEL_ALIASES = {"yoloe-pf": "yoloe", "yoloe_pf": "yoloe",
                  "moge": "moge2_aerial", "moge2": "moge2_aerial", "moge2-aerial": "moge2_aerial",
                  "moge2aerial": "moge2_aerial"}

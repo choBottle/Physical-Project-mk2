@@ -41,8 +41,9 @@
    ```
 
 2. 스트림 서버가 영상을 끌어올 로봇·드론 Pi 주소를 준다. 우선순위는 명령행
-   `--robot1/--robot2/--drone` > 환경변수 `PD_HOST_ROBOT1`, `PD_HOST_ROBOT2`,
-   `PD_HOST_DRONE` > `camera360/hosts.local.json`(커밋하지 않는다) 순이다. 옛 기기의
+   `--host <소스>=<주소>`(예전 `--robot1/--robot2/--drone`도 된다) > 환경변수 `PD_HOST_<소스>`
+   (`PD_HOST_ROBOT1` 등) > `camera360/hosts.local.json`(커밋하지 않는다) 순이다. 소스 목록 자체는
+   `camera360/sources.json`이다. 옛 기기의
    `hosts.local.json`을 그대로 복사해 와도 된다.
 3. 방화벽에서 10001~10004, 6380을 tailnet 쪽에만 연다.
 4. WSL에서 돌린다면 WSL을 재시작할 때마다 Redis를 다시 띄워야 한다.

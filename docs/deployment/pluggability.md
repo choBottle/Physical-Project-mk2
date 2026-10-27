@@ -7,7 +7,8 @@
 | 바꾸려는 것 | 지금 | 방법 |
 |-------------|------|------|
 | 360 카메라 (Insta360 Pro2 → 다른 기종) | 설정만으로 된다 | `camera360/upload_equirect.py` |
-| 360 검출 모델 (YOLO-World → 다른 모델) | 설정만으로 된다 | config의 `backend` 한 줄 |
+| 영상 스트림 서버에 소스 추가 | 설정만으로 된다 | `camera360/sources.json` (§1-1) |
+| 검출 모델 (camera360 전체) | 설정만으로 된다 | config의 `backend` 한 줄 |
 | AI 프레임워크 provider | 설정 파일 + 함수 하나 | `ai/perception-framework` 의 `model_config` |
 | 트윈 추가 (Unity와 함께 다른 뷰어) | 설정만으로 된다 | 받는 곳을 쉼표로 추가 |
 | 트윈 교체 (Unity 없이) | 받는 쪽 코드 필요, 보내는 쪽은 그대로 | `hardware/HW-interface/twin_listen.py` 참고 |
@@ -44,9 +45,32 @@ python camera360/upload_equirect.py pano1.jpg pano2.jpg
 - 카메라를 두 대 이상 쓰면 `--camera-id`를 다르게 주고 `anchor360_live.py --watch-dir`로
   각 폴더를 본다.
 
-아직 고정된 것: `server_stream_multi_source.py`의 소스 목록(cam360 10001, drone 10002,
-robot1 10003, robot2 10004)은 코드에 있다. 다섯 번째 소스는 `SOURCES`와 끌어오는 방식을
-코드에서 추가해야 한다. 360 카메라를 바꾸는 데는 영향이 없다(10001로 올리면 된다).
+## 1-1. 영상 스트림 서버의 소스 (1.0.2)
+
+`server_stream_multi_source.py`의 소스 목록은 `camera360/sources.json`에 있다. 소스를 더하거나
+포트, 끌어오는 방식을 바꿀 때 코드를 고치지 않는다. 파일이 없으면 지금과 같은 기본 4개
+(cam360 10001, drone 10002, robot1 10003, robot2 10004)로 돈다. `vision_infer.py`도 같은
+파일에서 기기 목록을 읽는다.
+
+| kind | 영상을 얻는 방식 | 필요한 칸 |
+|------|------------------|-----------|
+| `upload` | 그 포트로 올라오는 것만 받는다 (`POST /upload_pano`, `/upload`) | 없음 |
+| `mjpeg` | `http://<주소>:<video_port><path>`의 MJPEG를 끌어온다 | `video_port`, `path`(`{cam}` 자리), `cam` |
+| `drone_api` | 드론 agent의 `/api/frame` 롱폴 | `video_port`, `cam` |
+
+`mqtt_port`가 있으면 그 주소의 MQTT 전체 토픽을 상태로 받고, `null`이면 받지 않는다. 주소는
+이 파일에 쓰지 않는다. `hosts.local.json`, 환경변수 `PD_HOST_<소스>`, 또는 `--host 소스=주소`로
+준다. 다른 목록 파일은 `--sources <파일>`이나 `PD_SOURCES`로 고른다.
+
+예) 로봇 한 대와 두 번째 360 카메라를 더한다.
+
+```json
+{"name": "robot3", "port": 10005, "kind": "mjpeg", "video_port": 8090, "path": "/stream/{cam}", "cam": 1, "mqtt_port": 1883},
+{"name": "theta",  "port": 10006, "kind": "upload"}
+```
+
+새 포트는 방화벽에서 열고 [docs/PORTS.md](../PORTS.md)에 적는다. 콘솔의 객체 탐지 추론 스트림
+카드는 포트 줄을 더해 본다.
 
 ## 2. 검출 모델
 
