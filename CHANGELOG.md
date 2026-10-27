@@ -8,6 +8,12 @@ ports, database migrations and image versions.
 
 ## [Unreleased]
 
+## [1.0.0-rc.2] - 2026-10-27
+
+Second release candidate. It adds the 1.0.x decoupling steps (marked 1.0.1,
+1.0.2 and 1.0.3 below) to 1.0.0 before the real-hardware end-to-end run; see
+`docs/RELEASE.md` section 4.
+
 ### Added
 
 - `docs/deployment/endpoints.md`: what to change on each device when the
