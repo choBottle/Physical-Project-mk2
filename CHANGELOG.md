@@ -8,6 +8,23 @@ ports, database migrations and image versions.
 
 ## [Unreleased]
 
+### Added
+
+- `docs/deployment/twin-demo.md`: recorded run with screenshots. A 360 photo
+  goes through `anchor360_live.py` detection and the twin gateway into
+  Gazebo; the operator console shows the Gazebo screen (in the slot used for
+  Unity), the 360 camera stream and a simulated robot reported through the
+  central stack. `hardware/twin/demo/run-demo.sh` starts the Gazebo side.
+
+### Fixed
+
+- Twin gateway: Gazebo updates are batched per tick (`create_multiple`,
+  `set_pose_vector`) instead of one `gz service` process per entity, which
+  fell behind and timed out with a 10 Hz robot plus 360 obstacles. A missing
+  `gz` binary is logged instead of silently stopping the Gazebo thread.
+- `anchor360_live.py` prints each destination as `host:port` instead of
+  `host:port:port` when a port is given in `--unity-ip`.
+
 ## [1.0.0-rc.2] - 2026-10-27
 
 Second release candidate. It adds the 1.0.x decoupling steps (marked 1.0.1,

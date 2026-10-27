@@ -166,7 +166,8 @@ Unity가 아닌 뷰어를 만들 때 출발점으로 쓴다.
 
 중립 엔티티 형식은 `hardware/HW-interface/twin-entity.schema.json`, 실행과 확인 기록은
 [hardware/twin/README.md](../../hardware/twin/README.md). 2026-10-27에 Gazebo Harmonic(gz sim 8.11)
-에서 로봇 생성·이동, 360 장애물 생성·삭제를 확인했다.
+에서 로봇 생성·이동, 360 장애물 생성·삭제를 확인했다. 360 사진 → 실제 검출 → Gazebo, 그리고 가시화
+콘솔에 Gazebo 화면을 띄운 시연 기록은 [twin-demo.md](twin-demo.md).
 
 ### 3-3. 패킷 형식과 좌표
 

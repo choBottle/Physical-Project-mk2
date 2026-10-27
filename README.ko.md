@@ -161,6 +161,7 @@ npm run dev
 | [엣지](docs/deployment/edge.md) | 구역 엣지 노드와 장치 노드 설치 |
 | [전 구간 시험](docs/deployment/e2e.md) | 범위, 실행 기록, 실장비 절차 |
 | [서버 주소 변경](docs/deployment/endpoints.md) | 객체 탐지·스트림·앵커 서버나 Unity PC를 옮겼을 때 바꿀 곳 |
+| [트윈 시연](docs/deployment/twin-demo.md) | 360 사진 → 검출 → Gazebo, 콘솔에 Gazebo · 360 카메라 · 로봇 (캡처) |
 | [바꿔 끼우기](docs/deployment/pluggability.md) | 다른 360 카메라, 다른 검출 모델, Unity가 아닌 트윈 |
 | [보안](docs/deployment/security.md) | 노출 정책, 토큰, 터널, 운영 전환 체크리스트 |
 | [운영](docs/deployment/operations.md) | 재기동, 업그레이드, 백업, 알림별 대응 |
