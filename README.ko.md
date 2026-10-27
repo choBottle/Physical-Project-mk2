@@ -30,12 +30,32 @@ OpenTelemetry, Tailscale 은 지금 쓰는 구현이고 고정된 의존이 아�
 - **360 카메라 → Unity 를 데이터 규약 v2 로.** `camera360/anchor360_live.py` 와 Unity 수신 스크립트
   `Anchor360ObstacleReceiver.cs` 가 v2 이름(`label`, `position`, `ground_dist_m`, `size_m`, `bbox`, `confidence`)을 쓴다.
   수신 스크립트는 v1 패킷도 받으므로 서버와 Unity 를 다른 날 바꿔도 된다.
+- **바꿔 끼울 수 있게.** 검출 모델은 설정으로 고르고, 어느 equirect 360 카메라든 올릴 수 있고, 스트림 서버 소스는
+  `camera360/sources.json` 에서 읽고, 트윈 게이트웨이가 Unity 옆에 Gazebo 등 다른 트윈을 붙인다.
+  [docs/deployment/pluggability.md](docs/deployment/pluggability.md).
 - **관제 화면 하나로.** 드론 팀의 화면 사본을 `visualization/viz-debugger` 로 합쳤고, 드론 파이썬 패키지는
   [`drone/`](drone/) 으로 옮겼다.
 - **장비 없는 전 구간 시험.** `deploy/scripts/e2e-sim.sh` 가 라즈베리파이 센서 노드를 컨테이너로 띄워 중앙 스택에 붙이고,
   계측값이 관제 구독, DB, Prometheus 까지 가는지 확인한다.
 - **회귀 수정.** 통합 저장소와 원래 팀 브랜치를 같은 입력으로 비교해 찾은 것: camera360 설정의 모델 경로, Go1 로봇 노드의
   빈 환경변수, 흐림 처리한 시료 사진의 화질. 자세한 내용은 `CHANGELOG.md`.
+
+## 화면
+
+배포하면 이렇게 보인다. 모두 이 저장소의 코드로 찍은 것이고, 사진 속 얼굴은 흐림 처리했다.
+
+| | |
+|---|---|
+| ![Unity 디지털 트윈](docs/assets/readme-unity-twin.jpg) | ![검출된 장애물을 피하는 로봇 경로](docs/assets/readme-unity-path.jpg) |
+| **Unity 디지털 트윈.** 연구실 모델 안의 360 앵커 카메라 · 드론 · Go1. 360 카메라가 찾은 장애물이 이름 · 거리 구간 · 거리와 함께 놓인다. | **트윈 속 로봇 경로.** Go1 이 카메라가 알려 준 장애물을 피해 경로를 잡는다. 광선과 영역은 로봇과 앵커 카메라가 보는 범위다. |
+| ![360 사진에서 Gazebo 까지](docs/assets/twin-demo-pipeline.jpg) | ![가시화 콘솔의 Gazebo · 360 카메라 · 로봇](docs/assets/twin-demo-console.jpg) |
+| **같은 흐름, 트윈은 Gazebo.** 360 사진 → `anchor360_live.py` 검출 → [트윈 게이트웨이](hardware/twin/README.md) → Gazebo. Unity 가 없어도 된다. | **가시화 콘솔.** `viz-debugger` 에 Gazebo 트윈 · 360 카메라 영상 · 중앙 서버를 거친 로봇이 함께 뜨고, 트윈 화면과 360 영상을 같이 본다. |
+| ![Grafana 백엔드 개요](docs/assets/readme-grafana.jpg) | ![드론 SAR 패스 비교](drone/screenshots/31_SAR_%ED%8C%A8%EC%8A%A4%EB%B9%84%EA%B5%90.png) |
+| **관측.** 중앙 스택의 Grafana: 서비스 상태 · MQTT 수신과 Kafka · TimescaleDB 처리량 · 발행→저장 지연 · WebSocket 접속 · Loki 백엔드 로그. | **드론 SAR.** 콘솔에서 레이더 패스 두 개를 비교한 화면(일치도 · 밝기 변화). |
+
+Unity 프로젝트 자체는 이 저장소 밖에서 관리한다. Unity 가 쓰는 수신 스크립트(예: `camera360/Anchor360ObstacleReceiver.cs`)와
+받는 패킷은 여기 있고 [docs/deployment/pluggability.md](docs/deployment/pluggability.md) 에 적었다. Gazebo · 콘솔 캡처를
+만든 과정은 [docs/deployment/twin-demo.md](docs/deployment/twin-demo.md) 에 단계별로 적었다.
 
 ## 저장소 구성
 
