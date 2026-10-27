@@ -39,7 +39,8 @@
 | 백엔드 회귀 | `docker compose exec -e MK2_PROMETHEUS_URL=http://prometheus:9090 -e MK2_LOKI_URL=http://loki:3100 -e MK2_TEMPO_URL=http://tempo:3200 be-gateway python -m pytest -q` |
 | AI | `cd ai/perception-framework && pip install -e ".[dev,mqtt,kafka,otel,sim]" && pytest -q` |
 | 가시화 계약 | `cd visualization/contracts && python validate_examples.py` |
-| 드론 | `cd drone/viz-debugger/drone && pip install -e ".[test,image,base]" && pytest -q` |
+| 드론 | `cd drone && pip install -e ".[test,image,base]" && pytest -q` |
+| 가시화 화면 (드론 화면 포함) | `cd visualization/viz-debugger && npm ci && npm run typecheck && npm run build && npm run verify:sar` |
 
 ## 5. 라이선스
 

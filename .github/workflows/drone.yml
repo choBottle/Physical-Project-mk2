@@ -1,43 +1,42 @@
-# 드론 파트 자동 검사 — drone/ 이 바뀌는 PR·main 푸시에서 돈다.
+# 드론 파트 자동 검사 — drone/ 또는 화면(visualization/viz-debugger)이 바뀌는 PR·main 푸시에서 돈다.
 #   (모노레포 통합 때 drone/.github/ 에서 옮겼다 — 하위 폴더의 워크플로는 GitHub 가 실행하지 않는다.
 #    원본 Junho_drone 브랜치의 판은 그 브랜치에 그대로 있다.)
-#   1) 드론 파이썬 시험 (viz-debugger/drone, PX4 없이 시뮬레이터로)
-#   2) 화면 타입 검사 + 드론 쪽 규칙 검사(verify:sar 등)
+#   1) 드론 파이썬 시험 (drone/, PX4 없이 시뮬레이터로)
+#   2) 화면 타입 검사 · 빌드 + 드론 쪽 규칙 검사(verify:sar 등)
+#      화면의 정본은 visualization/viz-debugger 하나다(drone/viz-debugger 사본은 2차 병합 때 지웠다).
+#      verify:sar 는 드론 파이썬 상수(drone/sar_pass/mission.py 등)와 화면 숫자를 견주므로 두 폴더 어느 쪽이 바뀌어도 돈다.
 name: drone
 on:
   pull_request:
-    paths: ["drone/**", ".github/workflows/drone.yml"]
+    paths: ["drone/**", "visualization/viz-debugger/**", ".github/workflows/drone.yml"]
   push:
     branches: [main]
-    paths: ["drone/**", ".github/workflows/drone.yml"]
+    paths: ["drone/**", "visualization/viz-debugger/**", ".github/workflows/drone.yml"]
   workflow_dispatch:
 
 jobs:
   python:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    defaults: { run: { working-directory: drone/viz-debugger/drone } }
+    defaults: { run: { working-directory: drone } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12", cache: pip, cache-dependency-path: drone/viz-debugger/drone/pyproject.toml }
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: drone/pyproject.toml }
       - run: pip install -e ".[test,image,base]"
       - run: python -m pytest -q
 
   web:
-    # ⚠ 알려진 실패 — 원래 Junho_drone 브랜치에서도 2026-10-04 부터 실패했다. drone/viz-debugger 는 visualization/
-    #   의 화면 사본이라 그쪽에만 있는 contracts/ · places/ · equipment/ 를 ../../../ 로 참조한다.
-    #   화면 사본을 visualization/ 하나로 합치면(docs/OPEN_SOURCE_READINESS.md 「drone」) 이 잡은 그쪽으로 옮기고 이 줄을 지운다.
-    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    defaults: { run: { working-directory: drone/viz-debugger } }
+    defaults: { run: { working-directory: visualization/viz-debugger } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: "22", cache: npm, cache-dependency-path: drone/viz-debugger/package-lock.json }
+        with: { node-version: "22", cache: npm, cache-dependency-path: visualization/viz-debugger/package-lock.json }
       - run: npm ci
-      - run: npx tsc -p . --noEmit
+      - run: npm run -s typecheck
+      - run: npm run -s build
       - run: |
           for s in verify:sar verify:view-nodes verify:i18n-no-frozen verify:no-raw-korean verify:dep-rules verify:command-through-tracker; do
             echo "== $s"; npm run -s "$s"

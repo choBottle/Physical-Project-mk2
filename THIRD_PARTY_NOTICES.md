@@ -8,7 +8,7 @@
 | 경로 | 원 저작물 | 라이선스 | 비고 |
 |---|---|---|---|
 | [`osmocam/`](osmocam/) | [luisreysan/osmocam](https://github.com/luisreysan/osmocam) — "The OsmoCam authors" | MIT ([`osmocam/LICENSE`](osmocam/LICENSE)) | MJPEG 스트림 출력으로 개조한 판. 원 저작물이 참조한 프로젝트들의 고지는 [`osmocam/NOTICE.md`](osmocam/NOTICE.md) |
-| `drone/viz-debugger/drone/radar_team/` · `drone/viz-debugger/drone/tests/data/cansar/` | 레이더 팀 제공 코드(`cansar_pi.py` · `cansar.service` 등)와 시험용 원본 사본 | MIT (루트 [`LICENSE`](LICENSE)) | 원 저작자(레이더 팀)가 2026-10-26 MIT 공개에 동의. 원본을 그대로 보존하고 드론 쪽 수정은 `# [드론 쪽 제안 10/4]` 표시 · `cansar_pi.diff` 로 구분 |
+| `drone/radar_team/` · `drone/tests/data/cansar/` | 레이더 팀 제공 코드(`cansar_pi.py` · `cansar.service` 등)와 시험용 원본 사본 | MIT (루트 [`LICENSE`](LICENSE)) | 원 저작자(레이더 팀)가 2026-10-26 MIT 공개에 동의. 원본을 그대로 보존하고 드론 쪽 수정은 `# [드론 쪽 제안 10/4]` 표시 · `cansar_pi.diff` 로 구분 |
 
 ## 의존성으로만 쓰는 것 (저장소에 포함하지 않음)
 

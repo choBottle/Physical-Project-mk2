@@ -6,6 +6,18 @@
 
 ## [Unreleased]
 
+### 바뀜
+- **드론 화면 사본 정리(2차 병합)** — 화면의 정본은 `visualization/viz-debugger` 하나다. `drone/viz-debugger` 사본을 지우고
+  드론 파트만 가진 화면 변경(레이더 상태 · SAR 간단 모드 · cansar quick-look 카드 · 알림/소리 · 리플렉터 측량 · Pi 상태 칩 ·
+  패스 지오펜스 · 지도 미리 받기 · 재처리 조건 저장)을 `visualization/viz-debugger` 로 옮겼다.
+- 드론 파이썬(`sar_pass` · `rtk_relay` · `fc_watch` · `sar_data` · `sar_image` · `deploy/` · `radar_team/` · `tests/`)은
+  `drone/viz-debugger/drone/` → `drone/` 로 옮겼다. `visualization/viz-debugger/drone/` 의 옛 사본(1차 병합분)도 지웠다 —
+  그쪽에만 있던 `fc_watch` NaN → null 고침은 `drone/` 에 합쳤다.
+
+### 배포 변경
+- Pi 설치 경로: `pip install -e <저장소>/drone` · `sudo <저장소>/drone/deploy/pi/install.sh` (예전 `…/viz-debugger/drone`).
+  `install.sh` 는 제 위치 기준으로 코드를 찾으므로 옵션은 그대로다. 이미 설치한 Pi 는 `install.sh` 를 새 자리에서 한 번 다시 돌리면 된다.
+
 ## [1.0.0-rc.1] — 2026-10-26
 
 첫 공개 후보판. 정식 1.0 전에 남은 것은 [docs/RELEASE.md §3](docs/RELEASE.md#3-v100-출시-기준) (실 하드웨어 E2E · 인물 사진 처리 · viz-debugger 중복 정리).
