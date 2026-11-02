@@ -64,6 +64,9 @@ jobs:
       # unity_state_test 는 시험이 아니라 실물 유니티로 보내는 송신기라 뺀다.
       - name: pi 벤치 (go1_relay · physical_command · physical_command_node · unity_bridge)
         working-directory: hardware/pi
+        env:
+          # 노드 기본 스풀은 /var/lib/hw-node (Pi 에서 root 로 도는 경로) — 러너에선 쓸 수 없다
+          HW_SPOOL_PATH: ${{ runner.temp }}/hw-node/spool.jsonl
         run: |
           for m in go1_relay_test physical_command_test physical_command_node_test unity_bridge_test; do
             echo "== bench.$m"; python -m "bench.$m"
