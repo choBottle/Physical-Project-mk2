@@ -264,7 +264,9 @@ def upload_stitched(equirect_path, capture_id):
         with open(equirect_path, "rb") as f:
             files = {"file": ("equirect.jpg", f, "image/jpeg")}
             form = {"capture_id": capture_id, "camera_id": CAMERA_ID}
-            resp = requests.post(SERVER_UPLOAD_URL, files=files, data=form, timeout=60)
+            tok = os.environ.get("MK2_PANO_TOKEN", "")
+            resp = requests.post(SERVER_UPLOAD_URL, files=files, data=form, timeout=60,
+                                 headers={"X-MK2-Token": tok} if tok else {})
         return resp.status_code == 200
     except Exception as e:
         print(f"{ts()} [worker] upload error: {e}")
