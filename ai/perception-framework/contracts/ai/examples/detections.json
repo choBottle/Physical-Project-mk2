@@ -1,22 +1,19 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "message_id": "msg-detection-001",
   "source_id": "camera-01",
   "node_id": "edge-node-a",
   "zone_id": "zone-a",
   "entity_id": "camera-01",
   "channel": "detections",
-  "timestamp": "2026-08-25T12:00:00Z",
+  "timestamp": "2026-08-25T11:59:59.800Z",
   "sequence_id": 42,
-  "correlation_id": null,
   "coordinate_frame": "IMAGE",
   "payload": {
     "frame_ref": {
-      "source_id": "camera-01",
-      "capture_timestamp": "2026-08-25T11:59:59.800Z",
+      "camera_id": "camera-01",
       "sequence_id": 1042,
-      "frame_id": "frame-1042",
-      "time_sync_state": "SYNCED"
+      "timestamp": "2026-08-25T11:59:59.800Z"
     },
     "emitted_at": "2026-08-25T12:00:00Z",
     "inference_delay_ms": 200,
@@ -29,7 +26,10 @@
     "bbox_space": {
       "format": "absolute",
       "origin": "top-left",
-      "reference": {"width": 640, "height": 480}
+      "reference": {
+        "width": 640,
+        "height": 480
+      }
     },
     "association": "enabled",
     "corridor": null,
@@ -39,12 +39,28 @@
         "label": "person",
         "confidence": 0.94,
         "class_confidence": 0.91,
-        "bbox": {"x": 120, "y": 80, "width": 90, "height": 210},
+        "bbox": {
+          "x": 120,
+          "y": 80,
+          "width": 90,
+          "height": 210
+        },
         "approach": null,
-        "trail": [{"x": 151, "y": 180}, {"x": 165, "y": 185}],
+        "trail": [
+          {
+            "x": 151,
+            "y": 180
+          },
+          {
+            "x": 165,
+            "y": 185
+          }
+        ],
         "source_id": "camera-01",
         "link": {
-          "linked_sources": ["camera-02"],
+          "linked_sources": [
+            "camera-02"
+          ],
           "confidence": 0.82
         }
       }

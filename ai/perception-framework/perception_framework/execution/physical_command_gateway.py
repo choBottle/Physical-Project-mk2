@@ -59,6 +59,13 @@ from perception_framework.contracts.physical_command import (
 from perception_framework.registry.capability_registry import CapabilityRegistry, ProviderRegistration
 
 
+# Defaults for an action announced on the wire without catalog metadata:
+# the wire carries numeric maps only (hardware/schema/physical_command.proto).
+WIRE_CAPABILITY_VERSION = "wire"
+WIRE_PARAMETER_SCHEMA = "physical.Command.parameters:map<string,double>"
+WIRE_RESULT_SCHEMA = "physical.CommandResult.result:map<string,double>"
+
+
 def downlink_topic(device_id: str) -> str:
     return f"terminal/{device_id}/downlink"
 
@@ -87,11 +94,17 @@ class PhysicalCommandGateway:
         *,
         registry: CapabilityRegistry | None = None,
         capability_kind_prefix: str = "hardware.action",
+        capability_catalog: dict[str, Capability] | None = None,
     ) -> None:
         self._transport = transport
         self._serializer = serializer
         self._registry = registry
         self._capability_kind_prefix = capability_kind_prefix
+        # The wire Capability only names actions (hardware/schema/
+        # physical_command.proto: device_id + repeated actions). Richer
+        # per-action metadata (schemas, required resources, version) is
+        # edge-side knowledge supplied here; unknown actions get defaults.
+        self._capability_catalog = dict(capability_catalog or {})
         self._lock = threading.RLock()
         self._commands: dict[str, _TrackedCommand] = {}
         self._attached: set[str] = set()
@@ -211,10 +224,16 @@ class PhysicalCommandGateway:
                 record.terminal.set()
 
     def _on_status(self, body: dict) -> None:
-        status = CommandStatus(
-            command_id=body["command_id"], status=ExecutionStatus(body["status"]),
-            observed_at=body["observed_at"],
-        )
+        # The wire `state` is a free string ("EXECUTING", or a device-specific
+        # stage name). Only the non-terminal lifecycle vocabulary is tracked;
+        # anything else is progress detail this gateway does not interpret.
+        try:
+            status = CommandStatus(
+                command_id=body["command_id"], status=ExecutionStatus(body["status"]),
+                observed_at=body["observed_at"],
+            )
+        except ValueError:
+            return
         record = self._record(status.command_id)
         with self._lock:
             record.status = status.status
@@ -239,22 +258,35 @@ class PhysicalCommandGateway:
         with self._lock:
             record.cancel_response = response
 
-    def _on_capability(self, device_id: str, body: dict) -> None:
-        capability = Capability(
-            name=body["name"], version=body["version"],
-            parameter_schema=body["parameter_schema"], result_schema=body["result_schema"],
-            cancel_supported=body.get("cancel_supported", False),
-            required_resources=tuple(body.get("required_resources", ())),
+    def _capability_for(self, action: str) -> Capability:
+        known = self._capability_catalog.get(action)
+        if known is not None:
+            return known
+        return Capability(
+            name=action, version=WIRE_CAPABILITY_VERSION,
+            parameter_schema=WIRE_PARAMETER_SCHEMA, result_schema=WIRE_RESULT_SCHEMA,
+            cancel_supported=True,
         )
+
+    def _on_capability(self, device_id: str, body: dict) -> None:
+        """A wire Capability is the device's *complete* action list, so it
+        replaces whatever this device announced before."""
+        capabilities = [self._capability_for(str(action)) for action in body.get("actions", ())]
         with self._lock:
-            self._capabilities.setdefault(device_id, []).append(capability)
+            previous = self._capabilities.get(device_id, [])
+            self._capabilities[device_id] = capabilities
         if self._registry is None:
             return
-        self._registry.register_local(ProviderRegistration(
-            capability_kind=f"{self._capability_kind_prefix}.{capability.name}",
-            provider_id=device_id,
-            version=capability.version,
-            compatibility=capability.compatibility_profile(),
-            supported_inputs=(capability.parameter_schema,),
-            supported_outputs=(capability.result_schema,),
-        ))
+        current_names = {capability.name for capability in capabilities}
+        for capability in previous:
+            if capability.name not in current_names:
+                self._registry.unregister_local(f"{self._capability_kind_prefix}.{capability.name}", device_id)
+        for capability in capabilities:
+            self._registry.register_local(ProviderRegistration(
+                capability_kind=f"{self._capability_kind_prefix}.{capability.name}",
+                provider_id=device_id,
+                version=capability.version,
+                compatibility=capability.compatibility_profile(),
+                supported_inputs=(capability.parameter_schema,),
+                supported_outputs=(capability.result_schema,),
+            ))

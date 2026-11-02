@@ -174,22 +174,6 @@ export namespace physical {
         );
     }
 
-    /** TerminalStatus enum. */
-    enum TerminalStatus {
-
-        /** TERMINAL_STATUS_UNSPECIFIED value */
-        TERMINAL_STATUS_UNSPECIFIED = 0,
-
-        /** SUCCEEDED value */
-        SUCCEEDED = 1,
-
-        /** ABORTED value */
-        ABORTED = 2,
-
-        /** CANCELED value */
-        CANCELED = 3
-    }
-
     /**
      * Properties of a Command.
      * @deprecated Use physical.Command.$Properties instead.
@@ -223,6 +207,9 @@ export namespace physical {
 
         /** Command deadlineUnixMs. */
         deadlineUnixMs: (number|Long);
+
+        /** Command traceparent. */
+        traceparent: string;
 
         /**
          * Creates a new Command instance using the specified properties.
@@ -322,6 +309,9 @@ export namespace physical {
 
             /** Command deadlineUnixMs */
             deadlineUnixMs?: (number|Long|null);
+
+            /** Command traceparent */
+            traceparent?: (string|null);
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
@@ -1331,5 +1321,21 @@ export namespace physical {
 
         /** Shape of a Capability. */
         type $Shape = physical.Capability.$Properties;
+    }
+
+    /** TerminalStatus enum. */
+    enum TerminalStatus {
+
+        /** TERMINAL_STATUS_UNSPECIFIED value */
+        TERMINAL_STATUS_UNSPECIFIED = 0,
+
+        /** SUCCEEDED value */
+        SUCCEEDED = 1,
+
+        /** ABORTED value */
+        ABORTED = 2,
+
+        /** CANCELED value */
+        CANCELED = 3
     }
 }

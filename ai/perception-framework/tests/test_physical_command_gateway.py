@@ -36,11 +36,12 @@ from perception_framework.providers.physical_command_protobuf import (
 from perception_framework.registry.capability_registry import CapabilityRegistry
 
 
-def _gateway(transport=None, registry=None):
+def _gateway(transport=None, registry=None, catalog=None):
     return PhysicalCommandGateway(
         transport or InMemoryTransportProvider(),
         PhysicalCommandProtobufSerializerProvider(),
         registry=registry,
+        capability_catalog=catalog,
     )
 
 
@@ -145,26 +146,46 @@ def test_duplicate_resend_leaves_the_last_reported_acceptance_intact():
 
 
 def test_capability_announcement_registers_into_the_capability_registry():
+    """The wire Capability (hardware/schema/physical_command.proto) only names
+    actions; per-action metadata comes from the edge-side catalog."""
     transport = InMemoryTransportProvider()
     registry = CapabilityRegistry()
-    gateway = _gateway(transport, registry=registry)
+    navigate = Capability(
+        name="navigate.relative", version="1.0",
+        parameter_schema="schema://navigate-relative-params",
+        result_schema="schema://navigate-relative-result",
+        cancel_supported=True, required_resources=("mobility.base",),
+    )
+    gateway = _gateway(transport, registry=registry, catalog={"navigate.relative": navigate})
     gateway.attach("robot1")
 
     _device_reply(
         transport, "robot1",
-        Capability(
-            name="navigate.relative", version="1.0",
-            parameter_schema="schema://navigate-relative-params",
-            result_schema="schema://navigate-relative-result",
-            cancel_supported=True, required_resources=("mobility.base",),
-        ),
+        {"message_type": "capability", "payload": {"device_id": "robot1", "actions": ["navigate.relative", "ping"]}},
     )
 
     providers = registry.available_providers("hardware.action.navigate.relative")
     assert len(providers) == 1
     assert providers[0].provider_id == "robot1"
     assert providers[0].compatibility.required_runtime_tags == ("mobility.base",)
-    assert gateway.known_capabilities("robot1")[0].name == "navigate.relative"
+    assert [c.name for c in gateway.known_capabilities("robot1")] == ["navigate.relative", "ping"]
+    # An action without catalog metadata is still registered, with wire defaults.
+    assert registry.available_providers("hardware.action.ping")[0].version == "wire"
+
+
+def test_a_new_capability_announcement_replaces_the_previous_action_list():
+    transport = InMemoryTransportProvider()
+    registry = CapabilityRegistry()
+    gateway = _gateway(transport, registry=registry)
+    gateway.attach("robot1")
+
+    _device_reply(transport, "robot1", {"message_type": "capability",
+                                        "payload": {"device_id": "robot1", "actions": ["ping", "turn"]}})
+    _device_reply(transport, "robot1", {"message_type": "capability",
+                                        "payload": {"device_id": "robot1", "actions": ["ping"]}})
+
+    assert [c.name for c in gateway.known_capabilities("robot1")] == ["ping"]
+    assert registry.available_providers("hardware.action.turn") == []
 
 
 def test_unregister_device_drops_its_capabilities_only():

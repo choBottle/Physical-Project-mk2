@@ -35,7 +35,11 @@ def test_protobuf_binding_round_trips_typed_command():
     decoded = serializer.decode(serializer.encode(command))
     assert decoded["message_type"] == "command"
     assert decoded["payload"]["command_id"] == "c1"
-    assert decoded["payload"]["parameters"] == {"hard": True}
+    # The HW wire carries map<string, double>: a bool travels as 1.0.
+    assert decoded["payload"]["parameters"] == {"hard": 1.0}
+    # A non-W3C correlation id is not put into the wire traceparent field.
+    assert "correlation_id" not in decoded["payload"]
+    assert decoded["payload"]["deadline"] == 2000000000.0
 
 
 def test_async_cancel_is_real_and_state_survives_restart(tmp_path):

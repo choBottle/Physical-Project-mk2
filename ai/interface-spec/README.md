@@ -7,8 +7,14 @@
 
 ```text
 spec/     규약 문서 — 파트별로 실제로 지켜야 할 내용
-schema/   그 규약의 실제 메시지 형식(Protobuf/JSON)
 ```
+
+메시지 형식(스키마)은 여기 사본으로 두지 않는다 — 정본 한 벌만 둔다.
+
+- 물리 명령 Protobuf: [`hardware/schema/physical_command.proto`](../../hardware/schema/physical_command.proto)
+  (말단이 디코드에 쓰는 바로 그 스키마, package `physical`)
+- 물리 명령 JSON 표현(디버깅용): [`perception-framework/contracts/ai/physical-command.schema.json`](../perception-framework/contracts/ai/physical-command.schema.json)
+- 사본·생성물 어긋남은 저장소 루트 `python -I scripts/check_contracts.py` 가 잡는다.
 
 ## 지금 있는 규약
 

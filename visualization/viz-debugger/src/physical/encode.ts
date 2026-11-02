@@ -130,8 +130,14 @@ export function encodeCommand(input: CommandInput): Uint8Array {
   };
   // 파라미터가 없으면 **필드를 아예 안 넣는다.** 빈 맵을 넣어도 바이트는 같지만,
   // 「없음」과 「비어 있음」을 구별해 두는 편이 나중에 읽기 쉽다.
+  //
+  // 키는 **이름순으로** 넣는다. 맵 항목 순서는 뜻이 없지만 바이트는 바뀐다 — 정렬해 두면
+  // 하드웨어 쪽 파이썬(`SerializeToString(deterministic=True)`)과 바이트가 똑같아져서
+  // `verify:command-encode` 가 정본 바이트(hardware/schema/golden)와 그대로 견줄 수 있다.
   if (input.parameters !== undefined && Object.keys(input.parameters).length > 0) {
-    command.parameters = input.parameters;
+    command.parameters = Object.fromEntries(
+      Object.entries(input.parameters).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+    );
   }
   return physical.PhysicalCommandEnvelope.encode(
     physical.PhysicalCommandEnvelope.create({ command }),

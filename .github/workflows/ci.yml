@@ -128,6 +128,8 @@ jobs:
       - run: pip install jsonschema
       - run: python validate_examples.py
         working-directory: visualization/contracts
+      # 명령 proto 사본·생성 코드·golden 바이트·AI/가시화 예제가 정본과 어긋나면 실패 (scripts/check_contracts.py)
+      - run: pip install grpcio-tools==1.83.1 && python -I scripts/check_contracts.py
 
   ai:
     name: AI perception-framework

@@ -30,16 +30,20 @@ from perception_framework.risk.output import RiskJudgment
 
 
 CONTRACT_DIR = Path(__file__).parents[1] / "contracts" / "ai"
+# Single source of the common envelope / frame reference (monorepo-relative).
+COMMON_CONTRACT_DIR = Path(__file__).resolve().parents[3] / "server" / "contracts" / "common"
 
 
 def validator() -> Draft202012Validator:
+    # AI channel schemas layer on the backend's common envelope and frame
+    # reference; those are loaded from their single source, never copied.
     registry = Registry()
     schemas = []
-    for path in CONTRACT_DIR.glob("*.schema.json"):
+    for path in [*sorted(CONTRACT_DIR.glob("*.schema.json")), *sorted(COMMON_CONTRACT_DIR.rglob("*.schema.json"))]:
         schema = json.loads(path.read_text(encoding="utf-8"))
         schemas.append(schema)
         registry = registry.with_resource(schema["$id"], Resource.from_contents(schema))
-    message_schema = next(schema for schema in schemas if schema["$id"].endswith("/message.schema.json"))
+    message_schema = next(schema for schema in schemas if schema["$id"].endswith("/contracts/ai/message.schema.json"))
     return Draft202012Validator(message_schema, registry=registry, format_checker=FormatChecker())
 
 
@@ -68,7 +72,18 @@ def reference() -> FrameReference:
     )
 
 
+def common_envelope_validator() -> Draft202012Validator:
+    """The backend's common envelope alone (server/contracts/common/message.schema.json)."""
+    registry = Registry()
+    for path in sorted(COMMON_CONTRACT_DIR.rglob("*.schema.json")):
+        schema = json.loads(path.read_text(encoding="utf-8"))
+        registry = registry.with_resource(schema["$id"], Resource.from_contents(schema))
+    schema = json.loads((COMMON_CONTRACT_DIR / "message.schema.json").read_text(encoding="utf-8"))
+    return Draft202012Validator(schema, registry=registry, format_checker=FormatChecker())
+
+
 def assert_contract(message: dict) -> None:
+    common_envelope_validator().validate(message)
     validator().validate(message)
 
 
@@ -89,13 +104,15 @@ def test_detection_adapter_makes_frame_reference_and_bbox_unambiguous():
     )
 
     assert_contract(message)
+    # Common frame reference v2 (server/contracts/common/frame-reference.schema.json).
     assert message["payload"]["frame_ref"] == {
-        "source_id": "camera-01",
-        "capture_timestamp": "2026-08-25T11:59:59.800000Z",
+        "camera_id": "camera-01",
         "sequence_id": 42,
-        "frame_id": "frame-42",
-        "time_sync_state": "SYNCED",
+        "timestamp": "2026-08-25T11:59:59.800000Z",
     }
+    # R12: the header timestamp is the frame's data instant.
+    assert message["timestamp"] == message["payload"]["frame_ref"]["timestamp"]
+    assert message["schema_version"] == "2.0"
     assert message["payload"]["detections"][0]["bbox"] == {
         "x": 10.0,
         "y": 20.0,
@@ -220,5 +237,25 @@ def test_contract_message_publishes_through_existing_provider_interfaces():
     publish_message(message, serializer, transport, "ai/risk/zone-a")
 
     decoded = serializer.decode(received[0])
-    assert decoded["schema_version"] == "1.0"
+    assert decoded["schema_version"] == "2.0"
     assert decoded["channel"] == "risk_state"
+
+
+def test_messages_without_optional_ids_omit_them_instead_of_sending_null():
+    message = risk_judgment_message(
+        RiskJudgment("WATCH", 0.5, 0.7, ("rain",), "rules-1", "observe"),
+        context(correlation_id=None),
+        decided_at="2026-08-25T12:00:05Z",
+    )
+
+    assert "correlation_id" not in message
+    assert_contract(message)
+
+
+def test_zone_id_is_required_by_the_common_envelope():
+    with pytest.raises(ValueError, match="zone_id"):
+        risk_judgment_message(
+            RiskJudgment("WATCH", 0.5, 0.7, ("rain",), "rules-1", "observe"),
+            context(zone_id=None),
+            decided_at="2026-08-25T12:00:05Z",
+        )

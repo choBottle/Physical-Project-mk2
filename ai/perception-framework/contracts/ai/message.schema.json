@@ -13,17 +13,34 @@
     "channel",
     "timestamp",
     "sequence_id",
-    "correlation_id",
-    "coordinate_frame",
     "payload"
   ],
   "properties": {
-    "schema_version": {"const": "1.0"},
-    "message_id": {"type": "string", "minLength": 1},
-    "source_id": {"type": "string", "minLength": 1},
-    "node_id": {"type": "string", "minLength": 1},
-    "zone_id": {"type": ["string", "null"]},
-    "entity_id": {"type": "string", "minLength": 1},
+    "schema_version": {
+      "type": "string",
+      "pattern": "^2\\.[0-9]+$",
+      "description": "AI 생산자는 공통 머리 2.x 를 낸다(frame_ref v2 · timestamp = 데이터 시각)."
+    },
+    "message_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "node_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "zone_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entity_id": {
+      "type": "string",
+      "minLength": 1
+    },
     "channel": {
       "enum": [
         "detections",
@@ -33,18 +50,37 @@
         "model_deployment_result"
       ]
     },
-    "timestamp": {"type": "string", "format": "date-time"},
-    "sequence_id": {"type": "integer", "minimum": 0},
-    "correlation_id": {"type": ["string", "null"]},
-    "coordinate_frame": {"type": ["string", "null"]},
-    "payload": {"type": "object"}
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sequence_id": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "coordinate_frame": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload": {
+      "type": "object"
+    }
   },
   "allOf": [
+    {
+      "$ref": "https://github.com/khw18033/Physical-Project-mk2/contracts/common/message.schema.json"
+    },
     {
       "oneOf": [
         {
           "properties": {
-            "channel": {"const": "detections"},
+            "channel": {
+              "const": "detections"
+            },
             "payload": {
               "$ref": "https://physical-project.local/contracts/ai/detection-result.schema.json"
             }
@@ -52,7 +88,9 @@
         },
         {
           "properties": {
-            "channel": {"const": "risk_state"},
+            "channel": {
+              "const": "risk_state"
+            },
             "payload": {
               "$ref": "https://physical-project.local/contracts/ai/risk-judgment.schema.json"
             }
@@ -60,7 +98,9 @@
         },
         {
           "properties": {
-            "channel": {"const": "ai_failure"},
+            "channel": {
+              "const": "ai_failure"
+            },
             "payload": {
               "$ref": "https://physical-project.local/contracts/ai/ai-failure.schema.json"
             }
@@ -68,7 +108,9 @@
         },
         {
           "properties": {
-            "channel": {"const": "capability_status"},
+            "channel": {
+              "const": "capability_status"
+            },
             "payload": {
               "$ref": "https://physical-project.local/contracts/ai/capability-status.schema.json"
             }
@@ -76,7 +118,9 @@
         },
         {
           "properties": {
-            "channel": {"const": "model_deployment_result"},
+            "channel": {
+              "const": "model_deployment_result"
+            },
             "payload": {
               "$ref": "https://physical-project.local/contracts/ai/model-deployment-result.schema.json"
             }
@@ -85,5 +129,6 @@
       ]
     }
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "description": "AI 채널 메시지. 공통 머리는 백엔드 server/contracts/common/message.schema.json 을 그대로 따른다(allOf $ref — 사본을 두지 않는다). 이 파일은 AI 채널 어휘와 채널별 payload, AI 가 추가로 싣는 칸만 정한다."
 }

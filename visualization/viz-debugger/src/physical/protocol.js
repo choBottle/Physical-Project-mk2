@@ -553,24 +553,6 @@ export const physical = $root.physical = (() => {
         return PhysicalCommandEnvelope;
     })();
 
-    /**
-     * TerminalStatus enum.
-     * @name physical.TerminalStatus
-     * @enum {number}
-     * @property {number} TERMINAL_STATUS_UNSPECIFIED=0 TERMINAL_STATUS_UNSPECIFIED value
-     * @property {number} SUCCEEDED=1 SUCCEEDED value
-     * @property {number} ABORTED=2 ABORTED value
-     * @property {number} CANCELED=3 CANCELED value
-     */
-    physical.TerminalStatus = (function() {
-        const valuesById = $Object.create(null), values = $Object.create(valuesById);
-        values[valuesById[0] = "TERMINAL_STATUS_UNSPECIFIED"] = 0;
-        values[valuesById[1] = "SUCCEEDED"] = 1;
-        values[valuesById[2] = "ABORTED"] = 2;
-        values[valuesById[3] = "CANCELED"] = 3;
-        return values;
-    })();
-
     physical.Command = (function() {
 
         /**
@@ -581,6 +563,7 @@ export const physical = $root.physical = (() => {
          * @property {string|null} [action] Command action
          * @property {Object.<string,number>|null} [parameters] Command parameters
          * @property {number|Long|null} [deadlineUnixMs] Command deadlineUnixMs
+         * @property {string|null} [traceparent] Command traceparent
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -654,6 +637,14 @@ export const physical = $root.physical = (() => {
         Command.prototype.deadlineUnixMs = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
 
         /**
+         * Command traceparent.
+         * @member {string} traceparent
+         * @memberof physical.Command
+         * @instance
+         */
+        Command.prototype.traceparent = "";
+
+        /**
          * Creates a new Command instance using the specified properties.
          * @function create
          * @memberof physical.Command
@@ -696,6 +687,8 @@ export const physical = $root.physical = (() => {
                     writer.uint32(/* id 4, wireType 2 =*/34).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]).uint32(/* id 2, wireType 1 =*/17).double(message.parameters[keys[i]]).ldelim();
             if (message.deadlineUnixMs != null && $Object.hasOwnProperty.call(message, "deadlineUnixMs") && (typeof message.deadlineUnixMs === "object" ? message.deadlineUnixMs.low || message.deadlineUnixMs.high : message.deadlineUnixMs !== 0))
                 writer.uint32(/* id 5, wireType 0 =*/40).int64(message.deadlineUnixMs);
+            if (message.traceparent != null && $Object.hasOwnProperty.call(message, "traceparent") && message.traceparent !== "")
+                writer.uint32(/* id 6, wireType 2 =*/50).string(message.traceparent);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -825,6 +818,15 @@ export const physical = $root.physical = (() => {
                             delete message.deadlineUnixMs;
                         continue;
                     }
+                case 6: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.stringVerify()).length)
+                            message.traceparent = value;
+                        else
+                            delete message.traceparent;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -893,6 +895,9 @@ export const physical = $root.physical = (() => {
             if (message.deadlineUnixMs != null && $Object.hasOwnProperty.call(message, "deadlineUnixMs"))
                 if (!$util.isInteger(message.deadlineUnixMs) && !(message.deadlineUnixMs && $util.isInteger(message.deadlineUnixMs.low) && $util.isInteger(message.deadlineUnixMs.high)))
                     return "deadlineUnixMs: integer|Long expected";
+            if (message.traceparent != null && $Object.hasOwnProperty.call(message, "traceparent"))
+                if (!$util.isString(message.traceparent))
+                    return "traceparent: string expected";
             return null;
         };
 
@@ -943,6 +948,9 @@ export const physical = $root.physical = (() => {
                         message.deadlineUnixMs = object.deadlineUnixMs;
                     else if (typeof object.deadlineUnixMs === "object")
                         message.deadlineUnixMs = new $util.LongBits(object.deadlineUnixMs.low >>> 0, object.deadlineUnixMs.high >>> 0).toNumber();
+            if (object.traceparent != null)
+                if (typeof object.traceparent !== "string" || object.traceparent.length)
+                    message.traceparent = $String(object.traceparent);
             return message;
         };
 
@@ -974,6 +982,7 @@ export const physical = $root.physical = (() => {
                     object.deadlineUnixMs = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
                 } else
                     object.deadlineUnixMs = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                object.traceparent = "";
             }
             if (message.commandId != null && $Object.hasOwnProperty.call(message, "commandId"))
                 object.commandId = message.commandId;
@@ -997,6 +1006,8 @@ export const physical = $root.physical = (() => {
                     object.deadlineUnixMs = options.longs === $String ? $String(message.deadlineUnixMs) : message.deadlineUnixMs;
                 else
                     object.deadlineUnixMs = options.longs === $String ? $util.Long.prototype.toString.call(message.deadlineUnixMs) : options.longs === $Number ? new $util.LongBits(message.deadlineUnixMs.low >>> 0, message.deadlineUnixMs.high >>> 0).toNumber() : message.deadlineUnixMs;
+            if (message.traceparent != null && $Object.hasOwnProperty.call(message, "traceparent"))
+                object.traceparent = message.traceparent;
             return object;
         };
 
@@ -3634,6 +3645,24 @@ export const physical = $root.physical = (() => {
         };
 
         return Capability;
+    })();
+
+    /**
+     * TerminalStatus enum.
+     * @name physical.TerminalStatus
+     * @enum {number}
+     * @property {number} TERMINAL_STATUS_UNSPECIFIED=0 TERMINAL_STATUS_UNSPECIFIED value
+     * @property {number} SUCCEEDED=1 SUCCEEDED value
+     * @property {number} ABORTED=2 ABORTED value
+     * @property {number} CANCELED=3 CANCELED value
+     */
+    physical.TerminalStatus = (function() {
+        const valuesById = $Object.create(null), values = $Object.create(valuesById);
+        values[valuesById[0] = "TERMINAL_STATUS_UNSPECIFIED"] = 0;
+        values[valuesById[1] = "SUCCEEDED"] = 1;
+        values[valuesById[2] = "ABORTED"] = 2;
+        values[valuesById[3] = "CANCELED"] = 3;
+        return values;
     })();
 
     return physical;
