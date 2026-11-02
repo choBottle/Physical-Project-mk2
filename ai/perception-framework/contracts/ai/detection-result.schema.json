@@ -15,7 +15,7 @@
   ],
   "properties": {
     "frame_ref": {
-      "$ref": "https://physical-project.local/contracts/ai/frame-reference.schema.json"
+      "$ref": "https://github.com/khw18033/Physical-Project-mk2/contracts/common/frame-reference.schema.json"
     },
     "emitted_at": {"type": "string", "format": "date-time"},
     "inference_delay_ms": {"type": "number", "minimum": 0},

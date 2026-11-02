@@ -12,17 +12,21 @@ from referencing import Registry, Resource
 
 
 CONTRACT_DIR = Path(__file__).parents[1] / "contracts" / "ai"
+# Single source of the common envelope / frame reference (monorepo-relative).
+COMMON_CONTRACT_DIR = Path(__file__).resolve().parents[3] / "server" / "contracts" / "common"
 EXAMPLE_DIR = CONTRACT_DIR / "examples"
 
 
 def contract_validator() -> Draft202012Validator:
+    # AI channel schemas layer on the backend's common envelope and frame
+    # reference; those are loaded from their single source, never copied.
     registry = Registry()
     schemas = []
-    for path in sorted(CONTRACT_DIR.glob("*.schema.json")):
+    for path in [*sorted(CONTRACT_DIR.glob("*.schema.json")), *sorted(COMMON_CONTRACT_DIR.rglob("*.schema.json"))]:
         schema = json.loads(path.read_text(encoding="utf-8"))
         schemas.append(schema)
         registry = registry.with_resource(schema["$id"], Resource.from_contents(schema))
-    message_schema = next(schema for schema in schemas if schema["$id"].endswith("/message.schema.json"))
+    message_schema = next(schema for schema in schemas if schema["$id"].endswith("/contracts/ai/message.schema.json"))
     return Draft202012Validator(message_schema, registry=registry, format_checker=FormatChecker())
 
 
@@ -68,3 +72,22 @@ def test_unknown_top_level_fields_are_rejected():
 
     with pytest.raises(Exception):
         contract_validator().validate(mutated)
+
+
+def test_old_frame_reference_shape_is_rejected():
+    """AI emits the common frame reference v2 (camera_id/sequence_id/timestamp)."""
+    message = json.loads((EXAMPLE_DIR / "detections.json").read_text(encoding="utf-8"))
+    message["payload"]["frame_ref"] = {
+        "source_id": "camera-01", "capture_timestamp": "2026-08-25T11:59:59.800Z", "sequence_id": 1042,
+    }
+
+    with pytest.raises(Exception):
+        contract_validator().validate(message)
+
+
+def test_null_correlation_id_is_rejected_by_the_common_envelope():
+    message = json.loads((EXAMPLE_DIR / "risk-state.json").read_text(encoding="utf-8"))
+    message["correlation_id"] = None
+
+    with pytest.raises(Exception):
+        contract_validator().validate(message)

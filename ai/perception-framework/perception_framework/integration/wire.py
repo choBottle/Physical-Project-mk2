@@ -10,7 +10,7 @@ logic while still giving every other part one stable wire representation.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from typing import Iterable, Sequence
 from uuid import uuid4
@@ -23,7 +23,10 @@ from perception_framework.risk.output import RiskJudgment
 from perception_framework.runtime.model_deployment import ModelDeploymentResult
 
 
-SCHEMA_VERSION = "1.0"
+# Common envelope version (server/contracts/common/message.schema.json —
+# "current header version is 2.0", 2026-10-13 통합데이터규약). 2.0 means:
+# `timestamp` is the data instant, frame_ref uses camera_id/sequence_id/timestamp.
+SCHEMA_VERSION = "2.0"
 AI_CHANNELS = frozenset(
     {
         "detections",
@@ -96,11 +99,13 @@ def build_message(
         raise ValueError(f"unsupported AI channel: {channel}")
     if context.sequence_id < 0:
         raise ValueError("sequence_id must be non-negative")
-    for field_name in ("source_id", "node_id", "entity_id"):
+    # zone_id is a required common-header field (server/contracts/common/
+    # message.schema.json); optional fields are omitted rather than sent as null.
+    for field_name in ("source_id", "node_id", "entity_id", "zone_id"):
         if not getattr(context, field_name):
             raise ValueError(f"{field_name} must not be empty")
 
-    return {
+    message = {
         "schema_version": SCHEMA_VERSION,
         "message_id": context.message_id or str(uuid4()),
         "source_id": context.source_id,
@@ -110,19 +115,23 @@ def build_message(
         "channel": channel,
         "timestamp": _timestamp(context.timestamp),
         "sequence_id": context.sequence_id,
-        "correlation_id": context.correlation_id,
-        "coordinate_frame": coordinate_frame,
-        "payload": payload,
     }
+    if context.correlation_id:
+        message["correlation_id"] = context.correlation_id
+    if coordinate_frame:
+        message["coordinate_frame"] = coordinate_frame
+    message["payload"] = payload
+    return message
 
 
 def frame_reference_to_wire(reference: FrameReference) -> dict:
+    """Common frame reference (server/contracts/common/frame-reference.schema.json):
+    exactly camera_id + sequence_id + timestamp, copied from the frame header.
+    frame_id / time_sync_state are not part of the shared reference (v2)."""
     return {
-        "source_id": reference.source_id,
-        "capture_timestamp": _timestamp(reference.observed_at),
+        "camera_id": reference.source_id,
         "sequence_id": reference.local_sequence,
-        "frame_id": reference.frame_id,
-        "time_sync_state": reference.sync_state.value,
+        "timestamp": _timestamp(reference.observed_at),
     }
 
 
@@ -233,6 +242,9 @@ def detection_message(
             _observation_to_wire(observation, reference.source_id) for observation in observations
         ],
     }
+    # R12: a message carrying a frame reference uses the frame's data instant
+    # as its header timestamp (server/contracts/common/frame-reference.schema.json).
+    context = replace(context, timestamp=payload["frame_ref"]["timestamp"])
     return build_message(context, "detections", payload, coordinate_frame="IMAGE")
 
 

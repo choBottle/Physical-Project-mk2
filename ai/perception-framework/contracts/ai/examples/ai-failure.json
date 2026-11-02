@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "message_id": "msg-failure-001",
   "source_id": "perception-runtime-a",
   "node_id": "edge-node-a",
@@ -9,7 +9,6 @@
   "timestamp": "2026-08-25T12:00:02Z",
   "sequence_id": 9,
   "correlation_id": "mission-42",
-  "coordinate_frame": null,
   "payload": {
     "event_id": "failure-001",
     "component": "perception.detect",
