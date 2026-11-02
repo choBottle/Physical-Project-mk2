@@ -110,8 +110,10 @@ docker compose up -d --build --wait
 > 볼륨을 그대로 다시 쓴다.** DB 비밀번호는 볼륨 최초 초기화 때 박히므로 볼륨 안에는 **옛 `.env` 의 비밀번호**가 있고,
 > 새로 만든 `.env` 의 비밀번호와 어긋나 백엔드가 DB 에 붙지 못한다. `init-env.sh` 는 이런 볼륨을 찾으면 경고를 찍는다.
 > 이때 셋 중 하나를 고른다: ① 옛 데이터를 이어 쓴다면 옛 `.env` 를 되살린다 ② 별도 배포를 나란히 세운다면 `deploy/.env` 의
-> `COMPOSE_PROJECT_NAME` 을 다른 이름(예: `mk2test`)으로 바꾼 뒤 기동한다(두 배포를 동시에 띄우면 포트도 겹친다 — 운영자
-> 포트는 `MK2_PORT_*` 로 옮기고, 장치 쪽 고정 포트는 시험 호스트에서만 override 로 — §6)
+> `COMPOSE_PROJECT_NAME` 을 다른 이름(예: `mk2test`)으로 바꾼 뒤 기동한다. 옛 배포의 네트워크가 남아 있으면(멈춘 배포 포함)
+> 대역도 겹치므로 `MK2_NET_SUBNET` 과 `MK2_DB_APP_HOST` 를 짝으로 바꾼다(예: `172.29.0.0/16` · `172.29.%`) —
+> `init-env.sh` 가 겹침을 찾으면 비어 있는 대역을 골라 알려 준다. 두 배포를 동시에 띄우면 포트도 겹친다 — 운영자
+> 포트는 `MK2_PORT_*` 로 옮기고, 장치 쪽 고정 포트는 시험 호스트에서만 override 로 — §6
 > ③ 옛 데이터를 버린다면 의도를 확인한 뒤 `docker volume rm <이름>_mysql_data <이름>_timescale_data`(되돌릴 수 없다).
 > 셸 환경변수 `COMPOSE_PROJECT_NAME` 이 있으면 `.env` 보다 우선한다.
 
@@ -193,6 +195,7 @@ docker compose up -d     # 바뀐 서비스만 재생성된다
 |---|---|
 | `Bind for 127.0.0.1:7862 failed: port is already allocated` (주소는 실제 바인딩 — 기본 `127.0.0.1`, 바꿨다면 `MK2_ADMIN_BIND`·`MK2_EDGE_BIND` 값) | 같은 서버에 다른 서비스가 그 포트를 쓴다. **운영자 포트**(MySQL 7858 · TimescaleDB 7859 · Prometheus 7861 · Grafana 7862 · Loki 3100 · Tempo 3200)는 `deploy/.env` 의 `MK2_PORT_*` 로 옮긴다. **장치 쪽 포트**(1883 · 9001 · 4316~4318 · 8765~8767 · 9095)는 고정이다 — 장치·엣지 설정에 이 번호가 박혀 있어 서버에서 바꾸면 장치가 못 붙는다. 시험 호스트에서 그중 하나가 이미 쓰이면 gitignore 된 `deploy/docker-compose.override.yml` 로 그 서비스의 포트만 덮어쓴다(아래 예). **운영 서버에서는 하지 않는다** — 겹치는 서비스를 치운다 |
 | `.env` 를 새로 만들었는데 (새 clone 인데도) 백엔드가 DB 에 못 붙는다 · `init-env.sh` 가 볼륨 경고를 찍었다 | 같은 `COMPOSE_PROJECT_NAME`(기본 `mk2`)의 옛 볼륨을 다시 쓰고 있다 — 볼륨에는 옛 비밀번호가 있다. §3 의 「프로젝트 이름」 경고대로 옛 `.env` 를 되살리거나, 다른 `COMPOSE_PROJECT_NAME` 을 쓰거나, 의도적으로 볼륨을 지운다. `docker volume ls \| grep _mysql_data` 로 확인 |
+| `failed to create network …: invalid pool request: Pool overlaps with other one on this address space` | 다른 도커 네트워크(옛 배포 · 다른 `COMPOSE_PROJECT_NAME` 의 배포 · 다른 도구)가 이미 `MK2_NET_SUBNET`(기본 `172.28.0.0/16`)을 쓴다. `deploy/.env` 의 `MK2_NET_SUBNET` 과 `MK2_DB_APP_HOST` 를 짝으로 비어 있는 대역으로 바꾼다(예: `172.29.0.0/16` · `172.29.%` — MySQL 앱 계정 host 제한이 대역과 짝이다). 대역은 DB 볼륨 최초 초기화 때 앱 계정 권한(MySQL host · TimescaleDB `pg_hba`)에 박히므로, **새 볼륨으로 세우는 배포에서만** 바꾼다([database.md §3](database.md)). 쓰는 대역 확인: `docker network inspect -f '{{.Name}} {{range .IPAM.Config}}{{.Subnet}}{{end}}' $(docker network ls -q)` |
 | `mysql`/`timescaledb` 가 `unhealthy` 에 머문다 | `docker compose logs mysql \| grep mk2-init` — 초기화 스크립트가 어느 단계에서 멈췄는지 본다. 셸 스크립트가 CRLF 로 체크아웃되면 `bad interpreter` 로 죽는다 → `git config core.autocrlf false` 후 다시 체크아웃(저장소 `.gitattributes` 가 LF 를 강제한다) |
 | `.env` 를 다시 만들었더니 백엔드가 DB 에 못 붙는다 | DB 비밀번호는 **볼륨 최초 초기화 때** 박힌다. 새 `.env` 와 기존 볼륨이 어긋난 것. 시험 서버면 `docker compose down -v` 로 볼륨까지 지우고 다시, 운영 서버면 [database.md §5](database.md#5-비밀번호-교체) |
 | be-gateway 가 `exit 2` | loopback 밖 바인딩인데 토큰이 비었다. `MK2_WS_TOKEN`·`MK2_EDGE_TOKEN` 확인 |

@@ -9,7 +9,7 @@
 |---|---|---|---|---|
 | 1883 | MQTT | Mosquitto | `MK2_EDGE_BIND` | 말단·엣지 발행자 |
 | 9001 | MQTT/WS | Mosquitto | `MK2_EDGE_BIND` | 브라우저 도구 |
-| 4316 · 4317 | OTLP gRPC | OTel Collector (같은 수신단) | `MK2_EDGE_BIND` | 백엔드 · HW 노드 · AI · 엣지 Collector |
+| 4316 · 4317 | OTLP gRPC | OTel Collector (같은 파이프라인, 수신단은 각자) | `MK2_EDGE_BIND` | 백엔드 · HW 노드 · AI · 엣지 Collector |
 | 4318 | OTLP HTTP | OTel Collector | `MK2_EDGE_BIND` | 브라우저(가시화 화면, CORS) |
 | 8765 | WS | be-gateway `/state` · `/media` | `MK2_EDGE_BIND` | 관제 화면(뷰어) — 토큰 |
 | 8766 | WS | be-gateway `/ingest` | `MK2_EDGE_BIND` | 엣지 미디어 송신 — 토큰 |

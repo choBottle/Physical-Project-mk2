@@ -8,6 +8,31 @@ ports, database migrations and image versions.
 
 ## [Unreleased]
 
+Found by a fresh-clone install on a Windows 11 / Docker Desktop host that
+already had an earlier deployment.
+
+### Fixed
+
+- The OTel Collector now opens 4316 as its own gRPC receiver instead of
+  mapping host ports 4316 and 4317 to the same container port. With
+  `MK2_EDGE_BIND` set to a non-loopback address (for example a Tailscale IP),
+  Docker Desktop on Windows failed to bind the second mapping and the
+  collector did not start.
+- `init-env.sh` warns when another Docker network already uses
+  `MK2_NET_SUBNET` and prints a free subnet with the matching
+  `MK2_DB_APP_HOST`. Its volume warning, the deployment guide §3 (Korean and
+  English) and the troubleshooting table now say that a second deployment on
+  the same host needs a different subnet as well as a different
+  `COMPOSE_PROJECT_NAME`; changing only the name failed with
+  `Pool overlaps with other one on this address space`.
+- `npm run dev` in `viz-debugger` pointed to the repository root README for
+  the STT/generation setup; the section is in `visualization/README.md`.
+
+### Deployment changes
+
+- Collector host port 4316 now maps to container port 4316 (was 4317). No
+  device or `.env` change is needed.
+
 ## [1.0.0-rc.3] - 2026-11-02
 
 Third release candidate. Verified on a fresh Windows 11 / Docker Desktop host

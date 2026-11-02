@@ -36,7 +36,7 @@ export function startGenerate() {
   const python = pythonPath();
   if (python === null) {
     console.warn('[generate] gen-lab/.venv 가 없어 생성 서비스를 띄우지 않는다 — 화면은 그대로 뜨고 생성만 꺼진다.');
-    console.warn('[generate] 환경 준비 절차는 저장소 루트 README.md 의 「음성 인식(STT)과 생성까지 붙이려면」.');
+    console.warn('[generate] 환경 준비 절차는 visualization/README.md 의 「음성 인식(STT)과 생성까지 붙이려면」.');
     return null;
   }
   const child = spawn(python, ['-m', 'server.main'], { cwd: labDir, stdio: 'inherit' });

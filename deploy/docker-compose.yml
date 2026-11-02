@@ -240,8 +240,9 @@ services:
     environment:
       MK2_OTLP_CORS_EXTRA_ORIGIN: ${MK2_OTLP_CORS_EXTRA_ORIGIN:-http://localhost:5175}
     ports:
-      # 4316 = 백엔드 문서·기본값의 입구, 4317 = OTLP 표준(HW·AI 노드 기본값) — 같은 수신단 둘
-      - "${MK2_EDGE_BIND:-127.0.0.1}:4316:4317"
+      # 4316 = 백엔드 문서·기본값의 입구, 4317 = OTLP 표준(HW·AI 노드 기본값) — 수집기 안에서도 각자 연다
+      # (호스트 포트 둘을 컨테이너 포트 하나에 붙이면 Windows Docker Desktop 이 비-loopback 바인딩에서 실패한다)
+      - "${MK2_EDGE_BIND:-127.0.0.1}:4316:4316"
       - "${MK2_EDGE_BIND:-127.0.0.1}:4317:4317"
       - "${MK2_EDGE_BIND:-127.0.0.1}:4318:4318"     # OTLP/HTTP (브라우저, CORS)
     volumes:
