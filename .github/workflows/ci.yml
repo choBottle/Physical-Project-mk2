@@ -167,3 +167,20 @@ jobs:
           fi
           echo "범위: $RANGE"
           docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.28.0             git /repo --redact --no-banner --log-opts="$RANGE"
+
+  web-lint:
+    name: 가시화 ESLint (버그 잡는 규칙만 · ${{ matrix.pkg }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg: [viz-debugger, web-dashboard]
+    defaults: { run: { working-directory: "visualization/${{ matrix.pkg }}" } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: "visualization/${{ matrix.pkg }}/package-lock.json" }
+      - run: npm ci
+      # 규칙 묶음은 각 패키지의 eslint.config.js — 버그만 본다(스타일·포매팅·Prettier 는 범위 밖)
+      - run: npm run -s lint
