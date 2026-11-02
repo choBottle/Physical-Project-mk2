@@ -222,6 +222,12 @@ npm run dev
 
 <a href="docs/assets/readme-unity-twin.jpg"><img src="docs/assets/g-unity-twin.jpg" width="49%"></a> <a href="docs/assets/readme-unity-path.jpg"><img src="docs/assets/g-unity-path.jpg" width="49%"></a>
 
+#### 실제 Go1
+
+*실제 Go1 이 연구실을 걷는 모습. 등에 올린 태블릿에서 디지털 트윈이 함께 돈다 — 왼쪽은 계획 경로가 그려진 지도, 오른쪽은 트윈 속 로봇 시점(4.5배속).*
+
+<a href="docs/assets/g-real-go1.gif"><img src="docs/assets/g-real-go1.gif" width="66%"></a>
+
 #### 객체 탐지
 
 *360 사진에서 YOLO-World: 시점이 방을 한 바퀴 돌며 보이는 것마다 검출한다 (`camera360/anchor360_live.py`).*
