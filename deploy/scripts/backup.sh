@@ -24,6 +24,7 @@ docker compose exec -T mysql sh -c \
 echo "[backup] TimescaleDB mk2 → ${OUT}/timescaledb_mk2.dump"
 # -Fc(사용자 정의 형식) — restore 가 timescaledb_pre_restore()/post_restore() 사이에서 pg_restore 로 푼다
 docker compose exec -T timescaledb pg_dump -U postgres -d mk2 -Fc > "${OUT}/timescaledb_mk2.dump"
+echo "[backup] 참고: 위의 pg_dump 'circular foreign-key constraints' 경고·hint 는 무해하다 — TimescaleDB 내부 카탈로그 표 때문이며, restore.sh 가 timescaledb_pre_restore()/post_restore() 사이에서 푼다."
 
 {
   echo "created_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"

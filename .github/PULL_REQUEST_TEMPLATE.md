@@ -23,4 +23,4 @@ If any of these apply, update the documentation in the same pull request.
 - [ ] `CHANGELOG.md` `[Unreleased]` updated (deployment changes in "Deployment changes")
 - [ ] No secrets, real IP addresses, tailnet host names or `/home/<user>` paths in the diff
 - [ ] No photos or videos with identifiable people or precise locations
-- [ ] Tested locally: <!-- for example: ./deploy/scripts/healthcheck.sh 32/32, pytest ... -->
+- [ ] Tested locally: <!-- for example: ./deploy/scripts/healthcheck.sh 35/35, pytest ... -->

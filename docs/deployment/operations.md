@@ -2,6 +2,9 @@
 
 모든 명령은 `deploy/` 에서 실행한다. 원칙: **"떠 있다"가 아니라 "흐른다"를 본다** — 판정은 `./scripts/healthcheck.sh`.
 
+> Windows Git Bash 에서는 먼저 `export MSYS_NO_PATHCONV=1` — 그러지 않으면 아래 `docker compose exec kafka /opt/kafka/…` ·
+> `promtool check config /etc/prometheus/…` 같은 명령의 컨테이너 안 경로를 Git Bash 가 Windows 경로로 바꿔 실패한다.
+
 ## 일상 명령
 
 | 하려는 것 | 명령 |
@@ -14,7 +17,7 @@
 | 설정 파일 반영 (그 외) | `docker compose up -d --force-recreate <서비스>` |
 | 정지 (데이터 유지) | `docker compose down` |
 | ⚠ 완전 삭제 (데이터 포함) | `docker compose down -v` — 시험 서버에서만 |
-| 백업 / 복구 | `./scripts/backup.sh` / `./scripts/restore.sh <디렉터리>` — [database.md §6](database.md#6-백업--복구--보존) |
+| 백업 / 복구 | `./scripts/backup.sh` (→ `deploy/backups/<UTC>/`) / `./scripts/restore.sh <디렉터리>` (`[y/N]` 확인 — 비대화식은 `--yes`) — [database.md §6](database.md#6-백업--복구--보존) |
 | DB 마이그레이션 · 보존 정책 | `./scripts/migrate.sh --dry-run` / `./scripts/migrate.sh` — [database.md §4](database.md#4-스키마-변경-절차-마이그레이션) |
 
 ## 재부팅 뒤
@@ -74,11 +77,11 @@ echo 'net.ipv4.ip_nonlocal_bind=1' | sudo tee /etc/sysctl.d/90-mk2-nonlocal-bind
 ```bash
 ./scripts/backup.sh                       # 1. 백업 (.env · site/ · override 는 따로 보관 — 위 「현장 설정」)
 git status --short                        #    추적 파일에 현장 수정이 없어야 한다(있으면 site/·override 로 옮긴다)
-git fetch --tags && git checkout v1.1.0   # 2. 코드
+git fetch --tags && git checkout <새 태그>  # 2. 코드 — 예: v1.0.0-rc.3 (현재 릴리스는 저장소 README 첫머리)
 diff .env.example .env                    # 3. 새 환경변수 — CHANGELOG 해당 판의 `### Deployment changes` 절
 #    MK2_TSDB_RETENTION_DAYS · MK2_TSDB_COMPRESS_AFTER_DAYS 는 비우면 끔 — database.md §6
 #    게시 이미지를 쓰면 .env 의 MK2_BACKEND_IMAGE 태그를 새 판으로 올린다:
-#      MK2_BACKEND_IMAGE=ghcr.io/<owner>/mk2-backend:v1.1.0
+#      MK2_BACKEND_IMAGE=ghcr.io/<owner>/mk2-backend:<새 태그>
 docker compose pull && docker compose up -d --wait            # 4a. 게시 이미지 — 바뀐 서비스만 재생성
 # docker compose up -d --build --wait                        # 4b. 소스에서 빌드(MK2_BACKEND_IMAGE=mk2-backend:local)
 ./scripts/migrate.sh --dry-run            # 5. DB 마이그레이션 — 대기 목록 확인
@@ -96,6 +99,8 @@ docker compose pull && docker compose up -d --wait            # 4a. 게시 이�
 
 되돌리기: 이전 태그로 `checkout` → `MK2_BACKEND_IMAGE` 를 이전 태그로 → `up -d --wait`(소스 빌드면 `--build`).
 DB 변경이 있었다면 백업으로 `restore.sh`.
+
+폐쇄망 서버: [offline.md §7](offline.md#7-폐쇄망-업그레이드).
 
 ## 알림별 대응
 
