@@ -188,7 +188,7 @@ ports to `MK2_ADMIN_BIND`; both default to `127.0.0.1`.
 | 8765 | WebSocket gateway `/state`, `/media` | operator consoles (token) |
 | 8766 | WebSocket gateway `/ingest` | edge video senders (token) |
 | 8767 | Capture upload `PUT /capture` | robots (token) |
-| 9095 | Kafka edge listener | remote edge bridges |
+| 9095 | Kafka edge listener (`MK2_KAFKA_EDGE_BIND`, unused in 1.0) | future edge Kafka bridges |
 | 9092 | Kafka internal listener (always `127.0.0.1`) | host processes on the server (pytest) |
 | 7858, 7859 | MySQL, TimescaleDB | operators |
 | 7861, 7862 | Prometheus, Grafana | operators |

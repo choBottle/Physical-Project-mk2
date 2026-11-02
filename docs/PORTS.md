@@ -14,7 +14,7 @@
 | 8765 | WS | be-gateway `/state` · `/media` | `MK2_EDGE_BIND` | 관제 화면(뷰어) — 토큰 |
 | 8766 | WS | be-gateway `/ingest` | `MK2_EDGE_BIND` | 엣지 미디어 송신 — 토큰 |
 | 8767 | HTTP | be-capture `PUT /capture` | `MK2_EDGE_BIND` | 로봇 촬영본 업로드 — 토큰 |
-| 9095 | Kafka | Kafka EDGE 리스너 | `MK2_EDGE_BIND` | 원격 엣지 브릿지 |
+| 9095 | Kafka | Kafka EDGE 리스너 | `MK2_KAFKA_EDGE_BIND` (기본 `127.0.0.1`) | 1.x 의 엣지 Kafka 브릿지용. 1.0 엣지는 MQTT 브리지로 붙으므로 쓰지 않는다 |
 | 9092 | Kafka | Kafka PLAINTEXT | `127.0.0.1` 고정 | 서버 안 호스트 프로세스(pytest) |
 | 7858 | MySQL | MySQL | `MK2_ADMIN_BIND` · `MK2_PORT_MYSQL` | 운영자 · 호스트 도구 |
 | 7859 | PostgreSQL | TimescaleDB | `MK2_ADMIN_BIND` · `MK2_PORT_TSDB` | 운영자 · 호스트 도구 |
