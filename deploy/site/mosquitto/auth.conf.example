@@ -1,14 +1,18 @@
-# 중앙 Mosquitto 현장 설정 예시 — 운영 프로파일(계정 + ACL). docs/deployment/security.md
+# 중앙 Mosquitto 현장 설정 예시 — 운영 프로파일(계정 + ACL). docs/deployment/security.md §3-1
 # deploy/server/config/mosquitto.conf 끝의 include_dir 이 이 폴더(deploy/site/mosquitto/)의 *.conf 를 읽는다.
 # 이 폴더는 gitignore 대상이라 업그레이드(git checkout <태그>)와 부딪치지 않는다.
 #
-# ⚠ 백엔드(be-ingest·be-gateway)는 현재 MQTT 계정 설정이 없다(익명 접속). 익명을 끄기 전에 백엔드 지원 여부를
-#   확인한다 — 지금은 바인딩 주소(MK2_EDGE_BIND = 터널 주소)가 노출 통제다.
-#
-# 1) 비밀번호 파일:  docker compose exec mosquitto mosquitto_passwd -c /mosquitto/data/passwd <user>
-#    엣지 브릿지용 계정도 만든다 → 엣지 deploy/edge/.env 의 MK2_CENTRAL_MQTT_USER / MK2_CENTRAL_MQTT_PASSWORD
-# 2) cp auth.conf.example auth.conf   (ACL 을 쓰면 같은 폴더에 acl 파일을 두고 아래 줄을 푼다)
-# 3) docker compose restart mosquitto
+# 순서가 중요하다 — 익명을 끄기 전에 백엔드 계정부터 만든다(아니면 be-ingest·헬스체크가 끊긴다).
+# 1) deploy/.env 에 백엔드 계정:  MK2_MQTT_USERNAME=mk2-backend  MK2_MQTT_PASSWORD=<영숫자>
+# 2) 비밀번호 파일 — 백엔드 + 장치/엣지마다 한 계정(첫 줄만 -c):
+#      docker compose exec mosquitto mosquitto_passwd -c -b /mosquitto/data/passwd mk2-backend <위와 같은 비밀번호>
+#      docker compose exec mosquitto mosquitto_passwd    -b /mosquitto/data/passwd edge-zoneA <비밀번호>
+#    엣지 브릿지 계정 → 엣지 deploy/edge/.env 의 MK2_CENTRAL_MQTT_USER / MK2_CENTRAL_MQTT_PASSWORD
+#    중앙에 직접 붙는 장치 계정 → 장치 /etc/hw-node.env 의 HW_MQTT_USER / HW_MQTT_PASS
+# 3) cp auth.conf.example auth.conf   (ACL 을 쓰면 같은 폴더에 acl 파일을 두고 아래 줄을 푼다 — 백엔드 계정은
+#    +/+/+/state·status·heartbeat 읽기, 헬스체크용 $SYS/broker/uptime 읽기, 시험 발행(hc-probe) 쓰기가 필요하다)
+# 4) docker compose up -d --wait --force-recreate mosquitto be-ingest   (환경변수 반영은 restart 가 아니라 재생성)
+# 확인: ./scripts/healthcheck.sh · CI 에서는 deploy/scripts/mqtt-auth-check.sh 가 이 경로를 그대로 시험한다.
 allow_anonymous false
 password_file /mosquitto/data/passwd
 # acl_file /mosquitto/config/site.d/acl

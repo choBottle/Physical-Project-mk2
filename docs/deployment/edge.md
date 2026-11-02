@@ -76,13 +76,14 @@ docker compose up -d --wait
 
 ### ④ 장치 노드
 
-장치 노드 설정(`hardware/pi/deploy/hw-node.env.example`)의 세 값을 엣지로 향하게 한다:
+장치 노드 설정(`hardware/pi/deploy/hw-node.env.example`)의 세 값을 엣지로 향하게 한다(계정은 선택):
 
 | 변수 | 값 |
 |---|---|
 | `HW_BROKER_HOST` | 엣지 자신(`localhost`) 또는 엣지 LAN 주소 — 엣지 Mosquitto 가 브릿지로 중앙에 넘긴다 |
 | `HW_OTEL_ENDPOINT` | `http://<엣지 주소>:4317` |
 | `HW_ZONE_ID` | `deploy/edge/.env` 의 `MK2_ZONE_ID` 와 같은 값 |
+| `HW_MQTT_USER` · `HW_MQTT_PASS` | 붙는 브로커가 익명을 거부할 때만 — 그 브로커의 password_file 에 만든 장치 계정. 비우면 익명 |
 
 ### ⑤ 중앙 페더레이션 켜기
 

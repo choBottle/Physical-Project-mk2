@@ -14,12 +14,16 @@ permissions:
 jobs:
   backend-image:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # arm64 층은 QEMU 에뮬레이션으로 빌드한다(의존성은 전부 휠이라 컴파일이 없다 — deploy-smoke backend-image-arm64 가 PR 마다 같은 빌드를 본다)
+    timeout-minutes: 40
     permissions:
       contents: read
       packages: write   # GHCR 게시
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
@@ -37,6 +41,8 @@ jobs:
       - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: server
+          # 다중 아키텍처 — x86 서버와 ARM 서버(Graviton·Ampere·Jetson/RPi 5 급 엣지)가 같은 태그를 받는다
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

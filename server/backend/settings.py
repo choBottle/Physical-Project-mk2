@@ -9,6 +9,7 @@
 |---|---|---|
 | `MK2_MQTT_HOST` / `MK2_MQTT_PORT` | `localhost` / `1883` | ingest — **서버 안에서** Mosquitto에 붙는다 |
 | `MK2_BROKER_HOST` / `MK2_BROKER_PORT` | `localhost` / `1883` | 발행자(tests·실노드) — **브로커 바깥에서** 서버 Mosquitto에 붙는다 |
+| `MK2_MQTT_USERNAME` / `MK2_MQTT_PASSWORD` | 빈 값(익명) | ingest·발행자(tests) 공통 MQTT 계정. **opt-in** — 비어 있으면 지금처럼 익명 접속. 중앙 Mosquitto 운영 프로파일(`allow_anonymous false`)을 켤 때 채운다(docs/deployment/security.md) |
 | `MK2_KAFKA_BOOTSTRAP` | `localhost:9092` | ingest·저장 sink·WS — Kafka는 서버 localhost 전용 |
 | `MK2_WS_HOST` / `MK2_WS_PORT` | `127.0.0.1` / `8765` | 뷰어 입구(`/state`·`/media`) 바인딩. **콤마 구분 목록** — 단계 7 이후 `127.0.0.1,<서버 tailscale IP>` 둘 다 |
 | `MK2_WS_URL` | `ws://127.0.0.1:8765/state`(`MK2_WS_TOKEN`이 있으면 `?token=…` 부착) | WS 클라이언트(tests·콘솔)가 붙을 주소. **loopback 유지** — Tailscale 주소로 바꾸면 컴퓨터의 단위 테스트가 서버 주소를 찾는다 |
@@ -159,6 +160,24 @@ def mqtt_host() -> str:
 
 def mqtt_port() -> int:
     return int(os.environ.get("MK2_MQTT_PORT", "1883"))
+
+
+def mqtt_username() -> str:
+    """MQTT 계정 — 빈 문자열이면 익명 접속(1.0 기본 프로파일)."""
+    return os.environ.get("MK2_MQTT_USERNAME", "")
+
+
+def mqtt_password() -> str:
+    return os.environ.get("MK2_MQTT_PASSWORD", "")
+
+
+def mqtt_credentials() -> Optional[Tuple[str, str]]:
+    """(username, password) 또는 None(익명). ingest·발행자가 같은 값을 쓴다.
+
+    username 이 비어 있으면 password 가 있어도 익명이다 — 비밀번호만 있는 계정은 Mosquitto 에 없다.
+    """
+    user = mqtt_username()
+    return (user, mqtt_password()) if user else None
 
 
 def broker_host() -> str:

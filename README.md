@@ -98,6 +98,12 @@ To use a published backend image instead of building it, set
 `MK2_BACKEND_IMAGE=ghcr.io/chobottle/mk2-backend:<version>` in `deploy/.env`
 and run `docker compose up -d --wait`. The image is public.
 
+The central stack runs on x86-64 and on 64-bit ARM (arm64/aarch64) hosts.
+Release images are published for `linux/amd64` and `linux/arm64`, and every
+pinned third-party image in `deploy/docker-compose.yml` has an arm64 variant,
+so Docker pulls the right one. Building from source on arm64 works the same
+way; the backend dependencies install from prebuilt wheels.
+
 On Windows, run the scripts from Git Bash or WSL2.
 
 ## Dependencies
