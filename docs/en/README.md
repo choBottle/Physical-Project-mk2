@@ -98,7 +98,7 @@ docker compose up -d --build --wait
 ./scripts/healthcheck.sh
 ```
 
-The deployment is done when the last line reads `결과: 통과 32 · 실패 0` ("result: 32 passed · 0 failed").
+The deployment is done when the last line reads `결과: 통과 35 · 실패 0` ("result: 35 passed · 0 failed").
 
 To extend the check to the device end, run `./scripts/e2e-sim.sh` — it attaches the real node code with a fake sensor and
 follows the data up to the operator-screen subscription ([e2e.md](../deployment/e2e.md), Korean).
@@ -205,6 +205,8 @@ If it still fails, open an [issue](../../.github/ISSUE_TEMPLATE/deployment.yml) 
 |---|---|---|
 | 2026-10-26 | Windows 11 · Docker Desktop 29.5 (all volumes deleted, then §3 of this document as written) | 13 services healthy · `healthcheck.sh` **32/32** · backend regression `pytest` **351 passed, 2 skipped, 0 failed** · 32/32 after a backup → restore round trip. (In an earlier run one timing-dependent test failed once — [operations.md](operations.md#known-issues)) |
 | 2026-10-26 | same · `deploy/edge` | A log sent to the edge Collector arrived in central Loki with `zone_id` and `agg_layer=edge` |
+| 2026-11-02 | Windows 11 · Docker Desktop 29.5 · fresh clone from GitHub (`main` 6ba9e49) | 13 services healthy · `healthcheck.sh` **34/34** · `migrate.sh --dry-run` nothing pending · `e2e-sim.sh` **10/10** (publish→console median 11 ms) · `backup.sh`/`restore.sh` round trip from the repo root · edge stack bridged to the real central stack: 5 state messages sent to the edge reached central TimescaleDB, a birth reached the MySQL registry, a central downlink reached the edge · Grafana dashboard and 3 data sources · Prometheus targets 5/5 · viz-debugger `npm ci`/typecheck/build |
+| 2026-11-02 | same · **upgrade** `v1.0.0-rc.2` → `main` | fresh rc.2 install (32/32) + data → the operations.md upgrade procedure as written (source build) → healthcheck 31/34 before `migrate.sh` (expected: no tracking table) → `migrate.sh` marks the baseline → **34/34**; rows and registrations from rc.2 kept. One backend-volume copy race seen on the fresh rc.2 install → fixed with `backend-volume-init` (then 3 fresh installs in a row, 35/35) |
 | Every PR | GitHub Actions `ubuntu-latest` | [`deploy-smoke`](../../.github/workflows/deploy-smoke.yml) — on an empty runner: `up --wait` → `healthcheck.sh` → `e2e-sim.sh` |
 
 **"Works in our dev environment but not in a new one" is checked by CI on every change, not by a person.**
