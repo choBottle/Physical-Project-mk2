@@ -37,8 +37,9 @@ Exposure is controlled by the bind addresses `MK2_EDGE_BIND` and
 `MK2_ADMIN_BIND`, by tokens on the WebSocket gateway and the capture upload
 endpoint, and by database grants that prevent the application account from
 changing audit and mission records. A way to bypass one of these documented
-controls is in scope for a report. Authentication, RBAC and TLS are on the
-1.x roadmap. See [docs/deployment/security.md](docs/deployment/security.md)
+controls is in scope for a report. Version 1.0.x supports deployment only inside a private network or
+tunnel; authentication, RBAC and TLS are planned for 1.1.0 (see
+[docs/RELEASE.md](docs/RELEASE.md) section 3). See [docs/deployment/security.md](docs/deployment/security.md)
 for the exposure policy and the production checklist.
 
 ## If a secret was committed

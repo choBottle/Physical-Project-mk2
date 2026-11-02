@@ -30,6 +30,17 @@
 
 "우리 연구실에서 돈다"가 아니라 **"모르는 기관이 받아서 세울 수 있다"** 가 1.0 의 정의다.
 
+### 1.0.x 의 운영 범위 — 사설망·터널 전용
+
+1.0.x 는 **사설망이나 터널(VPN) 안의 신뢰된 구성원만 접속하는 배치**를 지원 범위로 한다. 인증·인가(RBAC)·
+전송 암호화(TLS/SASL)는 1.0 출시 기준에 넣지 않고, 이것이 없다는 이유로 1.0.0 을 미루지 않는다.
+
+- 1.0.x 에서 지켜지는 것과 아닌 것은 [security.md](deployment/security.md) 에 적는다. 엣지·운영자 포트는 기본이
+  `127.0.0.1` 이고, 공유 토큰 없이 loopback 밖에 바인딩하면 백엔드가 기동을 거부한다.
+- 인증·RBAC·TLS 는 **1.1.0 목표**다. 1.x 안에서는 설정으로 켜는 선택형(옵트인)으로 넣어 기존 배치가 깨지지 않게 하고,
+  켜는 것을 기본값으로 바꾸는 일은 MAJOR(2.0) 로 다룬다(§1).
+- 공용 인터넷이나 기관 사이 배치가 필요하면 1.1 전에는 [security.md §3](deployment/security.md#3-운영-전환-체크리스트-터널-밖--다기관--공공-배치) 의 체크리스트를 운영자가 직접 적용한다.
+
 ### 플랫폼 · 배포 (이번 통합에서 완료)
 
 - [x] 7개 파트를 하나의 저장소로 통합(히스토리 보존) — 원본 브랜치는 무변경
@@ -72,11 +83,31 @@
 실장비 전 구간 시험을 통과한 커밋이 그대로 v1.0.0 이 된다. 1.0 이후에는 §1 규칙대로
 버그 수정은 PATCH(1.0.1 …), 설정·기능 추가는 MINOR(1.1.0 …)로 올린다.
 
-## 5. 1.x 로드맵
+## 5. 정식 저장소
+
+지금 정식 저장소는 **`github.com/choBottle/Physical-Project-mk2`** 다. 이슈·PR·릴리스·GHCR 이미지는 모두 여기서 낸다.
+`khw18033/Physical-Project-mk2` 는 통합 전 원본이며 새 작업을 받지 않는다.
+
+장기적으로는 연구실 조직(`sysailab`)으로 옮길 예정이다. 개인 계정 아래에 두면 관리자가 졸업·이탈할 때 이어받기 어렵고,
+외부 기관이 보기에 프로젝트의 소유 주체가 불분명하기 때문이다. 옮길 때는 플랫폼 메인테이너가 다음을 한 PR 로 처리한다.
+
+1. GitHub 의 **Transfer ownership** 으로 옮긴다(복사·새 저장소가 아니라 이전). 이슈·PR·릴리스·스타가 따라가고, 옛 URL 은
+   자동으로 리디렉트된다. 조직 설정이 멤버의 저장소 이전을 막으면 조직 관리자에게 요청한다.
+2. 저장소 안의 주소를 바꾼다. 아래 명령으로 남은 곳을 찾는다.
+   `git grep -n "choBottle/Physical-Project-mk2"`
+   현재 대상: `README.md`·`README.ko.md` 배지와 clone 주소, `SECURITY.md`, `CITATION.cff` 의 `repository-code`,
+   `hardware/HW-interface/twin-entity.schema.json` 의 `$id`.
+3. GHCR 이미지는 이전되지 않는다. 다음 태그를 밀면 [`release.yml`](../.github/workflows/release.yml) 이
+   `ghcr.io/sysailab/mk2-backend` 로 새로 게시한다(소유자 이름은 워크플로가 읽는다). 옛 이미지 경로는 CHANGELOG 의
+   배포 변경 절에 적고, 패키지를 공개(public)로 바꾼다.
+4. 저장소 Settings 에서 Actions·브랜치 보호·Discussions·Private vulnerability reporting 을 다시 확인한다.
+5. 각자 로컬에서 `git remote set-url origin https://github.com/sysailab/Physical-Project-mk2.git`.
+
+## 6. 1.x 로드맵
 
 | 항목 | 근거 |
 |---|---|
-| 인증·인가(RBAC) · TLS/SASL · OTLP 토큰 | BE-Q-04 · [security.md §3](deployment/security.md#3-운영-전환-체크리스트-터널-밖--다기관--공공-배치) |
+| **1.1.0 목표** 인증·인가(RBAC) · TLS/SASL · OTLP 토큰 (선택형, §3 「1.0.x 의 운영 범위」) | BE-Q-04 · [security.md §3](deployment/security.md#3-운영-전환-체크리스트-터널-밖--다기관--공공-배치) |
 | 가용성 판정기(MQTT 세션 우선) · 명령 4단계 승격 · 감사 기록 | BE Phase 5~6 |
 | 디지털 트윈 (위치·클래스 융합, 커버리지) | BE Phase 7 |
 | 엣지 compose 에 업무 브릿지(엣지 ingest → 중앙 Kafka 9095) 포함 | [edge.md §4](deployment/edge.md#4-현재-한계-v10-범위-밖) |

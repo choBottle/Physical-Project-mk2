@@ -41,6 +41,13 @@ becomes an emeritus maintainer.
      to change them.
 3. Decisions are recorded in the issue and reflected in the design documents.
 
+## Canonical repository
+
+The canonical repository is `github.com/choBottle/Physical-Project-mk2`.
+Issues, pull requests, releases and container images are published there.
+It is planned to move to the lab organization (`sysailab`); the checklist
+for that move is in [docs/RELEASE.md](docs/RELEASE.md) section 5.
+
 ## Adopting organizations
 
 Organizations that deploy the platform are encouraged to say so in an issue

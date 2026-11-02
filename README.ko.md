@@ -26,10 +26,10 @@ OpenTelemetry, Tailscale 은 지금 쓰는 구현이고 고정된 의존이 아�
 중앙 스택은 컨테이너 13개이며 `docker compose` 명령 하나로 뜬다. 모든 PR 마다 CI 가 빈 러너에서 이 스택을 새로 세우고
 헬스체크, 실제 말단 노드 코드로 하는 전 구간 시험, 백엔드 회귀 시험, 백업·복구 왕복을 돌린다.
 
-현재 판은 후보판 `v1.0.0-rc.1` 이다. 인증, 역할 기반 접근 제어, TLS 는 아직 없으므로 그 전까지는 사설망이나 터널
+현재 판은 후보판 `v1.0.0-rc.2` 이다. 인증, 역할 기반 접근 제어, TLS 는 아직 없으므로 그 전까지는 사설망이나 터널
 안에서만 운영한다([보안](#보안)).
 
-### 1.0.0-rc.1 이후 바뀐 것
+### 1.0.0-rc.2 에서 바뀐 것
 
 - **360 카메라 → Unity 를 데이터 규약 v2 로.** `camera360/anchor360_live.py` 와 Unity 수신 스크립트
   `Anchor360ObstacleReceiver.cs` 가 v2 이름(`label`, `position`, `ground_dist_m`, `size_m`, `bbox`, `confidence`)을 쓴다.

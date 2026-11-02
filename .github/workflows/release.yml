@@ -42,6 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # GHCR 이미지 이름은 소문자만 된다(owner 가 choBottle 이어도 ghcr.io/chobottle/...).
+      - run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
@@ -53,7 +55,7 @@ jobs:
             git checkout ${{ github.ref_name }}
             cd deploy && ./scripts/init-env.sh
             # 미리 빌드된 이미지를 쓰려면 deploy/.env 에:
-            #   MK2_BACKEND_IMAGE=ghcr.io/${{ github.repository_owner }}/mk2-backend:${{ github.ref_name }}
+            #   MK2_BACKEND_IMAGE=ghcr.io/${{ env.OWNER_LC }}/mk2-backend:${{ github.ref_name }}
             docker compose up -d --wait && ./scripts/healthcheck.sh
             ```
             업그레이드 절차와 이번 판의 배포 변경(환경변수·DB 마이그레이션)은 `CHANGELOG.md` 와 `docs/deployment/operations.md`.

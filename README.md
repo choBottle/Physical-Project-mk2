@@ -34,12 +34,12 @@ Every pull request rebuilds it on an empty CI runner and runs the health
 check, an end-to-end test with the real device-node code, the backend
 regression suite and a backup/restore round trip.
 
-The current release is `v1.0.0-rc.1`, a release candidate. Authentication,
+The current release is `v1.0.0-rc.2`, a release candidate. Authentication,
 role-based access control and TLS are not implemented yet; until they are,
 run the platform only inside a private network or tunnel (see
 [Security](#security)).
 
-### Changes since 1.0.0-rc.1
+### New in 1.0.0-rc.2
 
 - **360-degree camera to Unity on data contract v2.** `camera360/anchor360_live.py`
   and the Unity receiver `Anchor360ObstacleReceiver.cs` now use the v2 field
