@@ -7,6 +7,7 @@
 | 문서 | 무엇을 답하는가 |
 |---|---|
 | [architecture.md](architecture.md) | 구조와 경계. 새로 합류하면 여기부터 |
+| [../requirements.md](../requirements.md) | 요구사항 정의서 원문 — 원칙·금지 사항·AI-* 요구사항 ID 정의 |
 | [requirement-traceability.md](requirement-traceability.md) | 요구사항 ID별 구현 위치·테스트·상태 |
 
 ## `design/` — 기술·계약 설계 결정

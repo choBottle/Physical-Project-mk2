@@ -1,6 +1,6 @@
 # perception-framework
 
-CLAUDE.md 요구사항(담당: 진나영)을 구현하는 온디바이스·엣지 AI 실행 프레임워크.
+[요구사항 정의서](../docs/requirements.md)(담당: 진나영)을 구현하는 온디바이스·엣지 AI 실행 프레임워크.
 특정 센서·모델·런타임·전송 프로토콜을 핵심 코드에 하드코딩하지 않고,
 Capability/Provider 인터페이스와 Registry, 실행 호환성·자원·배포 프로파일을 통해
 교체·축소·확장 가능한 구조를 지향한다.
