@@ -11,8 +11,10 @@
 엣지 Prometheus(구역 raw) ◀───────── /federate(요약만) ───────── 중앙 Prometheus
 ```
 
-- 수신 포트 **4316 과 4317 은 같은 수신단**이다. 4316 은 백엔드 문서·기본값(`MK2_OTEL_ENDPOINT`)이 쓰던 번호, 4317 은 OTLP
-  표준이며 HW 노드·AI 프레임워크의 기본값이다. 둘 다 열어 두어 어느 쪽 설정으로도 붙는다.
+- 수신 포트 **4316 과 4317 은 같은 파이프라인**으로 간다. 4316 은 백엔드 문서·기본값(`MK2_OTEL_ENDPOINT`)이 쓰던 번호, 4317 은 OTLP
+  표준이며 HW 노드·AI 프레임워크의 기본값이다. 둘 다 열어 두어 어느 쪽 설정으로도 붙는다. Collector 안에서도 수신단을 따로
+  연다(`otlp` · `otlp/4316`) — 호스트 포트 둘을 컨테이너 포트 하나에 붙이면 Windows Docker Desktop 이 127.0.0.1 이 아닌
+  `MK2_EDGE_BIND` 에서 바인딩에 실패한다.
 - Collector 를 우회하는 입구(Tempo·Loki 직접 수신)는 호스트에 열지 않는다.
 - 이미지 버전을 고정한다. Collector 는 0.150 계열에서 컴포넌트 이름이 바뀌었다(`otlp`→`otlp_grpc`, `otlphttp`→`otlp_http`) —
   `:latest` 를 쓰면 설정이 다음 갱신에서 조용히 깨진다. 올릴 때는 CI 의 `validate` 단계가 먼저 판정한다.
