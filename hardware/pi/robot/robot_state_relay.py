@@ -20,6 +20,7 @@
 좌표 규약은 HW-interface/coordinate-contract.md 와 동일하다(Unity 월드, yaw 시계+).
 """
 import argparse
+import os
 import socket
 import sys
 import time
@@ -76,7 +77,7 @@ def main():
     ap = argparse.ArgumentParser(description="온보딩 파이 -> Unity 로봇 상태 릴레이")
     ap.add_argument("--node_id", required=True,
                     help="이 파이의 식별자. 예: pi1, pi7")
-    ap.add_argument("--unity_ip", default="192.168.50.244",
+    ap.add_argument("--unity_ip", default=os.environ.get("HW_UNITY_IP", "127.0.0.1"),
                     help="받는 곳. 쉼표로 여러 곳, 곳마다 :포트 가능 (Unity 와 다른 뷰어를 같이)")
     ap.add_argument("--unity_port", type=int, default=DEFAULT_UNITY_PORT)
     ap.add_argument("--ingress_port", type=int, default=DEFAULT_INGRESS_PORT)

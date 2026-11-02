@@ -33,9 +33,9 @@
 | 15101 mode 98/99 | 99 만, `path_done_notify` 로 **한 번만**. 98 은 코드에 없다 |
 | 5009 state_change | 보낸다. 같은 포트로 `go1_detect_forward` 탐지 JSON 도 나간다 |
 | mosquitto 1883 · 9001 | **이번에 설치** (원래 없었다) |
-| robot-node | 컨테이너 `hw-robot-go1`, 엣지 브로커 `192.168.50.244:1883` 로 발행 (로컬에 없음) |
+| robot-node | 컨테이너 `hw-robot-go1`, 엣지 브로커 `192.0.2.244:1883` 로 발행 (로컬에 없음) |
 | zone · entity id | `zoneA` · `go1-001` |
-| 유니티 PC · 보내는 곳 | `192.168.50.244` → pi1 wlan0 `192.168.50.243` |
+| 유니티 PC · 보내는 곳 | `192.0.2.244` → pi1 wlan0 `192.0.2.243` |
 | 방화벽 | ufw 없음. nftables INPUT accept, `tailscale0` accept |
 
 ---

@@ -93,7 +93,7 @@ from datetime import datetime, timedelta, timezone
 import cv2
 import requests
 
-DEF_IP         = "192.168.100.124"
+DEF_IP         = os.environ.get("MK2_PRO2_IP", "198.51.100.124")  # 카메라 IP (예시 주소)
 # 서버 주소는 환경변수로 받는다 (기본 localhost). 예: MK2_SERVER_HOST=<server-ip>
 SERVER_HOST    = os.environ.get("MK2_SERVER_HOST", "127.0.0.1")
 DEF_UPLOAD     = os.environ.get("MK2_UPLOAD_URL", f"http://{SERVER_HOST}:7866/upload_pano")

@@ -1,6 +1,6 @@
 """노트북 쪽 — 베이스 수신기(USB 시리얼)의 RTCM3 를 Pi 로 UDP 전송한다.
 
-  python -m rtk_relay.base_sender --port COM5 --baud 115200 --to 192.168.43.10:14660   (Windows)
+  python -m rtk_relay.base_sender --port COM5 --baud 115200 --to 192.0.2.10:14660      (Windows)
   python -m rtk_relay.base_sender --port /dev/ttyACM0 --to pi5.local:14660              (Linux)
   python -m rtk_relay.base_sender --file base.rtcm --to 127.0.0.1:14660                 (기록 재생 — 시험용)
 

@@ -4,7 +4,7 @@
 # 여기 들어가는 것은 "없어도 안전 루프가 깨지지 않는" 기능뿐이다.
 # 계측·임계판정·하트비트·버퍼링은 systemd 층(sensor/robot/actuator node)이 담당한다.
 #
-# 배포:  kubectl apply  -f augment-analyzer.yaml
+# 배포:  HW_BROKER_HOST=<broker-ip> envsubst '$HW_BROKER_HOST' < augment-analyzer.yaml | kubectl apply -f -
 # 제거:  kubectl delete -f augment-analyzer.yaml
 #
 # ⚠ image 를 반드시 **digest 로 고정**하고 사전에 pre-pull 한다.
@@ -41,7 +41,7 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: HW_BROKER_HOST
-              value: "192.168.50.244"
+              value: "${HW_BROKER_HOST}"
             - name: HW_ZONE_ID
               value: "zoneA"
             - name: HW_NODE_ID

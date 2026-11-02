@@ -13,15 +13,15 @@
 
 | 항목 | 값 |
 |---|---|
-| Tailscale 이름 · IP | `<pi1-tailnet-host>` · `<pi1-tailscale-ip>` (랜: wlan0 `192.168.50.243`, eth0 `192.168.123.162` = Go1 내부망) |
-| 유니티 UDP 를 받는 프로세스 | `go1-sdk.service` → `~/go1sdk/go1_sdk_pc` (C++, `--robot_ip 192.168.123.161 --unity_ip 192.168.50.244`). 15100·15110 을 이 프로세스가 bind 한다. 소스 `~/go1sdk/go1_sdk_pc.cpp` 는 저장소 `pi/robot/go1_sdk_pc.cpp` 와 같다. `unity_bridge.py` 는 돌지 않는다 |
+| Tailscale 이름 · IP | `<pi1-tailnet-host>` · `<pi1-tailscale-ip>` (랜: wlan0 `192.0.2.243`, eth0 `192.168.123.162` = Go1 내부망) |
+| 유니티 UDP 를 받는 프로세스 | `go1-sdk.service` → `~/go1sdk/go1_sdk_pc` (C++, `--robot_ip 192.168.123.161 --unity_ip 192.0.2.244`). 15100·15110 을 이 프로세스가 bind 한다. 소스 `~/go1sdk/go1_sdk_pc.cpp` 는 저장소 `pi/robot/go1_sdk_pc.cpp` 와 같다. `unity_bridge.py` 는 돌지 않는다 |
 | 15101 에 mode 98/99 를 싣는가 | **99 만 싣는다.** `go1_sdk_pc.cpp:1753-1757` 에서 `send_unity_state(yaw_unity,0,0,0,1,99)` 를 **한 번만** 보낸다(여러 주기가 아니다). **98 은 코드에 없다.** `handle_path_cancel_from_unity()`(`:605-637`)는 정지만 하고 아무것도 보내지 않는다. 계약 문서(`bridge-contract.md` §4.1)에는 98 이 있지만 구현되지 않았다. 평소 mode 필드는 1(서기) 또는 2(걷기)라서 0 이 아닌 값이 늘 실린다 |
 | 5009 state_change | 보낸다(`:921-936`, 바뀔 때 즉시 + 0.3초 하트비트). 형식: `{"state_change": b, "motion_active": b, "source": "go1_sdk_pc", "mode": n, ...}`. **같은 포트로 `go1_detect_forward` 의 탐지 JSON 도 나간다.** 두 키가 다 있는 것만 골라야 한다 |
 | mosquitto 1883 · 9001 | **둘 다 없다. pi1 에는 mosquitto 브로커가 설치돼 있지 않다**(`mosquitto-clients` 만 있고 `/etc/mosquitto` 없음, localhost:1883 은 연결 거부) |
-| robot-node · 로컬 `…/state` | 도커 컨테이너 `hw-robot-go1` 안에서 돈다(`python3 -m robot.robot_node`, network host). **로컬이 아니라 엣지 브로커 `192.168.50.244:1883` 로 발행하는데, 그 브로커도 조사 시점에 연결 거부였다.** `battery_pct`·`heading_deg` 실제 줄은 볼 수 없었다 |
+| robot-node · 로컬 `…/state` | 도커 컨테이너 `hw-robot-go1` 안에서 돈다(`python3 -m robot.robot_node`, network host). **로컬이 아니라 엣지 브로커 `192.0.2.244:1883` 로 발행하는데, 그 브로커도 조사 시점에 연결 거부였다.** `battery_pct`·`heading_deg` 실제 줄은 볼 수 없었다 |
 | 배터리 · yaw 대안 원천 | Go1 내부 MQTT `192.168.123.161:1883` 구독이 된다: `bms/state` byte[3] = **71 (SOC %)**, `robot/state` yaw int16 = **-2°**. `robot.go1_link` 가 쓰는 방식과 같다 |
 | zone · entity id | `zoneA` · `go1-001` (컨테이너 env: `HW_ZONE_ID=zoneA`, `HW_ENTITY_ID=go1-001`, `HW_NODE_ID=pi1`) |
-| 유니티 PC IP · 보내는 곳 | 유니티 `192.168.50.244` → pi1 **wlan0 `192.168.50.243`**. 15100 텔레옵 약 26 Hz 를 캡처로 확인했다. 40초 캡처 동안 15110 은 오지 않았지만, 11:16:17 에 path id=1 을 받아 11:17:32 에 끝낸 로그(`done notify sent (mode=99)`)가 있다. 브리지는 15101 을 약 500 Hz 로 wlan0 을 거쳐 `.244` 로 보낸다. `lo` 에는 로컬 `MISSION PING`(15100)만 보였다 |
+| 유니티 PC IP · 보내는 곳 | 유니티 `192.0.2.244` → pi1 **wlan0 `192.0.2.243`**. 15100 텔레옵 약 26 Hz 를 캡처로 확인했다. 40초 캡처 동안 15110 은 오지 않았지만, 11:16:17 에 path id=1 을 받아 11:17:32 에 끝낸 로그(`done notify sent (mode=99)`)가 있다. 브리지는 15101 을 약 500 Hz 로 wlan0 을 거쳐 `.244` 로 보낸다. `lo` 에는 로컬 `MISSION PING`(15100)만 보였다 |
 | 방화벽 | ufw 없음. nftables 에는 tailscale·docker 체인만 있고 INPUT policy 는 accept, `tailscale0` 은 accept |
 
 ### 참고 사실
@@ -35,9 +35,9 @@
 ### 캡처 원문 (발췌)
 
 ```
-1059 ('wlan0', 1, 0, '192.168.50.244', '192.168.50.243', 15100) b'0.000 0.000 0.000 0'
-5000 ('?', 4, '192.168.50.243', '192.168.50.244', 15101) b'204021 521779.4 0.402675 4.930372 0.498429 0.160 0.000 -0.022 0 2'
- 113 ('?', 4, '192.168.50.243', '192.168.50.244', 5009) b'{"timestamp":"1789438646.3753228","camera_id":"go1_front","detections":[...'
+1059 ('wlan0', 1, 0, '192.0.2.244', '192.0.2.243', 15100) b'0.000 0.000 0.000 0'
+5000 ('?', 4, '192.0.2.243', '192.0.2.244', 15101) b'204021 521779.4 0.402675 4.930372 0.498429 0.160 0.000 -0.022 0 2'
+ 113 ('?', 4, '192.0.2.243', '192.0.2.244', 5009) b'{"timestamp":"1789438646.3753228","camera_id":"go1_front","detections":[...'
    8 ('lo', 772, 0, '127.0.0.1', '127.0.0.1', 15100) b'MISSION PING'
 ```
 

@@ -12,13 +12,13 @@
     { "id": "MS-G", "title": "임무 종료", "status": "pending", "assignedTargets": [] }
   ],
   "hardware": [
-    { "id": "go1-02", "kind": "Unitree Go1", "connection": "online", "battery": 78, "rssi": -52, "latency": 18, "ip": "192.168.10.42", "firmware": "v1.9.3", "temperature": 46, "heartbeat": "0.4s 전" },
-    { "id": "arm-03", "kind": "매니퓰레이터", "connection": "offline", "battery": 0, "rssi": -99, "latency": 0, "ip": "192.168.10.63", "firmware": "v2.1.0", "temperature": 28, "heartbeat": "연결 끊김" },
-    { "id": "cam-4f", "kind": "고정 카메라 4층", "connection": "online", "battery": 100, "rssi": -44, "latency": 11, "ip": "192.168.10.84", "firmware": "v4.2.1", "temperature": 39, "heartbeat": "0.2s 전" },
-    { "id": "cam-5f", "kind": "고정 카메라 5층", "connection": "maintenance", "battery": 100, "rssi": -58, "latency": 34, "ip": "192.168.10.85", "firmware": "v4.1.8", "temperature": 41, "heartbeat": "점검 중" },
-    { "id": "go1-05", "kind": "Unitree Go1", "connection": "online", "battery": 34, "rssi": -61, "latency": 26, "ip": "192.168.10.45", "firmware": "v1.9.2", "temperature": 49, "heartbeat": "0.7s 전" },
-    { "id": "amr-11", "kind": "AMR", "connection": "online", "battery": 91, "rssi": -47, "latency": 18, "ip": "192.168.10.71", "firmware": "v3.0.4", "temperature": 43, "heartbeat": "0.3s 전" },
-    { "id": "drone-01", "kind": "드론", "connection": "offline", "battery": 12, "rssi": -96, "latency": 0, "ip": "192.168.10.91", "firmware": "v0.8.7", "temperature": 31, "heartbeat": "연결 끊김" }
+    { "id": "go1-02", "kind": "Unitree Go1", "connection": "online", "battery": 78, "rssi": -52, "latency": 18, "ip": "192.0.2.42", "firmware": "v1.9.3", "temperature": 46, "heartbeat": "0.4s 전" },
+    { "id": "arm-03", "kind": "매니퓰레이터", "connection": "offline", "battery": 0, "rssi": -99, "latency": 0, "ip": "192.0.2.63", "firmware": "v2.1.0", "temperature": 28, "heartbeat": "연결 끊김" },
+    { "id": "cam-4f", "kind": "고정 카메라 4층", "connection": "online", "battery": 100, "rssi": -44, "latency": 11, "ip": "192.0.2.84", "firmware": "v4.2.1", "temperature": 39, "heartbeat": "0.2s 전" },
+    { "id": "cam-5f", "kind": "고정 카메라 5층", "connection": "maintenance", "battery": 100, "rssi": -58, "latency": 34, "ip": "192.0.2.85", "firmware": "v4.1.8", "temperature": 41, "heartbeat": "점검 중" },
+    { "id": "go1-05", "kind": "Unitree Go1", "connection": "online", "battery": 34, "rssi": -61, "latency": 26, "ip": "192.0.2.45", "firmware": "v1.9.2", "temperature": 49, "heartbeat": "0.7s 전" },
+    { "id": "amr-11", "kind": "AMR", "connection": "online", "battery": 91, "rssi": -47, "latency": 18, "ip": "192.0.2.71", "firmware": "v3.0.4", "temperature": 43, "heartbeat": "0.3s 전" },
+    { "id": "drone-01", "kind": "드론", "connection": "offline", "battery": 12, "rssi": -96, "latency": 0, "ip": "192.0.2.91", "firmware": "v0.8.7", "temperature": 31, "heartbeat": "연결 끊김" }
   ],
   "tasks": [
     { "id": "T-31", "title": "엘리베이터 홀 이동", "deps": [], "target": "go1-02", "actionItems": [

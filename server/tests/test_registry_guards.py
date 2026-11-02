@@ -37,7 +37,7 @@ REGISTRATION = {
     "device_type": "water_level",
     "fw_version": "0.3.0",
     "mac": "b8:27:eb:aa:bb:cc",
-    "ip": "192.168.50.31",
+    "ip": "192.0.2.31",
 }
 
 
@@ -68,8 +68,8 @@ def test_registration_of_absent_forms() -> None:
 def test_pick_keeps_old_on_blank() -> None:
     """★ 증강 분석이 `Identity(..., "", "", ...)`로 보내는 빈 값이 기존 값을 지우지 않는다."""
     assert pick("", "b8:27:eb:aa:bb:cc") == "b8:27:eb:aa:bb:cc"
-    assert pick("   ", "192.168.50.31") == "192.168.50.31"
-    assert pick(None, "192.168.50.31") == "192.168.50.31", "안 보낸 것이 '지워라'가 되면 안 된다"
+    assert pick("   ", "192.0.2.31") == "192.0.2.31"
+    assert pick(None, "192.0.2.31") == "192.0.2.31", "안 보낸 것이 '지워라'가 되면 안 된다"
 
 
 def test_pick_takes_new_when_present() -> None:
@@ -121,14 +121,14 @@ def test_fingerprint_fields_match_hardware() -> None:
 
 
 def test_changed_fields_none_when_same() -> None:
-    previous = {"zone_id": "zoneA", "mac": "b8:27:eb:aa:bb:cc", "ip": "192.168.50.31"}
+    previous = {"zone_id": "zoneA", "mac": "b8:27:eb:aa:bb:cc", "ip": "192.0.2.31"}
     assert changed_fields(previous, dict(previous)) == ()
 
 
 def test_changed_fields_detects_each() -> None:
-    previous = {"zone_id": "zoneA", "mac": "b8:27:eb:aa:bb:cc", "ip": "192.168.50.31"}
+    previous = {"zone_id": "zoneA", "mac": "b8:27:eb:aa:bb:cc", "ip": "192.0.2.31"}
     assert changed_fields(previous, dict(previous, zone_id="zoneB")) == ("zone_id",)
-    assert changed_fields(previous, dict(previous, ip="192.168.50.99")) == ("ip",)
+    assert changed_fields(previous, dict(previous, ip="192.0.2.99")) == ("ip",)
     assert changed_fields(previous, {"zone_id": "zoneB", "mac": "aa:bb:cc:dd:ee:ff",
                                      "ip": "10.0.0.2"}) == ("zone_id", "mac", "ip")
 
@@ -139,7 +139,7 @@ def test_changed_fields_ignores_blank_incoming() -> None:
     빈 문자열 가드를 통과한 뒤의 값끼리 비교하기 때문이다. 이 순서가 뒤바뀌면 증강 분석이
     status를 보낼 때마다 "mac이 바뀌었다"는 이력이 무한히 쌓인다.
     """
-    previous = {"zone_id": "zoneA", "mac": "b8:27:eb:aa:bb:cc", "ip": "192.168.50.31"}
+    previous = {"zone_id": "zoneA", "mac": "b8:27:eb:aa:bb:cc", "ip": "192.0.2.31"}
     incoming = {"zone_id": "zoneA", "mac": "", "ip": ""}
     assert changed_fields(previous, incoming) == ()
 
@@ -147,7 +147,7 @@ def test_changed_fields_ignores_blank_incoming() -> None:
 def test_changed_fields_first_observation() -> None:
     """처음 보는 개체는 전부 '다름'이다 — 이력이 초기 상태부터 자립하게 한다."""
     previous = {"zone_id": None, "mac": None, "ip": None}
-    incoming = {"zone_id": "zoneA", "mac": "b8:27:eb:aa:bb:cc", "ip": "192.168.50.31"}
+    incoming = {"zone_id": "zoneA", "mac": "b8:27:eb:aa:bb:cc", "ip": "192.0.2.31"}
     assert changed_fields(previous, incoming) == ("zone_id", "mac", "ip")
 
 

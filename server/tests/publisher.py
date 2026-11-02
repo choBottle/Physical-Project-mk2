@@ -92,7 +92,7 @@ DEVICE_TYPE_BY_ETYPE = {
 }
 FW_VERSION = "0.3.0"
 SAMPLE_MAC = "b8:27:eb:aa:bb:cc"
-SAMPLE_IP = "192.168.50.31"
+SAMPLE_IP = "192.0.2.31"
 
 EXAMPLES_DIR = settings.contracts_dir() / "examples"
 INVALID_FIXTURES = {

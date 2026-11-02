@@ -29,8 +29,9 @@ StartLimitIntervalSec=0
 Type=simple
 User=@MK2_USER@
 WorkingDirectory=@MK2_PI_DIR@
+EnvironmentFile=-/etc/hw-robot.env
 ExecStart=@MK2_VENV@/bin/python3 -u @MK2_PI_DIR@/robot/robot_state_relay.py \
-  --node_id pi7 --unity_ip 192.168.50.244 --unity_port 15201 --ingress_port 15200 \
+  --node_id pi7 --unity_port 15201 --ingress_port 15200 \
   --default_type go1 --default_robot_id go1-1
 Restart=always
 RestartSec=3

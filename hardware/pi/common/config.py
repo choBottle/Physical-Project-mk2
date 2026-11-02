@@ -22,7 +22,7 @@ def _b(name, default):
     return str(os.environ.get(f"HW_{name}", default)).lower() in ("1", "true", "yes", "on")
 
 # ---------------- 브로커 접속 (HW-C-01) ----------------
-BROKER_HOST = _s("BROKER_HOST", "192.168.50.244")   # 임시: 노트북. 엣지노드 구축 후 교체
+BROKER_HOST = _s("BROKER_HOST", "127.0.0.1")   # 현장 값은 HW_BROKER_HOST 로 준다
 BROKER_PORT = _i("BROKER_PORT", 1883)
 # BE-T-01이 말단↔엣지를 MQTT 5.0 + TLS로 확정. 5.0은 지금 적용하고,
 # TLS는 엣지 브로커에 인증서가 준비되면 아래 3개만 채우면 켜진다.
@@ -76,7 +76,7 @@ RAPID_MIN_GAP_S = _f("RAPID_MIN_GAP_S", 10.0)   # 급변 보고 자체의 최소
 
 # ---------------- 관측 (HW-C-05, BE-S-02) ----------------
 # 엣지 Collector(Agent)의 OTLP 수신 주소. 비우면 관측 발신을 끈다(노드는 정상 동작).
-OTEL_ENDPOINT = _s("OTEL_ENDPOINT", "")       # 예: http://192.168.50.244:4317
+OTEL_ENDPOINT = _s("OTEL_ENDPOINT", "")       # 예: http://<edge-ip>:4317
 # 아키텍처 v8 §5-1 에 맞춘다(백엔드 기준). 요구사항 정의서는 60초였다.
 OTEL_EXPORT_INTERVAL = _f("OTEL_EXPORT_INTERVAL", 15.0)
 

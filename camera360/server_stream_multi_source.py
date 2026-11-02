@@ -125,7 +125,7 @@ Redis Stream (최근 --maxlen 개만 유지, 기본 300)
   말단 → 엣지(노트북)   python server_stream_multi_source.py
   말단 → 엣지 → 서버    노트북: ... --forward <서버 주소>      서버: ... --no-pull
   소스 골라 켜기       ... --on robot1 drone              (노트북 3대 폴백도 이걸로)
-  현장 IP 로 바꾸기     ... --robot1 192.168.0.11 --drone 192.168.0.13
+  현장 IP 로 바꾸기     ... --robot1 <robot1-ip> --drone <drone-ip>
   360 카메라 노트북     stream_to_server.py --upload http://<이 파일이 도는 기기>:10001/upload_pano
                        (같은 노트북이면 http://127.0.0.1:10001/upload_pano)
   실시간 비전 (GPU 서버, 다른 터미널)

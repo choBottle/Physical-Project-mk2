@@ -228,7 +228,7 @@ const params = plan.toStartParams({
   const { parseRtcmStatus, rtcmChannel, RTCM_TOPIC } = await load('src', 'physical', 'rtcmFeed.ts');
   const body = { source_id: 'x500-001', receiving: true, age_s: 0.4, frames_per_s: 4.1, rate_bps: 812.5, frames: 120,
     types: { '1005': 3, '1077': 40, junk: 1 }, base: { station_id: 7, lat: 36.35, lon: 127.29, alt_m: 85.1 },
-    sender: '192.168.43.20:51234', injected_messages: 200, bad_crc: 0 };
+    sender: '192.0.2.20:51234', injected_messages: 200, bad_crc: 0 };
   const r = parseRtcmStatus(body, 'zoneA/drone/x500-001/rtcm');
   check(r !== null && r.receiving && r.ageS === 0.4 && r.base?.stationId === 7, '보정 전달기 보고를 못 뜯었다');
   check(r?.types.join() === '1005,1077', '메시지 번호가 아닌 키를 걸러 내지 않았다');

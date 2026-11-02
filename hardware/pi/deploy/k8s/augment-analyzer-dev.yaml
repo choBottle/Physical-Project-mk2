@@ -9,9 +9,9 @@
 #   - 이미지가 digest 로 고정되지 않는다
 # 레지스트리(또는 `k3s ctr images import`)가 준비되면 운영본으로 교체한다.
 #
-# hostPath 는 노드마다 다르므로 ${MK2_PI_DIR} 자리표시자로 둔다. 그대로 apply 하지 말고
+# hostPath 는 노드마다 다르므로 ${MK2_PI_DIR}, 브로커 주소는 ${HW_BROKER_HOST} 자리표시자로 둔다. 그대로 apply 하지 말고
 # 노드의 코드 위치(저장소의 pi/ 폴더 절대경로)를 넣어 적용한다:
-#   MK2_PI_DIR=/home/<user>/hw/pi envsubst '$MK2_PI_DIR' \
+#   MK2_PI_DIR=/home/<user>/hw/pi HW_BROKER_HOST=<broker-ip> envsubst '$MK2_PI_DIR $HW_BROKER_HOST' \
 #     < pi/deploy/k8s/augment-analyzer-dev.yaml | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
@@ -55,7 +55,7 @@ spec:
               exec python3 -u -m augment.analyzer   # -u: 로그가 즉시 보이도록
           env:
             - name: HW_BROKER_HOST
-              value: "192.168.50.244"
+              value: "${HW_BROKER_HOST}"
             - name: HW_ZONE_ID
               value: "zoneA"
             - name: HW_NODE_ID
