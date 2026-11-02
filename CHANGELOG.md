@@ -8,6 +8,16 @@ ports, database migrations and image versions.
 
 ## [Unreleased]
 
+### Removed
+
+- Internal records moved to the private repository
+  `sysailab/mk2-internal-docs`, under the same paths:
+  `visualization/documents/` `회의록/`, `작업보고/`, `옛판/`, `작업프롬프트/`,
+  `논문/`, `협의/`, and `ai/docs/obsidian/` (about 41 MB, 384 files). They are
+  not needed to build, deploy or contribute. Earlier commits still contain
+  them. `visualization/documents/verify_docs.py` treats citations of the moved
+  files (listed in `moved-to-internal.txt`) as valid.
+
 ### Added
 
 - `docs/deployment/twin-demo.md`: recorded run with screenshots. A 360 photo
