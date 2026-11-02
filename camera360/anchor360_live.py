@@ -361,7 +361,17 @@ def build_packet(kept, proj: GroundProjector, u_deg, v_deg,
     return packet, dropped
 
 
-def draw_debug(bgr, packet, out_path):
+def detection_label(d, mode="xyz"):
+    """박스 위 글자. xyz = 앵커 좌표(m, +x 오른쪽 · +y 위 · +z 정면 — Unity 로 보내는 position 과 같은 값),
+    dist = 예전처럼 지면 거리 D(m)."""
+    head = f'{d["label"]} {d["confidence"]:.2f}'
+    if mode == "dist":
+        return f'{head} D={d["ground_dist_m"]:.2f}m'
+    p = d["position"]
+    return f'{head} x={p["x"]:+.2f} y={p["y"]:.2f} z={p["z"]:+.2f}'
+
+
+def draw_debug(bgr, packet, out_path, label_mode="xyz"):
     """전송한 검출만 그린 시각화 이미지 저장 (detect_ground_3b1 형식)."""
     img = bgr.copy()
     for d in packet["detections"]:
@@ -369,8 +379,7 @@ def draw_debug(bgr, packet, out_path):
         bcx, bcy = (x1 + x2) // 2, y2
         cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.circle(img, (bcx, bcy), 5, (0, 0, 255), -1)
-        label = f'{d["label"]} {d["confidence"]:.2f} D={d["ground_dist_m"]:.2f}m'
-        cv2.putText(img, label, (x1, max(y1 - 5, 12)),
+        cv2.putText(img, detection_label(d, label_mode), (x1, max(y1 - 5, 12)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
     cv2.imwrite(out_path, img)
 
@@ -498,7 +507,7 @@ def process_one(path, det: Detector, sock, args, seq):
         cv2.imwrite(os.path.join(args.slice_dir, fname), sl)
 
     if args.debug_img:
-        draw_debug(sl, packet, os.path.join(args.out_dir, "anchor360_latest.jpg"))
+        draw_debug(sl, packet, os.path.join(args.out_dir, "anchor360_latest.jpg"), args.label)
 
     t_end = time.perf_counter()
     n_ok, n_drop = len(packet["detections"]), len(dropped)
@@ -558,6 +567,8 @@ def main():
     # --- 출력 ---
     ap.add_argument("--debug-img", action="store_true",
                     help="전송한 검출을 그린 슬라이스를 out-dir 에 덮어쓰며 저장")
+    ap.add_argument("--label", choices=["xyz", "dist"], default="xyz",
+                    help="--debug-img 박스 위 글자: xyz = 앵커 좌표 x,y,z(m, 기본) · dist = 지면 거리 D(m)")
     ap.add_argument("--save-slice", action="store_true",
                     help="검출에 쓴 슬라이스 원본을 타임스탬프 이름으로 백업 저장")
     ap.add_argument("--slice-dir", default=DEF_SLICE_DIR,

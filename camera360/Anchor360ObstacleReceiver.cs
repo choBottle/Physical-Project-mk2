@@ -57,6 +57,18 @@ public class Anchor360ObstacleReceiver : MonoBehaviour
     public string obstacleTagName = "Obstacle";
     public string obstacleLayerName = "Obstacle";
 
+    [Header("Coordinate Label (큐브 위에 x, y, z 표시)")]
+    [Tooltip("큐브 위에 좌표 글자를 띄운다.")]
+    public bool showCoordLabel = true;
+    [Tooltip("false = 360 서버가 보낸 앵커 좌표(m, +x 오른쪽 · +y 위 · +z 정면 — 탐지 화면 글자와 같은 값). true = 이 씬의 월드 좌표.")]
+    public bool labelUseUnityWorld = false;
+    [Tooltip("글자 크기(월드 단위). 너무 작거나 크면 조정.")]
+    public float labelCharacterSize = 0.05f;
+    public int labelFontSize = 48;
+    public Color labelColor = Color.green;
+    [Tooltip("큐브 윗면에서 글자까지 높이(m).")]
+    public float labelHeightOffset = 0.15f;
+
     [Header("Debug")]
     public bool printReceivedJson = false;
 
@@ -114,7 +126,9 @@ public class Anchor360ObstacleReceiver : MonoBehaviour
 
     // ---- 스폰된 큐브 ----
     private readonly List<GameObject> spawned = new List<GameObject>();
+    private readonly List<Transform> labels = new List<Transform>();   // 카메라를 향하게 돌릴 좌표 글자
     private GameObject root;
+    private Font labelFont;
 
     void Start()
     {
@@ -188,6 +202,7 @@ public class Anchor360ObstacleReceiver : MonoBehaviour
         // 이전 360 큐브 전부 제거(스냅샷 방식 → 사라진 장애물 자동 제거)
         foreach (var go in spawned) if (go != null) Destroy(go);
         spawned.Clear();
+        labels.Clear();
 
         Quaternion yawFix = Quaternion.Euler(0f, yawOffsetDeg, 0f);
 
@@ -219,7 +234,57 @@ public class Anchor360ObstacleReceiver : MonoBehaviour
             ApplyTagAndLayer(obj);
 
             spawned.Add(obj);
+
+            if (showCoordLabel)
+            {
+                Vector3 shown = labelUseUnityWorld ? pos : new Vector3(p3.x, p3.y, p3.z);
+                var top = new Vector3(pos.x, pos.y + scale.y * 0.5f + labelHeightOffset, pos.z);
+                SpawnLabel($"{det.Label}\n{FormatXyz(shown)}", top);
+            }
         }
+    }
+
+    static string FormatXyz(Vector3 v)
+    {
+        const string f = "+0.00;-0.00;0.00";
+        return $"x={v.x.ToString(f)} y={v.y.ToString(f)} z={v.z.ToString(f)}";
+    }
+
+    void SpawnLabel(string text, Vector3 worldPos)
+    {
+        if (labelFont == null)
+        {
+            // Unity 2022.2+ 는 LegacyRuntime.ttf, 그 전 판은 Arial.ttf 가 내장 글꼴이다
+            try { labelFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); } catch { }
+            if (labelFont == null) { try { labelFont = Resources.GetBuiltinResource<Font>("Arial.ttf"); } catch { } }
+            if (labelFont == null) { Debug.LogWarning("[Anchor360] 내장 글꼴을 못 찾아 좌표 글자를 끈다."); showCoordLabel = false; return; }
+        }
+        // 큐브의 자식으로 두면 큐브 크기(scale)에 글자가 찌그러지므로 root 아래에 따로 둔다
+        var go = new GameObject("Obs360_Label");
+        go.transform.SetParent(root.transform, false);
+        go.transform.position = worldPos;
+        var tm = go.AddComponent<TextMesh>();
+        tm.text = text;
+        tm.font = labelFont;
+        tm.fontSize = labelFontSize;
+        tm.characterSize = labelCharacterSize;
+        tm.anchor = TextAnchor.LowerCenter;
+        tm.alignment = TextAlignment.Center;
+        tm.color = labelColor;
+        go.GetComponent<MeshRenderer>().sharedMaterial = labelFont.material;
+        spawned.Add(go);
+        labels.Add(go.transform);
+    }
+
+    void LateUpdate()
+    {
+        // 좌표 글자가 항상 카메라 쪽을 보게 한다(빌보드)
+        if (labels.Count == 0) return;
+        var cam = Camera.main;
+        if (cam == null) return;
+        Vector3 c = cam.transform.position;
+        foreach (var t in labels)
+            if (t != null) t.rotation = Quaternion.LookRotation(t.position - c);
     }
 
     Vector3 ComputeScale(Size s)

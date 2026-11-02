@@ -43,3 +43,17 @@ pip install -r requirements.txt -r requirements-vision.txt   # + 비전 추론 �
 ```
 
 `venv_image_requirements.txt` 는 운영 비전 서버의 `pip freeze` 전체 기록이다(재현 참고용).
+
+## 검출 좌표 표시 (x, y, z)
+
+검출된 물체 위에는 거리 대신 **앵커 좌표 x, y, z(m)** 를 쓴다. +x 오른쪽 · +y 위(바닥 0) · +z 슬라이스 정면이며,
+Unity 로 보내는 `position` 과 같은 값이다.
+
+| 화면 | 표시 | 예전 거리 표시로 |
+|---|---|---|
+| `anchor360_live.py --debug-img` 가 남기는 `anchor360_latest.jpg` | `person 0.87 x=-1.23 y=0.00 z=+3.46` | `--label dist` → `D=3.67m` |
+| `detect_ground_3b1.py` 결과 이미지 | 같음 | `MK2_LABEL=dist` |
+| Unity `Anchor360ObstacleReceiver` 큐브 위 글자 | 이름 + `x=… y=… z=…`, 카메라를 향해 돈다 | Inspector `Show Coord Label` 끄기 |
+
+Unity 에서는 Inspector 의 `Label Use Unity World` 를 켜면 받은 앵커 좌표 대신 씬의 월드 좌표를 보여 준다.
+글자 크기·색·높이는 `Label Character Size` · `Label Color` · `Label Height Offset`.
