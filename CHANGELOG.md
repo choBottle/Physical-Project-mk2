@@ -8,16 +8,6 @@ ports, database migrations and image versions.
 
 ## [Unreleased]
 
-### Removed
-
-- Internal records moved to the private repository
-  `sysailab/mk2-internal-docs`, under the same paths:
-  `visualization/documents/` `회의록/`, `작업보고/`, `옛판/`, `작업프롬프트/`,
-  `논문/`, `협의/`, and `ai/docs/obsidian/` (about 41 MB, 384 files). They are
-  not needed to build, deploy or contribute. Earlier commits still contain
-  them. `visualization/documents/verify_docs.py` treats citations of the moved
-  files (listed in `moved-to-internal.txt`) as valid.
-
 ### Added
 
 - `docs/deployment/twin-demo.md`: recorded run with screenshots. A 360 photo
@@ -39,6 +29,22 @@ ports, database migrations and image versions.
 - `docs/RELEASE.md` section 5 and `GOVERNANCE.md`: which repository is
   canonical, and the checklist for moving it to the `sysailab` organization.
   The 1.x roadmap is now section 6.
+- Site LAN addresses are no longer hard-coded in code, unit files and
+  manifests; they come from environment variables with a `127.0.0.1`
+  fallback. Documentation and test fixtures use RFC 5737 example addresses
+  or placeholders such as `<camera-ip>`. Vendor-fixed device networks (Go1
+  `192.168.123.x`, RoboMaster EP USB, DJI Osmo AP, radar SDR link, Insta360
+  Farsight DHCP range) are unchanged.
+
+### Removed
+
+- Internal records moved to the private repository
+  `sysailab/mk2-internal-docs`, under the same paths:
+  `visualization/documents/` `회의록/`, `작업보고/`, `옛판/`, `작업프롬프트/`,
+  `논문/`, `협의/`, and `ai/docs/obsidian/` (about 41 MB, 384 files). They are
+  not needed to build, deploy or contribute. Earlier commits still contain
+  them. `visualization/documents/verify_docs.py` treats citations of the moved
+  files (listed in `moved-to-internal.txt`) as valid.
 
 ### Fixed
 
@@ -51,15 +57,6 @@ ports, database migrations and image versions.
   `gz` binary is logged instead of silently stopping the Gazebo thread.
 - `anchor360_live.py` prints each destination as `host:port` instead of
   `host:port:port` when a port is given in `--unity-ip`.
-
-### Changed
-
-- Site LAN addresses are no longer hard-coded in code, unit files and
-  manifests; they come from environment variables with a `127.0.0.1`
-  fallback. Documentation and test fixtures use RFC 5737 example addresses
-  or placeholders such as `<camera-ip>`. Vendor-fixed device networks (Go1
-  `192.168.123.x`, RoboMaster EP USB, DJI Osmo AP, radar SDR link, Insta360
-  Farsight DHCP range) are unchanged.
 
 ### Deployment changes
 
