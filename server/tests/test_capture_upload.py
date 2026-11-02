@@ -405,13 +405,34 @@ def test_c3_path_traversal_in_url_and_manifest(capture_server, tmp_path: Path) -
     assert not list(capture_server["storage"].incoming.iterdir())
 
 
-def test_c4_truncated_archive_leaves_nothing(capture_server, tmp_path: Path) -> None:
+def test_c4_truncated_archive_leaves_nothing(capture_server, tmp_path: Path, monkeypatch) -> None:
     session_dir, manifest, entity = new_session(tmp_path)
     raw = json.dumps(manifest).encode("utf-8")
     status, _ = up.http_put(up.join_url(capture_server["base_url"], session_dir.name + ".manifest.json"), raw, "application/json")
     assert status == 200
     archive = up.pack(session_dir, tmp_path / "staged")
     data = archive.read_bytes()
+    # 서버가 잘린 본문을 다 처리했다는 신호. `.part` 가 "아직 없다"와 "이미 지웠다"는 디렉터리만 봐서는 가를 수
+    # 없다 — 서버 스레드가 `.part` 를 열기 전에 디렉터리를 보면 폴링이 곧바로 빠져나오고, 그 직후 서버가 연
+    # `.part` 를 단언이 본다(issue #9). 그래서 수신(`receive_archive`)이 끝난 시점을 직접 기다린다 —
+    # 정리(unlink)는 그 함수 안에서 예외를 올리기 전에 끝난다.
+    storage = capture_server["storage"]
+    original_receive = storage.receive_archive
+    received = threading.Event()
+    outcome: List[BaseException] = []
+
+    def receive_and_signal(stem: str, reader: Any, length: int) -> Path:
+        try:
+            return original_receive(stem, reader, length)
+        except BaseException as exc:
+            if stem == session_dir.name:
+                outcome.append(exc)
+            raise
+        finally:
+            if stem == session_dir.name:
+                received.set()
+
+    monkeypatch.setattr(storage, "receive_archive", receive_and_signal)
     # Content-Length 를 실제보다 크게 적고 중간에 끊는다 — 전송 중 끊김.
     sock = socket.create_connection((capture_server["host"], capture_server["port"]), timeout=10)
     try:
@@ -421,16 +442,20 @@ def test_c4_truncated_archive_leaves_nothing(capture_server, tmp_path: Path) -> 
     finally:
         sock.close()
     final = _final(capture_server["root"], entity, session_dir.name)
-    deadline = time.monotonic() + 10
-    while time.monotonic() < deadline and list(capture_server["storage"].incoming.glob("*.part")):
-        time.sleep(0.1)
-    assert not list(capture_server["storage"].incoming.glob("*.part"))               # 불완전 파일이 남지 않는다
+    assert received.wait(10), "서버가 10초 안에 잘린 본문 처리를 끝내지 않았다"
+    assert len(outcome) == 1 and (
+        (isinstance(outcome[0], capture.CaptureError) and outcome[0].reason == "incomplete_body")
+        or isinstance(outcome[0], ConnectionError)), outcome                     # 끊김으로 실패했다(저장되지 않았다)
+    monkeypatch.undo()
+    assert not list(storage.incoming.glob("*.part"))                                # 불완전 파일이 남지 않는다
     assert not final.exists()
     assert row_of(capture_server["store"], manifest["session_id"]) is None
     assert capture_server["storage"].load_pending_manifest(session_dir.name) is not None   # 매니페스트는 대기 — 재전송 가능
-    # 재전송하면 정상 저장된다.
+    # 재전송하면 정상 저장된다. 비교 대상은 이번에 다시 묶은 아카이브다 — `pack` 을 다시 부르면 gzip 머리의
+    # mtime(4~7바이트, 초 단위)이 달라질 수 있어 처음 묶은 `data` 와는 초 경계를 넘으면 어긋난다.
     result = up.upload_session(capture_server["base_url"], session_dir, manifest, tmp_path / "staged2")
-    assert result["archive_status"] == 201 and final.read_bytes() == data
+    assert result["archive_status"] == 201, result
+    assert final.read_bytes() == Path(result["archive"]).read_bytes()
 
 
 def test_c5_retention_dry_run_over_store(capture_server, tmp_path: Path) -> None:
