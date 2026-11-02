@@ -217,11 +217,15 @@ stack and the ports used between devices and Unity.
 | [Swapping components](docs/deployment/pluggability.md) | Using another 360 camera, another detection model, or a twin other than Unity |
 | [Security](docs/deployment/security.md) | Exposure policy, tokens, tunnel, production checklist |
 | [Operations](docs/deployment/operations.md) | Restart, upgrade, backup, response to each alert |
+| [Air-gapped install](docs/deployment/offline.md) | Bundling images, repository and Python wheels to install without internet access |
 | [Release policy](docs/RELEASE.md) | Versioning, release procedure, 1.0 criteria, 1.x roadmap |
 | [Architecture](server/docs/be/00-architecture.md) | Design principles of the backend |
 
-Most documents are written in Korean. Issues and pull requests in English
-are welcome.
+Most documents are written in Korean. English translations of the
+[deployment guide](docs/en/README.md), [operations](docs/en/operations.md),
+[security](docs/en/security.md) and [edge](docs/en/edge.md) documents are in
+[docs/en/](docs/en/README.md); where they disagree, the Korean document is
+authoritative. Issues and pull requests in English are welcome.
 
 ## Security
 
