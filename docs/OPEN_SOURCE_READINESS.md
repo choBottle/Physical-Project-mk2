@@ -40,7 +40,7 @@
 - 🟡 `documents/` 의 docx/pdf — 공개 여부 결정. 이미지 44장은 확인 결과 다이어그램·UI 캡처와 칠판 사진 1장(인물 없음)
 - ✅ `door_example/test/{door,pedestal}/` 프레임 이미지 — 인물 얼굴 27장을 모자이크 처리(2026-10-27). 얼굴 검출기(YuNet)와 육안으로
   재확인했다. **처리 전 원본은 git 히스토리에 남아 있다** — 완전히 지우려면 히스토리 재작성이 필요하다(원 저장소도 공개 상태)
-- 🟡 `web-dashboard/.env.local` 이 커밋돼 있음(값은 localhost 뿐 — 비밀 아님). Vite 관례상 `.env` 로 옮기는 것을 권장
+- ✅ `web-dashboard/.env.local` 추적 해제(2026-11-02) — 같은 값(loopback)을 `web-dashboard/.env.example` 로 두고 `.env.local` 은 무시 목록에 넣었다
 - 🟡 Vite dev/preview 미들웨어에만 있는 CORS 중계 — 정적 빌드(`dist/`)로 배포하면 사라진다
 
 ### drone
@@ -55,8 +55,9 @@
 ### camera360
 - 🟡 의존성 명세 추가(`requirements.txt` 촬영·전송·수신 / `requirements-vision.txt` GPU 추론). Docker · systemd 는 아직 없음
 - ✅ `image backup/` · `360도 카메라 반영범위/` — 연구실 내부 사진. 얼굴이 보이는 6장을 흐림 처리(2026-10-27) — 파노라마 4장은 사람이 앉은 구역 전체,
-  나머지는 얼굴 영역. 남은 인물은 뒷모습뿐. 처리 전 원본은 git 히스토리에 남아 있다
-- 🟡 `구버전(참고금지)/` — 공개 판에서 제외하거나 `archive/` 로
+  나머지는 얼굴 영역. 남은 인물은 뒷모습뿐. 처리 전 원본은 git 히스토리에 남아 있다. 2026-11-02 `image backup/` 은 지우고
+  트윈 시연이 쓰는 1장만 `samples/br40_live.jpg` 로 옮겼다
+- ✅ `구버전(참고금지)/` — 공개 판에서 제외(2026-11-02 삭제, git 히스토리에는 남아 있다)
 - 🟢 이번에 스냅샷 zip(6.9MB, 폴더와 같은 내용)을 지웠다
 
 ### osmocam
