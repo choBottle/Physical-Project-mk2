@@ -8,9 +8,13 @@
 ## 1. 개요
 
 - **전송 계층**: MQTT (버전 5 권장, 3.1.1도 가능)
-- **인코딩**: Protobuf(`schema/physical_command.proto`)를 기본으로 한다. 디버깅·로그 확인용으로
-  같은 내용을 JSON으로 표현한 `schema/physical-command.schema.json`도 함께 제공한다 — 다만
-  실제 통신의 정본(source of truth)은 Protobuf 쪽이다.
+- **인코딩**: Protobuf — 정본은 [`hardware/schema/physical_command.proto`](../../../hardware/schema/physical_command.proto)
+  (package `physical`) 한 벌이다. 말단이 그 스키마로 디코드하므로 그것이 곧 와이어 규약이다.
+  디버깅·로그 확인용 JSON 표현은 `perception-framework/contracts/ai/physical-command.schema.json` —
+  다만 실제 통신의 정본(source of truth)은 Protobuf 쪽이다.
+  AI 쪽 의미 계약(dataclass)과 와이어의 차이(파라미터는 숫자만, `deadline`→`deadline_unix_ms`,
+  추적은 `traceparent`, 타임스탬프는 수신 시각으로 채움)는
+  `perception_framework/providers/physical_command_protobuf.py` 머리말에 표로 적었다.
 - **메시지 봉투**: 실제로 어떤 메시지인지는 `PhysicalCommandEnvelope`(`.proto` 참고)의
   `oneof body`가 결정한다. 토픽 이름 자체에는 "무슨 내용인지"를 담지 않는다 — 방향(누가
   누구에게 보내는지)만 담는다. 이렇게 나눈 이유는 §2 끝에 적어둔다.
@@ -38,8 +42,7 @@
 
 ## 3. 메시지 형식
 
-정확한 필드와 타입은 `schema/physical_command.proto`(또는 `schema/physical-command.schema.json`)를
-기준으로 삼는다. 아래는 각 메시지가 언제 쓰이는지에 대한 요약이다.
+정확한 필드와 타입은 정본 `hardware/schema/physical_command.proto`를 기준으로 삼는다. 아래는 각 메시지가 언제 쓰이는지에 대한 요약이다.
 
 | 메시지 | 보내는 쪽 | 언제 |
 |---|---|---|

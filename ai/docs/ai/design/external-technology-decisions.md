@@ -67,7 +67,7 @@ Kafka header 자체에 종속시키지 않는다.
 | trace 저장 | Grafana Tempo | C | AI-O-01 | [Tempo Docs](https://grafana.com/docs/tempo/latest/) |
 | 장치 생사·치명 오류 | MQTT LWT/heartbeat + Prometheus up, 백엔드 단일 지점 통합 판정 | C | AI-O-04, AI-C-10 | AI는 통합 판정 결과를 소비만 함 |
 | 영상(말단↔엣지) | RTP/UDP + JPEG | C | AI-C-08 | 백엔드/하드웨어 소유; [RFC 3550](https://www.rfc-editor.org/info/rfc3550/), [RFC 2435](https://www.rfc-editor.org/info/rfc2435/)(현재 구현이 실제로 준수하는지는 미확인) |
-| 영상(엣지↔서버↔뷰어) | WebSocket + `frame_ref` | C | AI-C-08, `contracts/ai/frame-reference.schema.json` | 백엔드 소유; [RFC 6455](https://www.rfc-editor.org/info/rfc6455/). `frame_ref` 자체는 WebSocket 표준이 아니라 프로젝트 자체 계약 |
+| 영상(엣지↔서버↔뷰어) | WebSocket + `frame_ref` | C | AI-C-08, `server/contracts/common/frame-reference.schema.json`(공통 규격 — AI 사본 없음) | 백엔드 소유; [RFC 6455](https://www.rfc-editor.org/info/rfc6455/). `frame_ref` 자체는 WebSocket 표준이 아니라 프로젝트 자체 계약 |
 | 업무 감사 기록 | MySQL (command_id 기준 책임·결과 저장) | C | AI-B-03 | 백엔드 소유, AI는 ID만 전달; [MySQL 8.4 Reference](https://dev.mysql.com/doc/refman/8.4/en/) |
 | 원격 구간 보안 | Tailscale overlay | C | AI-C-17 | `providers/overlay.py`; [Tailscale Docs](https://tailscale.com/docs) |
 | 오케스트레이션(서버·엣지) | K3s (양쪽 클러스터, 공통 계약) | C | AI-B-05/11 | `providers/k3s.py`, `runtime/clusters.py`; [K3s Docs](https://docs.k3s.io/) |
@@ -106,8 +106,11 @@ deadline은 제외)로 구현했다. 동일 command_id+동일 payload는 재실�
 필드는 추가하지 않고 `command_id`가 이미 이 역할을 한다. `google.api.*` Protobuf annotation 같은
 Google API 전용 의존성은 쓰지 않는다.
 
-**Canonical Binding: Protobuf.** `contracts/proto/physical_command.proto`(시스템 `protoc` 없이
-`grpcio-tools`로 컴파일)와 `PhysicalCommandProtobufSerializerProvider`를 구현했다.
+**Canonical Binding: Protobuf.** 스키마는 말단이 디코드에 쓰는 정본
+`hardware/schema/physical_command.proto`(package `physical`) 한 벌이다 — AI 전용 사본(옛 package
+`physical_project.ai.v1`, `Struct` 파라미터)은 와이어 호환이 안 돼 지웠다. `contracts/proto/physical_command_pb2.py`는
+그 정본에서 `grpcio-tools`로 생성하고(시스템 `protoc` 불필요), `PhysicalCommandProtobufSerializerProvider`가
+의미 계약 dataclass ↔ 와이어 메시지를 번역한다(번역 표는 그 모듈 머리말).
 `physical_command` 경계의 기본 직렬화 정책은 이 binding이며, 기존 `JsonSerializerProvider`(AI-C-07)는
 교체되지 않고 나란히 남아 있다(AI-C-11 선택 기능 격리 원칙) — physical command 채널만 이
 Protobuf provider를 기본 binding으로 쓰고 다른 채널은 기존 JSON 그대로다. `protobuf`는

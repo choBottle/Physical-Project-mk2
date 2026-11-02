@@ -22,36 +22,43 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-from google.protobuf import struct_pb2 as google_dot_protobuf_dot_struct__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16physical_command.proto\x12\x16physical_project.ai.v1\x1a\x1cgoogle/protobuf/struct.proto\"\xbe\x01\n\x07\x43ommand\x12\x12\n\ncommand_id\x18\x01 \x01(\t\x12\x0e\n\x06target\x18\x02 \x01(\t\x12\x0e\n\x06\x61\x63tion\x18\x03 \x01(\t\x12+\n\nparameters\x18\x04 \x01(\x0b\x32\x17.google.protobuf.Struct\x12\x1b\n\x0e\x63orrelation_id\x18\x05 \x01(\tH\x00\x88\x01\x01\x12\x15\n\x08\x64\x65\x61\x64line\x18\x06 \x01(\x01H\x01\x88\x01\x01\x42\x11\n\x0f_correlation_idB\x0b\n\t_deadline\"*\n\tRejection\x12\x0c\n\x04\x63ode\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t\"\x97\x01\n\x11\x43ommandAcceptance\x12\x12\n\ncommand_id\x18\x01 \x01(\t\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x02 \x01(\x08\x12\x13\n\x0b\x61\x63\x63\x65pted_at\x18\x03 \x01(\x01\x12\x39\n\trejection\x18\x04 \x01(\x0b\x32!.physical_project.ai.v1.RejectionH\x00\x88\x01\x01\x42\x0c\n\n_rejection\"q\n\rCommandStatus\x12\x12\n\ncommand_id\x18\x01 \x01(\t\x12\x37\n\x06status\x18\x02 \x01(\x0e\x32\'.physical_project.ai.v1.ExecutionStatus\x12\x13\n\x0bobserved_at\x18\x03 \x01(\x01\"(\n\x07\x46\x61ilure\x12\x0c\n\x04\x63ode\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t\"\xde\x01\n\rCommandResult\x12\x12\n\ncommand_id\x18\x01 \x01(\t\x12\x37\n\x06status\x18\x02 \x01(\x0e\x32\'.physical_project.ai.v1.ExecutionStatus\x12\x14\n\x0c\x63ompleted_at\x18\x03 \x01(\x01\x12\'\n\x06result\x18\x04 \x01(\x0b\x32\x17.google.protobuf.Struct\x12\x35\n\x07\x66\x61ilure\x18\x05 \x01(\x0b\x32\x1f.physical_project.ai.v1.FailureH\x00\x88\x01\x01\x42\n\n\x08_failure\"*\n\x14\x43\x61ncelCommandRequest\x12\x12\n\ncommand_id\x18\x01 \x01(\t\"]\n\x15\x43\x61ncelCommandResponse\x12\x12\n\ncommand_id\x18\x01 \x01(\t\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x02 \x01(\x08\x12\x13\n\x06reason\x18\x03 \x01(\tH\x00\x88\x01\x01\x42\t\n\x07_reason\"\x92\x01\n\nCapability\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07version\x18\x02 \x01(\t\x12\x18\n\x10parameter_schema\x18\x03 \x01(\t\x12\x15\n\rresult_schema\x18\x04 \x01(\t\x12\x18\n\x10\x63\x61ncel_supported\x18\x05 \x01(\x08\x12\x1a\n\x12required_resources\x18\x06 \x03(\t\"\xd4\x03\n\x17PhysicalCommandEnvelope\x12\x32\n\x07\x63ommand\x18\x01 \x01(\x0b\x32\x1f.physical_project.ai.v1.CommandH\x00\x12?\n\nacceptance\x18\x02 \x01(\x0b\x32).physical_project.ai.v1.CommandAcceptanceH\x00\x12\x37\n\x06result\x18\x03 \x01(\x0b\x32%.physical_project.ai.v1.CommandResultH\x00\x12\x37\n\x06status\x18\x04 \x01(\x0b\x32%.physical_project.ai.v1.CommandStatusH\x00\x12\x46\n\x0e\x63\x61ncel_request\x18\x05 \x01(\x0b\x32,.physical_project.ai.v1.CancelCommandRequestH\x00\x12H\n\x0f\x63\x61ncel_response\x18\x06 \x01(\x0b\x32-.physical_project.ai.v1.CancelCommandResponseH\x00\x12\x38\n\ncapability\x18\x07 \x01(\x0b\x32\".physical_project.ai.v1.CapabilityH\x00\x42\x06\n\x04\x62ody*\x89\x01\n\x0f\x45xecutionStatus\x12 \n\x1c\x45XECUTION_STATUS_UNSPECIFIED\x10\x00\x12\x0c\n\x08\x41\x43\x43\x45PTED\x10\x01\x12\r\n\tEXECUTING\x10\x02\x12\r\n\tCANCELING\x10\x03\x12\r\n\tSUCCEEDED\x10\x04\x12\x0b\n\x07\x41\x42ORTED\x10\x05\x12\x0c\n\x08\x43\x41NCELED\x10\x06\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16physical_command.proto\x12\x08physical\"\xf2\x02\n\x17PhysicalCommandEnvelope\x12$\n\x07\x63ommand\x18\x01 \x01(\x0b\x32\x11.physical.CommandH\x00\x12\x38\n\x0e\x63\x61ncel_request\x18\x02 \x01(\x0b\x32\x1e.physical.CancelCommandRequestH\x00\x12\x31\n\nacceptance\x18\x03 \x01(\x0b\x32\x1b.physical.CommandAcceptanceH\x00\x12)\n\x06status\x18\x04 \x01(\x0b\x32\x17.physical.CommandStatusH\x00\x12)\n\x06result\x18\x05 \x01(\x0b\x32\x17.physical.CommandResultH\x00\x12:\n\x0f\x63\x61ncel_response\x18\x06 \x01(\x0b\x32\x1f.physical.CancelCommandResponseH\x00\x12*\n\ncapability\x18\x07 \x01(\x0b\x32\x14.physical.CapabilityH\x00\x42\x06\n\x04\x62ody\"\xd6\x01\n\x07\x43ommand\x12\x12\n\ncommand_id\x18\x01 \x01(\t\x12\x0e\n\x06target\x18\x02 \x01(\t\x12\x0e\n\x06\x61\x63tion\x18\x03 \x01(\t\x12\x35\n\nparameters\x18\x04 \x03(\x0b\x32!.physical.Command.ParametersEntry\x12\x18\n\x10\x64\x65\x61\x64line_unix_ms\x18\x05 \x01(\x03\x12\x13\n\x0btraceparent\x18\x06 \x01(\t\x1a\x31\n\x0fParametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x01:\x02\x38\x01\"*\n\x14\x43\x61ncelCommandRequest\x12\x12\n\ncommand_id\x18\x01 \x01(\t\"*\n\tRejection\x12\x0c\n\x04\x63ode\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t\"(\n\x07\x46\x61ilure\x12\x0c\n\x04\x63ode\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t\"a\n\x11\x43ommandAcceptance\x12\x12\n\ncommand_id\x18\x01 \x01(\t\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x02 \x01(\x08\x12&\n\trejection\x18\x03 \x01(\x0b\x32\x13.physical.Rejection\"B\n\rCommandStatus\x12\x12\n\ncommand_id\x18\x01 \x01(\t\x12\r\n\x05state\x18\x02 \x01(\t\x12\x0e\n\x06\x64\x65tail\x18\x03 \x01(\t\"\xd5\x01\n\rCommandResult\x12\x12\n\ncommand_id\x18\x01 \x01(\t\x12(\n\x06status\x18\x02 \x01(\x0e\x32\x18.physical.TerminalStatus\x12\x33\n\x06result\x18\x03 \x03(\x0b\x32#.physical.CommandResult.ResultEntry\x12\"\n\x07\x66\x61ilure\x18\x04 \x01(\x0b\x32\x11.physical.Failure\x1a-\n\x0bResultEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x01:\x02\x38\x01\"=\n\x15\x43\x61ncelCommandResponse\x12\x12\n\ncommand_id\x18\x01 \x01(\t\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x02 \x01(\x08\"0\n\nCapability\x12\x11\n\tdevice_id\x18\x01 \x01(\t\x12\x0f\n\x07\x61\x63tions\x18\x02 \x03(\t*[\n\x0eTerminalStatus\x12\x1f\n\x1bTERMINAL_STATUS_UNSPECIFIED\x10\x00\x12\r\n\tSUCCEEDED\x10\x01\x12\x0b\n\x07\x41\x42ORTED\x10\x02\x12\x0c\n\x08\x43\x41NCELED\x10\x03\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'physical_command_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_EXECUTIONSTATUS']._serialized_start=1613
-  _globals['_EXECUTIONSTATUS']._serialized_end=1750
-  _globals['_COMMAND']._serialized_start=81
-  _globals['_COMMAND']._serialized_end=271
-  _globals['_REJECTION']._serialized_start=273
-  _globals['_REJECTION']._serialized_end=315
-  _globals['_COMMANDACCEPTANCE']._serialized_start=318
-  _globals['_COMMANDACCEPTANCE']._serialized_end=469
-  _globals['_COMMANDSTATUS']._serialized_start=471
-  _globals['_COMMANDSTATUS']._serialized_end=584
-  _globals['_FAILURE']._serialized_start=586
-  _globals['_FAILURE']._serialized_end=626
-  _globals['_COMMANDRESULT']._serialized_start=629
-  _globals['_COMMANDRESULT']._serialized_end=851
-  _globals['_CANCELCOMMANDREQUEST']._serialized_start=853
-  _globals['_CANCELCOMMANDREQUEST']._serialized_end=895
-  _globals['_CANCELCOMMANDRESPONSE']._serialized_start=897
-  _globals['_CANCELCOMMANDRESPONSE']._serialized_end=990
-  _globals['_CAPABILITY']._serialized_start=993
-  _globals['_CAPABILITY']._serialized_end=1139
-  _globals['_PHYSICALCOMMANDENVELOPE']._serialized_start=1142
-  _globals['_PHYSICALCOMMANDENVELOPE']._serialized_end=1610
+  _globals['_COMMAND_PARAMETERSENTRY']._loaded_options = None
+  _globals['_COMMAND_PARAMETERSENTRY']._serialized_options = b'8\001'
+  _globals['_COMMANDRESULT_RESULTENTRY']._loaded_options = None
+  _globals['_COMMANDRESULT_RESULTENTRY']._serialized_options = b'8\001'
+  _globals['_TERMINALSTATUS']._serialized_start=1252
+  _globals['_TERMINALSTATUS']._serialized_end=1343
+  _globals['_PHYSICALCOMMANDENVELOPE']._serialized_start=37
+  _globals['_PHYSICALCOMMANDENVELOPE']._serialized_end=407
+  _globals['_COMMAND']._serialized_start=410
+  _globals['_COMMAND']._serialized_end=624
+  _globals['_COMMAND_PARAMETERSENTRY']._serialized_start=575
+  _globals['_COMMAND_PARAMETERSENTRY']._serialized_end=624
+  _globals['_CANCELCOMMANDREQUEST']._serialized_start=626
+  _globals['_CANCELCOMMANDREQUEST']._serialized_end=668
+  _globals['_REJECTION']._serialized_start=670
+  _globals['_REJECTION']._serialized_end=712
+  _globals['_FAILURE']._serialized_start=714
+  _globals['_FAILURE']._serialized_end=754
+  _globals['_COMMANDACCEPTANCE']._serialized_start=756
+  _globals['_COMMANDACCEPTANCE']._serialized_end=853
+  _globals['_COMMANDSTATUS']._serialized_start=855
+  _globals['_COMMANDSTATUS']._serialized_end=921
+  _globals['_COMMANDRESULT']._serialized_start=924
+  _globals['_COMMANDRESULT']._serialized_end=1137
+  _globals['_COMMANDRESULT_RESULTENTRY']._serialized_start=1092
+  _globals['_COMMANDRESULT_RESULTENTRY']._serialized_end=1137
+  _globals['_CANCELCOMMANDRESPONSE']._serialized_start=1139
+  _globals['_CANCELCOMMANDRESPONSE']._serialized_end=1200
+  _globals['_CAPABILITY']._serialized_start=1202
+  _globals['_CAPABILITY']._serialized_end=1250
 # @@protoc_insertion_point(module_scope)
