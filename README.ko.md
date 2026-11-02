@@ -148,13 +148,15 @@ npm run dev
 | 포트 | 서비스 | 쓰는 쪽 |
 |------|--------|---------|
 | 1883, 9001 | Mosquitto (MQTT, MQTT over WebSocket) | 장치, 엣지 노드, 브라우저 도구 |
-| 4317, 4318 | OpenTelemetry Collector (gRPC, HTTP) | 백엔드, 장치 노드, AI, 엣지 Collector, 브라우저 |
+| 4316, 4317, 4318 | OpenTelemetry Collector (OTLP gRPC 4316 · 4317, HTTP 4318) | 백엔드, 장치 노드, AI, 엣지 Collector, 브라우저 |
 | 8765 | WebSocket 게이트웨이 `/state`, `/media` | 관제 화면 (토큰) |
 | 8766 | WebSocket 게이트웨이 `/ingest` | 엣지 영상 송신 (토큰) |
 | 8767 | 촬영본 업로드 `PUT /capture` | 로봇 (토큰) |
 | 9095 | Kafka 엣지 리스너 | 원격 엣지 브릿지 |
+| 9092 | Kafka 내부 리스너 (`127.0.0.1` 고정) | 서버 안 호스트 프로세스(pytest) |
 | 7858, 7859 | MySQL, TimescaleDB | 운영자 |
 | 7861, 7862 | Prometheus, Grafana | 운영자 |
+| 3100, 3200 | Loki, Tempo | 운영자 |
 
 엣지 스택과 장치 ↔ Unity 포트까지 포함한 전체 목록은 [docs/PORTS.md](docs/PORTS.md).
 

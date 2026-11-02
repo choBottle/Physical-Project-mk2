@@ -5,7 +5,7 @@
 --> venv_stitch는 image server 폴더 안에 있음.
 ==> . venv_stitch/bin/activate
 
--컴퓨터에선 C:\Users\asdfa\docx2026_code>python pro2_auto_bg.py --count 3 실행
+-컴퓨터에선 %USERPROFILE%\docx2026_code>python pro2_auto_bg.py --count 3 실행
 --> 서버에 360도 카메라 사진 들어올 것.
 
 ~/capstone-db/image_server/pano_captures/pro2_anchor/PIC_20160212_012903__20260712_162240/equirect.jpg

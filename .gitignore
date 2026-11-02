@@ -3,6 +3,7 @@
 # ── 비밀정보 — 공개 저장소이므로 절대 커밋 금지 ──
 .env
 .env.*
+.env.local
 !.env.example
 !**/.env.example
 *.pem
@@ -27,6 +28,8 @@ Thumbs.db
 desktop.ini
 .idea/
 *.swp
+*.bak
+*.orig
 /.claude/worktrees/
 
 # 객체 탐지 스트림 서버의 실제 로봇·드론 주소 (camera360/server_stream_multi_source.py)
@@ -37,5 +40,6 @@ hosts.local.json
 *.pth
 *.onnx
 *.engine
+*.trt
 *.ckpt
 *.safetensors

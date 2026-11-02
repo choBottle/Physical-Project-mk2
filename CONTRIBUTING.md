@@ -47,9 +47,10 @@ Run the tests for the parts you touched. These are the commands CI runs:
 | Deployment | `cd deploy && ./scripts/healthcheck.sh && ./scripts/e2e-sim.sh` |
 | Backend regression | `cd deploy && docker compose exec -e MK2_PROMETHEUS_URL=http://prometheus:9090 -e MK2_LOKI_URL=http://loki:3100 -e MK2_TEMPO_URL=http://tempo:3200 be-gateway python -m pytest -q` |
 | AI | `cd ai/perception-framework && pip install -e ".[dev,mqtt,kafka,otel,sim]" && OTEL_SDK_DISABLED=true python -m pytest -q` |
-| Console contracts | `cd visualization/contracts && python validate_examples.py` |
+| Console contracts | `pip install jsonschema && cd visualization/contracts && python validate_examples.py` |
 | Drone | `cd drone && pip install -e ".[test,image,base]" && python -m pytest -q` |
-| Operator console | `cd visualization/viz-debugger && npm ci && npm run typecheck && npm run build && npm run verify:sar` |
+| Operator console | `cd visualization/viz-debugger && npm ci && npm run typecheck && npm run build`, then `npm run verify:sar`, `verify:view-nodes`, `verify:i18n-no-frozen`, `verify:no-raw-korean`, `verify:dep-rules` and `verify:command-through-tracker` |
+| Deployment config checks | `docker compose -f deploy/docker-compose.yml config --quiet` (and `deploy/edge/docker-compose.yml`), `promtool check config` / `check rules` on `deploy/server/config` and `deploy/edge/config`, `shellcheck -S warning deploy/scripts/*.sh deploy/server/initdb/*/*.sh` — see the `deploy-config` job in `.github/workflows/ci.yml` |
 
 `verify:service-words` in the console fails on machines without the local
 speech service; that failure is known and does not block a pull request.

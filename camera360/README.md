@@ -1,7 +1,7 @@
 # camera360
 
 360도 카메라(Insta360 Pro2) 촬영·스트리밍·장애물 검출 스크립트 모음.
-자세한 운용 절차는 이 폴더의 날짜별 문서(`26xxxx_*.md`)를 본다. `구버전(참고금지)/` 는 보관용이라 참고하지 않는다.
+자세한 운용 절차는 이 폴더의 날짜별 문서(`26xxxx_*.md`)를 본다.
 
 ## 주소·경로 설정
 
@@ -23,6 +23,7 @@ set -a && . ./.env && set +a  # 현재 셸에 올리기
 | `MK2_TWIN_HOSTS` | `anchor360_live.py` 장애물 UDP 받는 곳. 쉼표로 여러 곳(Unity와 다른 뷰어), 곳마다 `:포트` | `127.0.0.1` (`--unity-ip` 기본값) |
 | `MK2_UNITY_IP` | `anchor360_bridge.py`, `detect_send_3b2.py`, `detect_send_3b2_timed.py`, `relay_loop.py` 장애물 UDP 받는 곳(한 곳) | `127.0.0.1` |
 | `MK2_PRO2_IP` | `stream_to_server.py`, `preview_probe.py`, `pro2_auto_bg.py` — Insta360 Pro2 카메라 IP (`--ip` 기본값) | `198.51.100.124`(예시 주소, 반드시 현장 값으로) |
+| `MK2_TRT_BACKUP_DIR` | `pro2_auto_bg.py` — ProStitcher TRT 엔진 캐시 백업 폴더(`~` 허용) | 스크립트 옆 `trt_cache/` |
 | `CONFIG_PATH` | `unidepth_dual_yolo.py` | 스크립트 옆 `unidepth_dual_yolo_config.yaml` |
 | `CONTROL_URL` | `unidepth_dual_yolo.py` | `http://127.0.0.1:7864/command/go1` |
 | `MK2_REDIS_PASSWORD` | `unidepth_dual_yolo.py` | 없음(config `redis.password`, 기본 빈 값) — 비밀값, 커밋 금지 |

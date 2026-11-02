@@ -268,7 +268,7 @@ allow_structured_metadata: false   ← 파일에 명시. 주석 사유: "v11 스
 | 엣지 실물 | **철수됨**(`EDGE_SETUP.md` §6, 2026-08-31). K3s 정지, pi7은 원래 클러스터로 복귀 |
 | 증강 분석 | **돌고 있지 않다** — 이미지 미빌드(매니페스트에 digest 자리표시자), K3s 제어평면 철수 |
 | 서버 Tailscale | **미설치**(`which tailscale` 빈손). `prometheus.yml`의 비활성 `k8s-nodes` 잡 주석이 *"서버에 tailscale 없음"*이라 적은 것과 일치 |
-| 컴퓨터 | 공인 `<컴퓨터 공인 IP>`(공유기) · Wi-Fi 사설 `<컴퓨터 사설 IP>` · **Docker 없음** · venv `C:\Users\asdfa\physical mk2` |
+| 컴퓨터 | 공인 `<컴퓨터 공인 IP>`(공유기) · Wi-Fi 사설 `<컴퓨터 사설 IP>` · **Docker 없음** · venv `%USERPROFILE%\physical mk2` |
 | 서버 sshd | `gatewayports no` · `allowtcpforwarding yes` — **읽기만 했고 변경하지 않았다** |
 
 
@@ -825,7 +825,7 @@ tailscale ip -4
 > **계정은 임시다.** 나중에 팀 계정으로 옮기면 **IP가 바뀌고** `prometheus.yml` 타깃 한 줄을
 > 고쳐야 한다. **plan Phase 4에 이월**로 적는다(§10-2).
 
-**8-2. 엣지 실행 파일 2개** — `C:\Users\asdfa\physical mk2\edge_probe\`에 푼다. **Docker를 깔지
+**8-2. 엣지 실행 파일 2개** — `%USERPROFILE%\physical mk2\edge_probe\`에 푼다. **Docker를 깔지
 않는다.** 검증 후 폴더 하나를 지우면 흔적이 없다.
 
 | 무엇 | 버전 | 왜 |
@@ -878,13 +878,13 @@ scrape_configs:
 **8-5-a. 엣지 실행과 Windows 방화벽 — 여기서 가장 많이 막힌다**
 
 ```powershell
-cd "C:\Users\asdfa\physical mk2\edge_probe"
+cd "%USERPROFILE%\physical mk2\edge_probe"
 # 터미널 1
 .\otelcol-contrib.exe --config=otel-agent.yaml
 # 터미널 2
 .\prometheus.exe --config.file=prometheus.yml --storage.tsdb.path=.\data
 # 터미널 3 (가짜 B층 발신) — venv 에 opentelemetry SDK 가 필요하다
-"C:\Users\asdfa\physical mk2\venv_phase1\Scripts\python.exe" edge_probe_publisher.py
+"%USERPROFILE%\physical mk2\venv_phase1\Scripts\python.exe" edge_probe_publisher.py
 ```
 
 > **⚠ Windows Defender 방화벽이 인바운드를 막는다.** Prometheus가 `0.0.0.0:9090`을 들어도

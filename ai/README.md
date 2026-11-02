@@ -363,7 +363,7 @@ OpenCL 플랫폼이 없거나 OTel collector 출력 경로가 지정되지 않�
 
 ## 다른 파트와의 계약
 
-파트 경계의 단일 기준은 Python dataclass가 아니라 [공통 AI 계약](contracts/ai/README.md)이다.
+파트 경계의 단일 기준은 Python dataclass가 아니라 [공통 AI 계약](perception-framework/contracts/ai/README.md)이다.
 하드웨어·백엔드·가시화는 AI 내부 Python 타입을 직접 import하지 않고
 `contracts/ai/*.schema.json`과 예제 payload만 소비한다.
 

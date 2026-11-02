@@ -75,11 +75,11 @@ python3 anchor360_live.py --u 230 --v -36.35 --pitch -35 \
 3. 컴퓨터 기동 (터미널 2개)
 
 3-1. 유니티 중계기 (컴퓨터 터미널 1)
-cd "C:\Users\asdfa\physical mk2\360camera_work"
+cd "%USERPROFILE%\physical mk2\360camera_work"
 python anchor360_bridge.py --unity-ip 192.0.2.244 --poll 0.3
 
 3-2. 스트림 공급 (컴퓨터 터미널 2) ※ pro2_auto_bg.py 를 대체하는 자리
-cd "C:\Users\asdfa\physical mk2\360camera_work"
+cd "%USERPROFILE%\physical mk2\360camera_work"
 python stream_to_server.py --fps 5
 
 ※ --count 60 을 붙이면 60장만 올리고 통계를 내고 종료한다(측정용).
@@ -88,7 +88,7 @@ python stream_to_server.py --fps 5
 3-A. 윈도우 노트북 기동 (터미널 2개. cmd)
 
 3-0. 공통 실행 코드 (2개 터미널 모두 각각)
-cd /d C:\Users\Admin\capstone
+cd /d %USERPROFILE%\capstone
 venv360\Scripts\activate
 cd 360camera_work
 
