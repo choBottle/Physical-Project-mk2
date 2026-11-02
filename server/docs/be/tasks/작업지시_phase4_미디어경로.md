@@ -215,7 +215,7 @@
 > | v1이 적은 것 | 09-18 실측 | 판정 |
 > |---|---|---|
 > | tailnet에 `pi4`·`pi6` | **둘 다 실재한다**(주소는 `_serverinfo/`) | ⚠ **v1이 맞았다.** 2026-09-18 검토에서 *"전 출처 0건이므로 지어낸 값"*으로 판정했으나 **그 판정이 틀렸다** — 저장소 문서에 근거가 없었을 뿐 실물에는 있었다. 다만 v1 목록도 불완전했다(아래) |
-> | tailnet 9대 | **11대.** `desktop-0ib285f`·`pi2`가 v1에 없고, v1·대조 보고서가 적은 `jin03`은 **실제 이름에 없다** | 목록을 실측으로 교체 |
+> | tailnet 9대 | **11대.** `<ai-desktop-host>`·`pi2`가 v1에 없고, v1·대조 보고서가 적은 `jin03`은 **실제 이름에 없다** | 목록을 실측으로 교체 |
 > | 컨슈머 그룹 4종 | **2종이다** — `mk2-storage`·`mk2-ws`. LAG 전부 0, 오프셋 heartbeat 200 · status 140 · state 127 | v1 과다 |
 > | 브로커 `localhost:9092 (id: 1)` 응답 | ✅ **맞다** (`KAFKA_NODE_ID=1`, `PLAINTEXT://localhost:9092`) | v1이 맞았다 |
 > | `be_*` 이름 28개 / A층 11 | ✅ **둘 다 맞다** — 이름 **28종**, A층(6접두사) **11종**, C층(`be.telemetry.`) **17종** | **v1이 맞았다.** 2026-09-18 1차 조회가 `localhost:9090`으로 가서 0이 나왔던 것뿐이다(Prometheus 호스트 포트는 **7861**) |
@@ -234,7 +234,7 @@
 | Kafka 클라이언트 | `[전사]` | **백엔드 3개뿐**(host 프로세스, `settings.kafka_bootstrap()` 기본 `localhost:9092`). `INTERNAL`을 쓰는 클라이언트 **0**. ⚠ compose 주석 232-233이 **사실과 반대**(단계 6-b) |
 | ufw | `[실측 09-18]` | **9092 규칙 없음** · **4316 규칙 없음** · `4317/tcp ALLOW Anywhere`[12] · 7859[8]·7862[4]·7864[2]·9101[3]·8522·5000~5002·8100·7865·7866·9000·6443 등, DENY 8종.<br>🔴 **9100이 두 줄이다** — `[6] ALLOW IN 172.16.0.0/12 # rpi pushgateway <- docker` + `[7] ALLOW IN Anywhere`. 같은 패턴이 `[36] 9110 <- 172.18.0.0/16 # node-exporter <- dg prometheus`·`[37] 9120`에도 있다. **§5 정정의 9100 실측은 [6](컨테이너→호스트) 경로였다** — 단계 6-b·7-h의 결정적 근거 |
 | LISTEN | `[실측 09-18]` | `127.0.0.1:8765`(python) · `127.0.0.1:9092` · `127.0.0.1:4316` · `127.0.0.1:7859` · `0.0.0.0:4317`(+v6) · `0.0.0.0:3100`·`3200`·`1883`·`7858`·`7860`·`7861`·`7862`·`7863`·`9100`·`9101`. **7864 없음**(AI 파트가 필요할 때만 켠다 — 건드리지 않는다). **8766·8767·9095·4318 없음** = Phase 4가 여는 자리 |
-| Tailscale | `[실측 09-18]` | 팀 공용 계정 · 서버 `<서버 tailscale IP>`(실값 `_serverinfo/`). **tailnet 11대** — 서버 · **컴퓨터(임시 엣지)** · `desktop-0ib285f` · `desktop-oaujese`(AI 탐지) · `laptop-isk6l1rq`(offline) · `pi1`(offline) · `pi2` · `pi4`(offline) · `pi6` · `pi7`(offline) · `ubuntu3`. **`jin03`이라는 이름은 없다.** ⚠ **VZ 관제 노트북이 어느 것인지 확인되지 않았다**(`laptop-isk6l1rq`가 후보) — 부록 B 10①에서 직접 묻는다 |
+| Tailscale | `[실측 09-18]` | 팀 공용 계정 · 서버 `<서버 tailscale IP>`(실값 `_serverinfo/`). **tailnet 11대** — 서버 · **컴퓨터(임시 엣지)** · `<ai-desktop-host>` · `<vz-desktop-host>`(AI 탐지) · `<vz-laptop-host>`(offline) · `pi1`(offline) · `pi2` · `pi4`(offline) · `pi6` · `pi7`(offline) · `ubuntu3`. **`jin03`이라는 이름은 없다.** ⚠ **VZ 관제 노트북이 어느 것인지 확인되지 않았다**(`<vz-laptop-host>`가 후보) — 부록 B 10①에서 직접 묻는다 |
 | 설정 md5 | `[실측 09-18]` | collector `e7a888c8…` · loki `678db4b0…` · tempo `416750de…` · prometheus `d7e1304d…` — **Phase 3 값과 전부 일치** |
 | **compose md5** | `[실측 09-18]` | **서버 `2fa97cc75b123162b24e8108bec02cbc` ↔ 컴퓨터 작업본 `16A704A9A7BF2736ED82F4F4B4E4EEBD` — 다르다.** 제약 18. ⚠ `infra/docker-compose.yml`은 gitignore이고 git에 추적된 적이 없어 **대조 수단이 md5뿐**이다 |
 | Collector receiver | `[실측 09-18]` | 🔴 **`http:` 블록·`4318`·`cors`가 설정 파일에 없다.** grep에 걸린 3줄은 전부 **Loki 향 exporter(`otlp_http`)**다. 결정 7 A는 **receiver 신설 + CORS + compose + ufw 네 곳**이다 |

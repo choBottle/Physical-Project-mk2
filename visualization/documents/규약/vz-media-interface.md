@@ -267,7 +267,7 @@ VZ 저장소 전체에서 `binaryType`·`ArrayBuffer`·`createImageBitmap`·`dra
 
 | # | 무엇 | 왜 | 답이 없으면 |
 |---|---|---|---|
-| ① | **관제 웹이 도는 기기의 tailnet 주소**(`tailscale ip -4` 출력). 기기가 여럿이면 전부, 시연 때 바뀌면 다시 | **8765(뷰어 WS)와 4318(관측 수집기) 두 입구의 ufw를 그 `/32`로 연다**(호스트 파이썬 8765는 ufw가 진짜 통제, 도커 4318은 바인딩 + ufw). tailnet 11대 중 어느 것이 관제 노트북인지 우리는 모른다(`laptop-isk6l1rq`가 후보) | 열지 않는다. VZ는 목 게이트웨이 유지 |
+| ① | **관제 웹이 도는 기기의 tailnet 주소**(`tailscale ip -4` 출력). 기기가 여럿이면 전부, 시연 때 바뀌면 다시 | **8765(뷰어 WS)와 4318(관측 수집기) 두 입구의 ufw를 그 `/32`로 연다**(호스트 파이썬 8765는 ufw가 진짜 통제, 도커 4318은 바인딩 + ufw). tailnet 11대 중 어느 것이 관제 노트북인지 우리는 모른다(`<vz-laptop-host>`가 후보) | 열지 않는다. VZ는 목 게이트웨이 유지 |
 | ② | **Collector CORS 허용 origin**(관제 웹의 origin 문자열) + **브라우저가 쓸 OTLP exporter 종류**(protobuf / json) | Collector `otlp/http` receiver의 `cors.allowed_origins`와 preflight `allowed_headers`가 갈린다 | 4318을 열지 않는다 |
 | ③ | **관제 웹을 https로 서빙하는가** | https 페이지에서 `http://<tailscale IP>:4318`로 보내면 브라우저가 **mixed content로 차단**한다. https라면 4318에 TLS가 필요하고 그건 결정 7의 범위를 넘는다(Phase 6) | http로 간주 |
 | ④ | **실제 `source_id` 확인** — VZ가 회신에서 직접 물었다(*"목 레지스트리의 로봇 ID는 `robot-01`이다. 실제 Go1의 `source_id`가 무엇인지 알려 달라"*) | **답: 개체는 `go1-001`, 카메라를 붙이면 `go1-001_front`**(HW `hw-robot*.env.example`). VZ 목의 `robot-01`·`robot-01-cam`이 아니다. 목록은 레지스트리(Phase 5/6) | 화면 설정값으로 |
@@ -447,7 +447,7 @@ selector = { entity: <값>|'*', node: <값>|'*', channel: <값>|'*' }
 
 | # | 무엇 | 값 |
 |---|---|---|
-| ① | **방화벽** | ✅ **둘 다 들어갔다** — `<VZ 데스크톱 tailnet 주소>`(desktop-oaujese) · `<VZ 노트북 tailnet 주소>`(laptop-isk6l1rq) 앞으로 `8765/tcp` |
+| ① | **방화벽** | ✅ **둘 다 들어갔다** — `<VZ 데스크톱 tailnet 주소>`(`<vz-desktop-host>`) · `<VZ 노트북 tailnet 주소>`(`<vz-laptop-host>`) 앞으로 `8765/tcp` |
 | ② | **주소** | `ws://<서버 tailscale IP>:8765/state` · `ws://<서버 tailscale IP>:8765/media?source_id=…` — 주소·토큰은 **별도 경로로 전달** |
 | ③ | 🔴 **구역 값** | **`zoneA`** — 연결 설정의 구역 칸에 이 값을 넣어야 한다. `zone-503` 이면 **연결은 되는데 0건**이다([15-5](#s15-5)) |
 | ④ | **토큰** | URL 쿼리 `?token=…`. 불일치는 **`4401`**. 뷰어 토큰과 엣지 토큰은 **다른 값**이다 |

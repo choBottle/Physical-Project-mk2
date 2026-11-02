@@ -40,5 +40,6 @@ hosts.local.json
 *.pth
 *.onnx
 *.engine
+*.trt
 *.ckpt
 *.safetensors

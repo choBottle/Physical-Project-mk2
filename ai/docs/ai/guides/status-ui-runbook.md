@@ -99,7 +99,7 @@ mkdir -p ~/.kube && sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config && sudo cho
 `export KUBECONFIG=$HOME/.kube/config`로 바꾸고 `source ~/.bashrc`. (2026-09-17 실측: 이 조치
 후 `tests/test_k3s_control.py` 14건 전부 실행·통과, `--control k3s`로 실제 Deployment 생성 확인.)
 
-**2026-09-17 실측 결과(이 기기, 노드 `desktop-0ib285f`에 `aif.io/compute.cpu=true`·`aif.io/tier.edge=true` 라벨)**:
+**2026-09-17 실측 결과(이 기기, 노드 `<ai-desktop-host>`에 `aif.io/compute.cpu=true`·`aif.io/tier.edge=true` 라벨)**:
 edge-dev에 배치 적용 → `aif-grounding-dino` Running, `aif-clip-dictionary-cuda`는 nodeSelector
 `aif.io/compute.gpu=true`를 만족하는 노드가 없어 **Pending**(P4 의도대로 — 선택기가 배제한 노드에
 Pod가 떨어지지 않는다). `grounding-dino` 제외 후 재적용 → 클러스터에서 `aif-grounding-dino` 0/0,

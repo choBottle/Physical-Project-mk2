@@ -12,8 +12,8 @@
 |---|---|---|---|
 | C1 | 라이선스 동의 | ✅ | 기여자 전원(daegyu10 · choBottle · JNY03 · khw18033 · jhjeong)이 MIT 공개에 동의함 (2026-10-26) |
 | C2 | 학교 서버 공인 IP 하드코딩 | ✅ | 코드 기본값은 전부 `localhost`, 실제 주소는 환경변수(#3 · #4 · #7). 연구실 운영 기록(`server/infra/systemd` · `server/reports/`)에는 남아 있다 — 새 배포는 `deploy/` |
-| C3 | Tailscale 주소(`100.x`) · tailnet 호스트명(`*.<tailnet>.ts.net`) | ✅ | UI 프리셋은 Vite 환경변수(`.env.local`), 스크립트는 `MK2_*` 환경변수. 남은 것은 레이더 팀 원본 · 시험 원본 사본뿐 |
-| C4 | `/home/<사용자>` 절대 경로 | ✅ | hardware 유닛은 `install-units.sh` 가 치환, drone 은 `install.sh` 의 `@SAR_HOME@`, 코드는 실행 계정 홈 · 스크립트 폴더 기준 |
+| C3 | Tailscale 주소(`100.x`) · tailnet 호스트명(`*.<tailnet>.ts.net`) · 기기 이름 | ✅ | UI 프리셋은 Vite 환경변수(`.env.local`), 스크립트는 `MK2_*` 환경변수. 문서 · 작업 기록에 남아 있던 Windows 기기 이름(`DESKTOP-…` · `LAPTOP-…`)은 2026-11-02 `<vz-desktop-host>` · `<vz-laptop-host>` · `<edge-laptop-host>` · `<ai-desktop-host>` 자리표시자로 바꿨다(git 히스토리에는 남아 있다) |
+| C4 | `/home/<사용자>` · `C:\Users\<계정>` 절대 경로 | ✅ | hardware 유닛은 `install-units.sh` 가 치환, drone 은 `install.sh` 의 `@SAR_HOME@`, 코드는 실행 계정 홈 · 스크립트 폴더 기준(`camera360/pro2_auto_bg.py` 의 TRT 캐시 백업 폴더는 2026-11-02 `MK2_TRT_BACKUP_DIR`). camera360 · server 문서의 Windows 계정 경로는 2026-11-02 `%USERPROFILE%` 로 바꿨다 |
 | C5 | 포트 충돌 8765 · 8766 · 8767 | ✅ | 8765 는 AI status UI 를 8775 로 옮겨 해결, 8766 · 8767 은 기기가 달라 실제 충돌 없음 — [PORTS.md](PORTS.md) |
 | C6 | 사람이 읽는 파트 문서의 실명 | 🟢 | 팀원 본인 동의 하에 유지 가능 — 원치 않으면 GitHub 계정명으로 |
 | C7 | 사진 메타데이터(EXIF GPS) | ✅ | 이미지 152장 전수 검사 — GPS 가 있던 1장(회의 사진)에서 EXIF 를 재인코딩 없이 제거(2026-10-26) |
