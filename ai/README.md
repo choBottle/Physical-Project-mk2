@@ -123,11 +123,13 @@ Physical-Project-mk2/
 ├── interface-spec/         # 파트 경계를 넘는 통신 규약(물리 명령 wire 규약 등)
 ├── docs/ai/                # 아키텍처, 설계 결정, 요구사항 추적, 검증 계획
 ├── docs/ops/                # 이 PC(엣지+서버 겸용)의 네트워크·보안 운영 설정
-├── docs/obsidian/          # KCI 확장 연구 — 재현 대상 논문·아이디어·구현 계획
 ├── models/                 # 실험용 AI 모델 artifact와 모델 카드
 ├── reports/                 # 개인 기록(git 미추적)
 └── CLAUDE.md               # AI 요구사항 원문과 개발 규칙
 ```
+
+논문 노트·연구 아이디어·실험 계획(`docs/obsidian/`)은 2026-11-02 에 비공개 저장소
+[`sysailab/mk2-internal-docs`](https://github.com/sysailab/mk2-internal-docs) 의 같은 경로로 옮겼다.
 
 세부 Python 패키지 구조는 [perception-framework/README.md](perception-framework/README.md)에서 확인할 수 있다.
 

@@ -41,6 +41,17 @@ ALLOWED_MISSING = {
 }
 
 
+# 비공개 저장소(sysailab/mk2-internal-docs)로 옮긴 내부 기록. 그 파일을 가리키는 인용은 깨진 것이 아니다.
+_MOVED_LIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "moved-to-internal.txt")
+MOVED_TO_INTERNAL = set()
+if os.path.exists(_MOVED_LIST):
+    for _line in io.open(_MOVED_LIST, encoding="utf-8"):
+        _line = _line.strip()
+        if _line and not _line.startswith("#"):
+            MOVED_TO_INTERNAL.add(_line)
+            MOVED_TO_INTERNAL.add(os.path.basename(_line))
+
+
 def p(msg):
     sys.stdout.write(msg + "\n")
 
@@ -74,6 +85,8 @@ for d in DOCS:
         if raw.startswith(("http", "//")):
             continue
         if raw in ALLOWED_MISSING:
+            continue
+        if raw in MOVED_TO_INTERNAL or os.path.basename(raw) in MOVED_TO_INTERNAL:
             continue
         cands = [raw, os.path.join(base, raw)]
         # 저장소 어디에나 같은 이름이 있으면 통과로 본다(상대경로 표기 흔들림 허용)
