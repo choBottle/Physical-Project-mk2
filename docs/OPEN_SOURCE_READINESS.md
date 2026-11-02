@@ -33,7 +33,7 @@
 ### ai
 - ✅ `perception-framework/Dockerfile` 빌드 복구(없는 `examples/` 대신 status UI 를 기본 명령으로) · CI 에서 이미지 빌드까지 확인
 - 🟡 `docs/obsidian/papers/` 논문 요약 약 70편 — 저작권(요약·인용 범위) 검토
-- 🟡 `CLAUDE.md`(115KB) · `AGENTS.md` · `.claude/skills/` — 공개 유지 여부
+- 🟡 `CLAUDE.md`(요구사항 본문은 `docs/requirements.md` 로 분리) · `AGENTS.md` · `.claude/skills/` — 공개 유지 여부
 
 ### visualization
 - ✅ 연결 프리셋 · 기본 주소를 Vite 환경변수로(`viz-debugger/.env.example`)

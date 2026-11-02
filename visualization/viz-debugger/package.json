@@ -130,7 +130,8 @@
     "verify:sar": "node scripts/verify-sar.mjs",
     "verify:manual-control": "node scripts/verify-manual-control.mjs",
     "verify:video-records": "node scripts/verify-video-records.mjs",
-    "test:drone": "cd ../../drone && python -m pytest -q"
+    "test:drone": "cd ../../drone && python -m pytest -q",
+    "lint": "eslint ."
   },
   "dependencies": {
     "mqtt": "^5.15.2",
@@ -145,8 +146,11 @@
     "@types/react-dom": "^19.1.0",
     "@types/ws": "^8.18.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "10.13.0",
+    "eslint-plugin-react-hooks": "7.1.1",
     "protobufjs-cli": "^2.7.0",
     "typescript": "^5.7.0",
+    "typescript-eslint": "8.71.2",
     "vite": "^6.0.0"
   }
 }
