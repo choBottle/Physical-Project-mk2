@@ -64,7 +64,7 @@ fi
 if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
   subnet="$(grep -m1 '^MK2_NET_SUBNET=' "${DST}" | cut -d= -f2- || true)"
   subnet="${subnet:-172.28.0.0/16}"
-  used="$(docker network inspect -f '{{.Name}} {{range .IPAM.Config}}{{.Subnet}} {{end}}' $(docker network ls -q) 2>/dev/null || true)"
+  used="$(docker network ls -q | xargs docker network inspect -f '{{.Name}} {{range .IPAM.Config}}{{.Subnet}} {{end}}' 2>/dev/null || true)"
   clash="$(printf '%s
 ' "${used}" | awk -v s="${subnet}" -v own="${project:-mk2}_mk2" '$1 != own { for (i = 2; i <= NF; i++) if ($i == s) print $1 }')"
   if [[ -n "${clash}" ]]; then
