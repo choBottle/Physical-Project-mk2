@@ -31,4 +31,4 @@ mv "${tmp}" "${DST}"
 chmod 600 "${DST}" 2>/dev/null || true
 
 echo "생성: ${DST} (권한 600, 비밀값 $(grep -c '=change_me' "${SRC}")개 무작위 생성)"
-echo "다음: 엣지를 붙일 서버라면 MK2_EDGE_BIND · MK2_KAFKA_EDGE_ADVERTISED 를 서버 터널 주소로 바꾼다."
+echo "다음: 엣지를 붙일 서버라면 MK2_EDGE_BIND 를 서버 터널 주소로 바꾼다(Kafka EDGE 9095 는 1.0 에서 쓰지 않으니 그대로 둔다 — docs/deployment/edge.md)."

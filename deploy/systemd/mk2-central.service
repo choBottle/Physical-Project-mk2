@@ -1,0 +1,35 @@
+# MK2 중앙 스택 — 재부팅 뒤 기동 순서를 보장하는 systemd 유닛 (예시 — 경로를 현장에 맞춘다)
+#
+# 왜 필요한가: 도커 데몬이 재부팅 뒤 컨테이너를 되살리는 것은 restart 정책(unless-stopped)이며, 이때
+# compose 의 depends_on(condition: service_healthy)은 **적용되지 않는다** — 백엔드가 DB·Kafka 보다 먼저 떠서
+# 몇 번 죽었다 다시 뜰 수 있다. 또 MK2_EDGE_BIND 가 Tailscale 주소면 tailscaled 가 주소를 올리기 전에
+# 바인딩하려다 실패한다. 이 유닛은 도커·tailscaled 뒤에 `docker compose up -d --wait` 로 순서대로 다시 세운다.
+# ExecStop 이 종료 때 컨테이너를 `stop` 하므로(unless-stopped 는 멈춘 컨테이너를 되살리지 않는다) 부팅 때는
+# 데몬이 아니라 이 유닛이 compose 의 의존 순서대로 띄운다.
+#
+# 설치:
+#   sudo cp deploy/systemd/mk2-central.service /etc/systemd/system/
+#   sudo systemctl edit --full mk2-central   # WorkingDirectory 를 이 저장소의 deploy/ 절대 경로로
+#   sudo systemctl daemon-reload && sudo systemctl enable mk2-central
+#
+# Tailscale 주소 바인딩: 주소가 올라오기 전에도 바인딩이 되도록 커널 설정을 켜 두면 더 견고하다.
+#   echo 'net.ipv4.ip_nonlocal_bind=1' | sudo tee /etc/sysctl.d/90-mk2-nonlocal-bind.conf && sudo sysctl --system
+# 문서: docs/deployment/operations.md 「재부팅 뒤」
+
+[Unit]
+Description=MK2 central stack (docker compose)
+Requires=docker.service
+After=docker.service network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/Physical-Project-mk2/deploy
+# 첫 기동(이미지 받기·DB 초기화)은 수 분이 걸린다
+TimeoutStartSec=900
+ExecStart=/usr/bin/docker compose up -d --wait --wait-timeout 600
+ExecStop=/usr/bin/docker compose stop
+
+[Install]
+WantedBy=multi-user.target

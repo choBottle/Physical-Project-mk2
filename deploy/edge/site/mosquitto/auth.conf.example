@@ -1,0 +1,10 @@
+# 엣지 Mosquitto 현장 설정 예시 — 장치 계정. docs/deployment/security.md
+# deploy/edge/config/mosquitto.conf 끝의 include_dir 이 이 폴더(deploy/edge/site/mosquitto/)의 *.conf 를 읽는다.
+# 이 폴더는 gitignore 대상이라 업그레이드(git checkout <태그>)와 부딪치지 않는다.
+# 중앙으로 가는 브릿지 계정은 여기가 아니라 deploy/edge/.env 의 MK2_CENTRAL_MQTT_USER / MK2_CENTRAL_MQTT_PASSWORD 다.
+#
+# 1) docker compose exec mosquitto mosquitto_passwd -c /mosquitto/data/passwd <장치 계정>
+# 2) cp auth.conf.example auth.conf  → 장치 노드 설정에 그 계정을 넣는다(장치 노드의 계정 지원 여부를 먼저 확인)
+# 3) docker compose restart mosquitto
+allow_anonymous false
+password_file /mosquitto/data/passwd

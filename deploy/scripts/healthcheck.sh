@@ -5,8 +5,10 @@
 #   ./deploy/scripts/healthcheck.sh --quick    # 생존만
 #
 # 모든 검사는 도커 망 안에서 한다(docker compose exec) — 호스트 포트·방화벽 설정과 무관하게 같은 결과.
-# 업무 관통 검사는 hc-<시각> 이름의 시험 장치로 4건을 발행한다. 계측 원본은 지우지 않는다(앱 계정에
-# DELETE 가 없다 — 의도). 시험 행은 source_id 접두사 hc- 로 구분된다.
+# 업무 관통 검사는 고정된 시험 장치 hc-probe 로 4건을 발행한다 — 실행마다 새 장치 이름을 쓰면 레지스트리에
+# 유령 장치가 영구히 쌓인다. 이번 실행의 행은 장치 이름이 아니라 **적재 시각**으로 가린다(TimescaleDB ingest_at ·
+# MySQL last_recorded_at 이 이번 실행 시작 이후). 계측 원본은 지우지 않는다(앱 계정에 DELETE 가 없다 — 의도).
+# 시험 행: source_id='hc-probe'.
 # 종료 코드: 0 = 전부 통과, 1 = 하나 이상 실패.
 set -uo pipefail
 
@@ -19,6 +21,9 @@ bad()  { echo "  ❌ $*"; FAIL=$((FAIL+1)); }
 check(){ local name="$1"; shift; if "$@" >/dev/null 2>&1; then ok "${name}"; else bad "${name}"; fi; }
 dc()   { docker compose "$@"; }
 prom() { dc exec -T prometheus wget -qO- "$1" 2>/dev/null; }
+# MySQL root 로 한 문장 — SQL 은 인자로 넘겨 따옴표 중첩을 피한다
+# shellcheck disable=SC2016  # $MYSQL_ROOT_PASSWORD 는 컨테이너 안에서 펼친다
+mysql_q(){ dc exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N -e "$1" 2>/dev/null' _ "$1" | tr -d '\r'; }
 
 echo "▶ 1. 컨테이너 생존"
 for svc in mosquitto kafka mysql timescaledb otel-collector prometheus loki tempo grafana \
@@ -45,18 +50,27 @@ check "Kafka 토픽 3개" bash -c \
   "[[ \$(docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list | grep -c '^mk2\.telemetry\.') == 3 ]]"
 
 echo "▶ 3. 업무 관통 (MQTT → ingest → Kafka → storage → TimescaleDB · MySQL)"
-EID="hc-$(date +%s)"
+EID="hc-probe"
+# 이번 실행의 시작 시각 — 각 DB 자신의 시계로 잰다(비교할 적재 시각도 그 DB·같은 호스트가 찍는다)
+T_TSDB="$(dc exec -T timescaledb psql -U postgres -d mk2 -tAc "SELECT now()" 2>/dev/null | tr -d '\r' | xargs)"
+T_MYSQL="$(mysql_q "SELECT UTC_TIMESTAMP(6)" | tail -1)"
+[[ -n "${T_TSDB}" && -n "${T_MYSQL}" ]] || bad "DB 시각 조회 실패 (TimescaleDB='${T_TSDB}' MySQL='${T_MYSQL}')"
 dc exec -T be-ingest python tests/publisher.py --host mosquitto --eid "${EID}" --count 3 --interval 0.2 >/dev/null 2>&1
 dc exec -T be-ingest python tests/publisher.py --host mosquitto --eid "${EID}" --channel status >/dev/null 2>&1
 rows=0
 for _ in $(seq 1 15); do
-  rows="$(dc exec -T timescaledb psql -U postgres -d mk2 -tAc "SELECT count(*) FROM telemetry WHERE source_id='${EID}'" 2>/dev/null | tr -d '[:space:]')"
+  rows="$(dc exec -T timescaledb psql -U postgres -d mk2 -tAc "SELECT count(*) FROM telemetry WHERE source_id='${EID}' AND ingest_at >= '${T_TSDB:-infinity}'::timestamptz" 2>/dev/null | tr -d '[:space:]')"
   [[ "${rows}" == "4" ]] && break
   sleep 2
 done
-[[ "${rows}" == "4" ]] && ok "TimescaleDB 적재 4/4 (source_id=${EID})" || bad "TimescaleDB 적재 ${rows:-0}/4 (source_id=${EID})"
-check "MySQL 레지스트리 관측 등록" bash -c \
-  "docker compose exec -T mysql sh -c 'mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" -N -e \"SELECT entity_id FROM mk2.registry_entity_observed WHERE entity_id=\\\"${EID}\\\"\"' 2>/dev/null | grep -q ${EID}"
+[[ "${rows}" == "4" ]] && ok "TimescaleDB 적재 4/4 (source_id=${EID}, 이번 실행)" || bad "TimescaleDB 적재 ${rows:-0}/4 (source_id=${EID}, 이번 실행)"
+reg=""
+for _ in $(seq 1 5); do
+  reg="$(mysql_q "SELECT entity_id FROM mk2.registry_entity_observed WHERE entity_id='${EID}' AND last_recorded_at >= '${T_MYSQL:-9999-12-31}'")"
+  [[ "${reg}" == *"${EID}"* ]] && break
+  sleep 2
+done
+[[ "${reg}" == *"${EID}"* ]] && ok "MySQL 레지스트리 관측 갱신 (이번 실행)" || bad "MySQL 레지스트리 관측 갱신 없음 (entity_id=${EID})"
 
 echo "▶ 4. 관측 평면 (metric · log · 대시보드)"
 targets="$(prom 'http://localhost:9090/api/v1/targets?state=active')"

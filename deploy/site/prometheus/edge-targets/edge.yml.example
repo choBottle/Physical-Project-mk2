@@ -1,0 +1,7 @@
+# 엣지 페더레이션 타깃 — 복사해 확장자 .example 을 뗀다(gitignore 대상):  cp edge.yml.example edge.yml
+# prometheus.yml 의 edge_federate 잡이 file_sd 로 읽는다 — 파일을 고치면 Prometheus 가 스스로 반영한다(reload 불필요).
+# 구역(엣지)마다 항목 하나. 주소는 그 엣지의 MK2_EDGE_TUNNEL_BIND(터널 주소):9090. 확인: up{job="edge_federate"} == 1
+- targets: ["<엣지 터널 주소>:9090"]
+  labels:
+    agg_layer: edge
+    zone_id: zoneA

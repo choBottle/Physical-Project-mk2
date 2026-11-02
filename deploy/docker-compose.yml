@@ -17,6 +17,8 @@
 #   - 바인딩 주소가 곧 노출 통제다: 엣지 입구는 MK2_EDGE_BIND, 운영 화면·DB 는 MK2_ADMIN_BIND.
 #   - DB 스키마의 정본은 server/infra/sql/ 이다. 여기서는 그 파일을 읽어 최초 1회 적용할 뿐 사본을 두지 않는다.
 #   - 호스트 포트 번호는 기존 운영 서버와 같다(7858·7859·7861·7862·4316 …) — 백엔드 기본값·pytest·문서가 그대로 맞는다.
+#   - 현장 설정은 이 파일·server/config 를 고치지 않고 docker-compose.override.yml(자동 로드)·site/ 에 둔다 — 둘 다
+#     gitignore 라 업그레이드(git checkout <태그>)와 부딪치지 않는다. 예시: docker-compose.override.yml.example · site/**/*.example
 # 상세: docs/deployment/README.md
 # =============================================================================
 
@@ -69,6 +71,7 @@ services:
       - "${MK2_EDGE_BIND:-127.0.0.1}:9001:9001"     # MQTT over WebSocket (브라우저 도구)
     volumes:
       - ./server/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./site/mosquitto:/mosquitto/config/site.d:ro       # 현장 설정(gitignore) — include_dir
       - mosquitto_data:/mosquitto/data
     networks: [mk2]
     healthcheck:
@@ -105,7 +108,9 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
     ports:
       - "127.0.0.1:9092:9092"
-      - "${MK2_EDGE_BIND:-127.0.0.1}:9095:9095"
+      # EDGE 리스너 — 1.0 에서는 엣지가 Kafka 를 쓰지 않는다(업무는 엣지 Mosquitto 브릿지 → 중앙 Mosquitto).
+      # 그래서 MK2_EDGE_BIND 와 따로 두고 기본은 loopback 이다. 엣지 be-ingest 배치를 실험할 때만 터널 주소로.
+      - "${MK2_KAFKA_EDGE_BIND:-127.0.0.1}:9095:9095"
     volumes:
       - kafka_data:/var/lib/kafka/data
     networks: [mk2]
@@ -240,6 +245,7 @@ services:
     volumes:
       - ./server/config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./server/config/prometheus-rules.yml:/etc/prometheus/rules/mk2.yml:ro
+      - ./site/prometheus:/etc/prometheus/site:ro         # 현장 설정(gitignore) — 엣지 타깃·잡·규칙·Alertmanager
       - prometheus_data:/prometheus
     networks: [mk2]
     healthcheck:
