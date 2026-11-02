@@ -4,6 +4,10 @@ global:
   external_labels:
     agg_layer: edge
 
+# 현장 전용 수집 잡(예: 가용성 판정 :9105) — deploy/edge/site/prometheus/scrape/*.yml (gitignore). 이 파일은 고치지 않는다.
+scrape_config_files:
+  - /etc/prometheus/site/scrape/*.yml
+
 scrape_configs:
   - job_name: otel_collector
     static_configs:
@@ -11,7 +15,4 @@ scrape_configs:
   - job_name: prometheus
     static_configs:
       - targets: ["localhost:9090"]
-  # 엣지 가용성 판정 참조 구현(hardware/edge/availability.py, :9105)을 띄웠다면:
-  # - job_name: hw_availability
-  #   static_configs:
-  #     - targets: ["host.docker.internal:9105"]
+  # 엣지 가용성 판정 참조 구현(hardware/edge/availability.py, :9105) — site/prometheus/scrape/hw-availability.yml.example

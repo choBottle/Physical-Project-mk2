@@ -1,0 +1,29 @@
+# MK2 중앙 스택 현장 덮어쓰기 — 복사해서 쓴다(gitignore 대상):
+#
+#   cp docker-compose.override.yml.example docker-compose.override.yml
+#
+# docker compose 는 같은 폴더의 docker-compose.override.yml 을 자동으로 함께 읽는다(-f 를 주지 않을 때).
+# docker-compose.yml 을 직접 고치지 않으므로 업그레이드(git checkout <태그>)와 부딪치지 않는다.
+# 합쳐진 결과 확인:  docker compose config
+#
+# 아래는 예시다 — 필요한 항목만 남긴다. 비밀값은 여기가 아니라 .env 에 둔다.
+
+services:
+  # 예 1) Alertmanager 붙이기 — 받는 채널(메일·메신저) 설정은 site/alertmanager/alertmanager.yml (gitignore)에 직접 쓴다.
+  #       Prometheus 쪽 주소는 site/prometheus/alertmanagers/alertmanager.yml.example 을 복사해 켠다.
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    restart: unless-stopped
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
+    volumes:
+      - ./site/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "${MK2_ADMIN_BIND:-127.0.0.1}:9093:9093"
+    networks: [mk2]
+
+  # 예 2) 서비스 하나의 자원 제한·로그 회전 같은 현장 조정
+  # be-storage:
+  #   mem_limit: 2g
+  #   logging:
+  #     driver: json-file
+  #     options: { max-size: "50m", max-file: "5" }

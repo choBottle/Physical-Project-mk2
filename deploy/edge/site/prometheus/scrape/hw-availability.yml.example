@@ -1,0 +1,10 @@
+# 엣지 현장 수집 잡 — 복사해 .yml 로 둔다(gitignore 대상). deploy/edge/config/prometheus.yml 의 scrape_config_files 가 읽는다.
+# 반영: docker compose restart prometheus
+#
+# 엣지 가용성 판정 참조 구현(hardware/edge/availability.py, :9105)을 엣지 호스트에서 띄웠다면.
+# 리눅스에서 host.docker.internal 을 쓰려면 deploy/edge/docker-compose.override.yml 에
+#   services: { prometheus: { extra_hosts: ["host.docker.internal:host-gateway"] } }
+scrape_configs:
+  - job_name: hw_availability
+    static_configs:
+      - targets: ["host.docker.internal:9105"]

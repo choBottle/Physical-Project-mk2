@@ -1,0 +1,13 @@
+# 현장 전용 알림 규칙 — 복사해 .yml 로 둔다(gitignore 대상). 형식은 deploy/server/config/prometheus-rules.yml 과 같다.
+# 확인: docker compose exec prometheus promtool check rules /etc/prometheus/site/rules/site.yml
+# 반영: curl -X POST http://127.0.0.1:7861/-/reload
+groups:
+  - name: site
+    rules:
+      - alert: EdgeFederationDown
+        expr: up{job="edge_federate"} == 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "엣지 {{ $labels.instance }} 페더레이션 실패 — 터널·엣지 Prometheus 확인"
+          runbook: docs/deployment/operations.md#scrape-target-down

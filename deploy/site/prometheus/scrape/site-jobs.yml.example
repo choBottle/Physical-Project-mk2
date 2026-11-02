@@ -1,0 +1,8 @@
+# 현장 전용 수집 잡 — 복사해 .yml 로 둔다(gitignore 대상). prometheus.yml 의 scrape_config_files 가 읽는다.
+# 형식은 prometheus.yml 의 scrape_configs 와 같다. job_name 은 기존 잡과 겹치면 안 된다.
+# 확인: docker compose exec prometheus promtool check config /etc/prometheus/prometheus.yml
+# 반영: curl -X POST http://127.0.0.1:7861/-/reload
+scrape_configs:
+  - job_name: site_node_exporter
+    static_configs:
+      - targets: ["<호스트 주소>:9100"]

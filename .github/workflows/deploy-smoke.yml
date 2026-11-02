@@ -69,12 +69,44 @@ jobs:
     defaults: { run: { working-directory: deploy/edge } }
     steps:
       - uses: actions/checkout@v4
-      - name: 엣지 스택 기동
+      - name: 엣지 스택 기동 (중앙 브로커 자리에 시험용 Mosquitto)
         run: |
+          docker run -d --name central-mqtt -p 18830:1883 eclipse-mosquitto:2.0.22 mosquitto -c /mosquitto-no-auth.conf
+          host_ip="$(hostname -I | awk '{print $1}')"
           cp .env.example .env
-          sed -i 's|^MK2_CENTRAL_OTLP=.*|MK2_CENTRAL_OTLP=localhost:4317|' .env
+          sed -i -e 's|^MK2_CENTRAL_OTLP=.*|MK2_CENTRAL_OTLP=localhost:4317|'                  -e "s|^MK2_CENTRAL_MQTT_HOST=.*|MK2_CENTRAL_MQTT_HOST=${host_ip}|"                  -e 's|^MK2_CENTRAL_MQTT_PORT=.*|MK2_CENTRAL_MQTT_PORT=18830|'                  -e 's|^MK2_ZONE_ID=.*|MK2_ZONE_ID=zoneT|' .env
           docker compose up -d --wait --wait-timeout 120
           docker compose ps -a
+      - name: 브릿지 — 엣지 발행이 중앙에, 중앙 명령이 엣지에
+        run: |
+          set -eu
+          # 브릿지 연결 표식(retained, 1 = 연결)
+          for _ in $(seq 1 30); do
+            st="$(docker compose exec -T mosquitto mosquitto_sub -t '$SYS/broker/connection/mk2-edge-zoneT/state' -C 1 -W 2 2>/dev/null || true)"
+            [ "${st}" = "1" ] && break; sleep 1
+          done
+          [ "${st}" = "1" ] || { echo "브릿지 미연결 (state='${st}')"; exit 1; }
+          token="bridge-$(date +%s%N)"
+          # 업무(out): 엣지에 발행 → 중앙에 도착 / 범위 밖 토픽은 엣지에 머문다
+          docker compose exec -T mosquitto mosquitto_pub -q 1 -r -t zoneT/sensor/bridge-probe/state -m "${token}"
+          docker compose exec -T mosquitto mosquitto_pub -q 1 -r -t zoneT/local/only -m "${token}"
+          got="$(docker exec central-mqtt mosquitto_sub -t zoneT/sensor/bridge-probe/state -C 1 -W 10 || true)"
+          [ "${got}" = "${token}" ] || { echo "업무 out 실패: '${got}'"; exit 1; }
+          leak="$(docker exec central-mqtt mosquitto_sub -t zoneT/local/only -C 1 -W 3 || true)"
+          [ -z "${leak}" ] || { echo "브릿지 범위 밖 토픽이 중앙으로 샜다"; exit 1; }
+          # 명령(in): 중앙에 발행 → 엣지에 도착
+          docker exec central-mqtt mosquitto_pub -q 1 -r -t terminal/bridge-probe/downlink -m "${token}"
+          got="$(docker compose exec -T mosquitto mosquitto_sub -t terminal/bridge-probe/downlink -C 1 -W 10 || true)"
+          [ "${got}" = "${token}" ] || { echo "명령 in 실패: '${got}'"; exit 1; }
+          echo "브릿지 양방향 OK (${token})"
+      - name: 실패 시 상태·로그
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color --tail 80
+          docker logs --tail 40 central-mqtt || true
       - name: 정리
         if: always()
-        run: docker compose down -v
+        run: |
+          docker compose down -v
+          docker rm -f central-mqtt || true

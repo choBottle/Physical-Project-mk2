@@ -1,0 +1,14 @@
+# 중앙 Mosquitto 현장 설정 예시 — 운영 프로파일(계정 + ACL). docs/deployment/security.md
+# deploy/server/config/mosquitto.conf 끝의 include_dir 이 이 폴더(deploy/site/mosquitto/)의 *.conf 를 읽는다.
+# 이 폴더는 gitignore 대상이라 업그레이드(git checkout <태그>)와 부딪치지 않는다.
+#
+# ⚠ 백엔드(be-ingest·be-gateway)는 현재 MQTT 계정 설정이 없다(익명 접속). 익명을 끄기 전에 백엔드 지원 여부를
+#   확인한다 — 지금은 바인딩 주소(MK2_EDGE_BIND = 터널 주소)가 노출 통제다.
+#
+# 1) 비밀번호 파일:  docker compose exec mosquitto mosquitto_passwd -c /mosquitto/data/passwd <user>
+#    엣지 브릿지용 계정도 만든다 → 엣지 deploy/edge/.env 의 MK2_CENTRAL_MQTT_USER / MK2_CENTRAL_MQTT_PASSWORD
+# 2) cp auth.conf.example auth.conf   (ACL 을 쓰면 같은 폴더에 acl 파일을 두고 아래 줄을 푼다)
+# 3) docker compose restart mosquitto
+allow_anonymous false
+password_file /mosquitto/data/passwd
+# acl_file /mosquitto/config/site.d/acl
