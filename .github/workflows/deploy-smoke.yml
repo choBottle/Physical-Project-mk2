@@ -115,3 +115,42 @@ jobs:
         run: |
           docker compose down -v
           docker rm -f central-mqtt || true
+
+  # MQTT 운영 프로파일(계정) — central-stack 은 기본(익명) 프로파일을 보고, 이 잡은 익명 거부 + 백엔드 계정 접속을 본다.
+  # 중앙 스택 전체를 다시 띄우지 않는다: 일회용 Mosquitto(auth.conf.example) + 백엔드 이미지의 ingest 클라이언트만.
+  mqtt-auth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults: { run: { working-directory: deploy } }
+    steps:
+      - uses: actions/checkout@v4
+      - name: 백엔드 이미지 빌드
+        run: docker build -q -t mk2-backend:auth-check ../server
+      - name: 계정 접속 성공 · 익명 거부 (scripts/mqtt-auth-check.sh)
+        run: ./scripts/mqtt-auth-check.sh mk2-backend:auth-check
+
+  # 백엔드 이미지 arm64 빌드 — release.yml 이 linux/amd64,linux/arm64 로 게시하는 것과 같은 빌드(QEMU). 게시하지 않는다.
+  # requirements.lock 의 해시가 arm64 휠까지 덮는지(--require-hashes)를 여기서 잡는다.
+  backend-image-arm64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - name: linux/arm64 빌드 (push 없음)
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: server
+          platforms: linux/arm64
+          push: false
+          load: true
+          tags: mk2-backend:arm64-check
+      - name: arm64 이미지에서 import 확인 (에뮬레이션)
+        run: |
+          arch="$(docker run --rm --platform linux/arm64 mk2-backend:arm64-check python -c \
+            'import platform, confluent_kafka, psycopg, grpc, cryptography, backend.ingest.bridge, backend.gateway.ws_echo; print(platform.machine())')"
+          echo "machine=${arch}"
+          [ "${arch}" = "aarch64" ]
