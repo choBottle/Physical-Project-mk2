@@ -26,23 +26,22 @@ OpenTelemetry, Tailscale 은 지금 쓰는 구현이고 고정된 의존이 아�
 중앙 스택은 컨테이너 13개이며 `docker compose` 명령 하나로 뜬다. 모든 PR 마다 CI 가 빈 러너에서 이 스택을 새로 세우고
 헬스체크, 실제 말단 노드 코드로 하는 전 구간 시험, 백엔드 회귀 시험, 백업·복구 왕복을 돌린다.
 
-현재 판은 후보판 `v1.0.0-rc.2` 이다. 인증, 역할 기반 접근 제어, TLS 는 아직 없으므로 그 전까지는 사설망이나 터널
+현재 판은 후보판 `v1.0.0-rc.3` 이다. 인증, 역할 기반 접근 제어, TLS 는 아직 없으므로 그 전까지는 사설망이나 터널
 안에서만 운영한다([보안](#보안)).
 
-### 1.0.0-rc.2 에서 바뀐 것
+### 1.0.0-rc.3 에서 바뀐 것
 
-- **360 카메라 → Unity 를 데이터 규약 v2 로.** `camera360/anchor360_live.py` 와 Unity 수신 스크립트
-  `Anchor360ObstacleReceiver.cs` 가 v2 이름(`label`, `position`, `ground_dist_m`, `size_m`, `bbox`, `confidence`)을 쓴다.
-  수신 스크립트는 v1 패킷도 받으므로 서버와 Unity 를 다른 날 바꿔도 된다.
-- **바꿔 끼울 수 있게.** 검출 모델은 설정으로 고르고, 어느 equirect 360 카메라든 올릴 수 있고, 스트림 서버 소스는
-  `camera360/sources.json` 에서 읽고, 트윈 게이트웨이가 Unity 옆에 Gazebo 등 다른 트윈을 붙인다.
-  [docs/deployment/pluggability.md](docs/deployment/pluggability.md).
-- **관제 화면 하나로.** 드론 팀의 화면 사본을 `visualization/viz-debugger` 로 합쳤고, 드론 파이썬 패키지는
-  [`drone/`](drone/) 으로 옮겼다.
-- **장비 없는 전 구간 시험.** `deploy/scripts/e2e-sim.sh` 가 라즈베리파이 센서 노드를 컨테이너로 띄워 중앙 스택에 붙이고,
-  계측값이 관제 구독, DB, Prometheus 까지 가는지 확인한다.
-- **회귀 수정.** 통합 저장소와 원래 팀 브랜치를 같은 입력으로 비교해 찾은 것: camera360 설정의 모델 경로, Go1 로봇 노드의
-  빈 환경변수, 흐림 처리한 시료 사진의 화질. 자세한 내용은 `CHANGELOG.md`.
+- **엣지 → 중앙 MQTT 브리지.** 엣지 브로커가 장치 토픽을 중앙으로 넘기고 명령을 받아 온다. 실제 중앙 스택과 CI 에서
+  확인했다([docs/deployment/edge.md](docs/deployment/edge.md)).
+- **현장 설정을 지키는 업그레이드.** 현장 수정은 gitignore 된 override 파일에 두고, `deploy/scripts/migrate.sh` 가
+  DB 스키마 판을 추적한다. [operations.md](docs/deployment/operations.md) 의 업그레이드 절차를 rc.2 → 이 판으로
+  그대로 돌려 데이터가 남는 것을 확인했다.
+- **보안 수정.** 360 카메라 업로드 수신기가 `..` 경로를 거부하고 크기 상한을 두며 loopback 밖에서는 토큰을 요구한다.
+  촬영본 아카이브 크기 상한, 백엔드 MQTT 계정(선택).
+- **명령 규격 하나로.** 하드웨어 · 관제 화면 · AI 가 `physical_command.proto` 하나를 쓰고, CI 가 어긋남을 막는다.
+- **폐쇄망 설치**([offline.md](docs/deployment/offline.md)), 영문 배포 문서([docs/en/](docs/en/)), amd64 · arm64 백엔드 이미지.
+- **rc.2 에서 올릴 때** `CHANGELOG.md` 의 "Deployment changes" 를 먼저 본다: `./scripts/migrate.sh` 한 번,
+  360 카메라 수신기의 `MK2_PANO_BIND` · `MK2_PANO_TOKEN`, 엣지의 `MK2_CENTRAL_MQTT_HOST`.
 
 ## 저장소 구성
 
