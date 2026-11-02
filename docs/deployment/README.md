@@ -79,7 +79,7 @@ MK2 는 다섯 구간으로 나뉜다. 이 저장소의 `deploy/` 는 **구간 2
 
 ```bash
 # ① 받기
-git clone https://github.com/<org>/Physical-Project-mk2.git
+git clone https://github.com/choBottle/Physical-Project-mk2.git
 cd Physical-Project-mk2/deploy
 
 # ② 환경변수 — 비밀번호·토큰 8개를 무작위 영숫자 32자로 자동 생성한다(.env, 권한 600, 커밋되지 않음)
@@ -129,18 +129,20 @@ docker compose up -d --build --wait
 ## 4. 엣지를 붙일 때 — 노출 정책 바꾸기
 
 기본값은 **모든 입구가 `127.0.0.1`** 이다. 서버 밖에서는 아무것도 붙지 못한다(안전한 기본값).
-엣지·뷰어를 붙일 때 `deploy/.env` 두 줄을 서버의 **터널 주소**로 바꾼다:
+엣지·뷰어를 붙일 때 `deploy/.env` 한 줄을 서버의 **터널 주소**로 바꾼다:
 
 ```bash
 MK2_EDGE_BIND=100.x.y.z                # tailscale ip -4 의 결과
-MK2_KAFKA_EDGE_ADVERTISED=100.x.y.z    # 같은 주소 — localhost 로 두면 엣지가 자기 자신으로 되돌아간다
 ```
+
+Kafka EDGE 리스너(9095)는 1.0 에서 쓰지 않는다 — 엣지 업무 경로는 엣지 Mosquitto 의 브릿지 → 중앙 Mosquitto(1883)다.
+`MK2_KAFKA_EDGE_BIND`·`MK2_KAFKA_EDGE_ADVERTISED` 는 기본값(loopback·localhost) 그대로 둔다.
 
 ```bash
 docker compose up -d     # 바뀐 서비스만 재생성된다
 ```
 
-> 🔴 `0.0.0.0` 으로 두지 않는다. MQTT(익명)·OTLP·Kafka EDGE(평문)는 인증이 없는 입구라, 터널 주소에만 바인딩하는
+> 🔴 `0.0.0.0` 으로 두지 않는다. MQTT(익명)·OTLP 는 인증이 없는 입구라, 터널 주소에만 바인딩하는
 > 것이 곧 접근 통제다. 자세한 근거와 운영 전환 체크리스트는 [security.md](security.md).
 
 엣지 쪽 절차는 [edge.md](edge.md).
@@ -154,7 +156,9 @@ docker compose up -d     # 바뀐 서비스만 재생성된다
 | 비밀번호·토큰·노출 주소·포트·보존 기간 | `deploy/.env` (템플릿 `deploy/.env.example`) |
 | 서비스 구성·이미지 버전 | `deploy/docker-compose.yml` |
 | DB 스키마 (정본) | `server/infra/sql/*.sql` — **사본을 두지 않는다**. compose 가 이 파일을 직접 읽는다 |
-| Prometheus 수집 대상 · 알림 규칙 | `deploy/server/config/prometheus.yml` · `prometheus-rules.yml` |
+| Prometheus 수집 대상 · 알림 규칙 (저장소 관리) | `deploy/server/config/prometheus.yml` · `prometheus-rules.yml` — 현장에서 고치지 않는다 |
+| **현장 설정** — 엣지 타깃 · 현장 잡·규칙 · Alertmanager · Mosquitto 계정 · compose 조정 | `deploy/site/**` · `deploy/docker-compose.override.yml` (gitignore, `*.example` 이 형식) — [operations.md 「현장 설정」](operations.md#현장-설정--추적-파일을-고치지-않는다) |
+| 재부팅 뒤 기동 순서 | `deploy/systemd/mk2-central.service` (예시) — [operations.md 「재부팅 뒤」](operations.md#재부팅-뒤) |
 | Collector 파이프라인 | `deploy/server/config/otel-collector.yaml` |
 | Loki · Tempo 보존 | `deploy/server/config/loki.yaml` · `tempo.yaml` |
 | Grafana 대시보드 | `deploy/server/grafana/dashboards/*.json` |
@@ -162,7 +166,8 @@ docker compose up -d     # 바뀐 서비스만 재생성된다
 
 **운영 서버와 저장소가 같은 파일을 본다.** 이전에는 서버의 compose·설정 파일이 비밀번호·내부 주소 때문에
 저장소 밖(gitignore)에 있어서, 서버를 다시 세우거나 다른 기관에 넘길 방법이 없었다. 이제 비밀값은 `.env` 하나로
-분리됐고 나머지는 전부 커밋된다.
+분리됐고 공통 설정은 전부 커밋된다. 현장마다 다른 값만 gitignore 된 `deploy/site/`·override 에 둔다 — 업그레이드
+(`git checkout <태그>`)가 현장 설정과 부딪치지 않는다.
 
 ---
 
@@ -175,7 +180,8 @@ docker compose up -d     # 바뀐 서비스만 재생성된다
 | `.env` 를 다시 만들었더니 백엔드가 DB 에 못 붙는다 | DB 비밀번호는 **볼륨 최초 초기화 때** 박힌다. 새 `.env` 와 기존 볼륨이 어긋난 것. 시험 서버면 `docker compose down -v` 로 볼륨까지 지우고 다시, 운영 서버면 [database.md §5](database.md#5-비밀번호-교체) |
 | be-gateway 가 `exit 2` | loopback 밖 바인딩인데 토큰이 비었다. `MK2_WS_TOKEN`·`MK2_EDGE_TOKEN` 확인 |
 | Tempo `/ready` 가 503 | 기동 뒤 15초 워밍업. 그 뒤에도 503 이면 `tempo.yaml` 의 `ingester.lifecycler` 확인 |
-| 엣지가 Kafka 9095 에 붙는데 데이터가 안 간다 | `MK2_KAFKA_EDGE_ADVERTISED` 가 `localhost` 다 — 브로커가 "localhost 로 오라"고 답한다 |
+| 엣지 장치의 데이터가 중앙 DB 에 없다 | 엣지 브릿지 연결 확인 — 엣지에서 `docker compose exec mosquitto mosquitto_sub -t '$SYS/broker/connection/#' -v -C 1 -W 5` 가 `1` 이어야 한다. `0`/무응답이면 `deploy/edge/.env` 의 `MK2_CENTRAL_MQTT_HOST` · 중앙 `MK2_EDGE_BIND` · 터널을 본다([edge.md](edge.md)) |
+| (실험 배치) 엣지가 Kafka 9095 에 붙는데 데이터가 안 간다 | `MK2_KAFKA_EDGE_ADVERTISED` 가 `localhost` 다 — 브로커가 "localhost 로 오라"고 답한다 |
 | Grafana 에 백엔드 지표가 없다 | 백엔드 export 주기 15초 + scrape 5초. 1분 기다린 뒤 `./scripts/healthcheck.sh` 의 4번 절 |
 
 그래도 안 되면 [이슈](../../.github/ISSUE_TEMPLATE/deployment.yml)에 `./scripts/healthcheck.sh` 출력과

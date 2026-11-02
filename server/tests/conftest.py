@@ -39,6 +39,24 @@ if str(TESTS_DIR) not in sys.path:
 from backend import settings  # noqa: E402  (위 sys.path 보정 뒤에 import)
 
 
+# ── `infra` 마커 자동 부착 ─────────────────────────────────────────────────
+#
+# 아래 fixture 중 하나라도 (직접·간접으로) 쓰는 테스트는 브로커·Kafka·DB·관측 저장소·WS 입구가
+# 떠 있어야 의미가 있다. 그런 테스트에 `infra` 마커를 붙여 CI 단위 잡이 `-m "not infra"` 로
+# 인프라 없이 도는 것만 고를 수 있게 한다. 전체 회귀(deploy-smoke)는 마커와 상관없이 전건을 돈다.
+INFRA_FIXTURES = frozenset({
+    "broker", "kafka_bootstrap", "kafka_reader", "ws_url",
+    "tsdb_conn", "mysql_conn",
+    "prometheus_url", "loki_url", "tempo_url", "ingest_url",
+})
+
+
+def pytest_collection_modifyitems(config, items) -> None:
+    for item in items:
+        if INFRA_FIXTURES.intersection(getattr(item, "fixturenames", ())):
+            item.add_marker(pytest.mark.infra)
+
+
 @pytest.fixture(scope="session")
 def broker() -> dict:
     """발행 대상 Mosquitto (`MK2_BROKER_HOST` / `MK2_BROKER_PORT`)."""

@@ -8,11 +8,85 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: 파이썬 린트 (ruff — 구문 오류·정의 안 된 이름)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install ruff==0.17.3
+      # 규칙 묶음은 루트 ruff.toml (E9·F63·F7·F82 — 실제 버그만)
+      - run: ruff check . --output-format github
+
+  server-unit:
+    name: 백엔드 단위 시험 (인프라 없이 · py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.10 = pyproject requires-python 하한, 3.12 = 운영 이미지 판
+        python: ["3.10", "3.12"]
+    defaults: { run: { working-directory: server } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python }}", cache: pip, cache-dependency-path: server/pyproject.toml }
+      - run: pip install -e ".[dev]"
+      # 브로커·Kafka·DB·관측 저장소가 필요한 시험은 conftest 가 `infra` 마커를 붙인다 — 그건 deploy-smoke 가 실제 스택 위에서 돈다.
+      - run: python -m pytest -q -p no:cacheprovider -m "not infra"
+      - name: 공통 규격 예제 ↔ 스키마 (contracts/common/examples)
+        run: python contracts/common/validate_examples.py
+
+  hardware:
+    name: 하드웨어 벤치 시험 (장치 없이)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      # 판은 hardware/pi/robot/Dockerfile 과 맞춘다
+      - run: pip install paho-mqtt==2.1.0 protobuf==7.36.1
+      - name: 바이트코드 컴파일 (hardware · camera360 · osmocam)
+        run: python -m compileall -q hardware camera360 osmocam
+      # 벤치 시험은 pytest 가 아니라 __main__ 스크립트다(각 파일 docstring 의 실행법 그대로).
+      # unity_state_test 는 시험이 아니라 실물 유니티로 보내는 송신기라 뺀다.
+      - name: pi 벤치 (go1_relay · physical_command · physical_command_node · unity_bridge)
+        working-directory: hardware/pi
+        env:
+          # 노드 기본 스풀은 /var/lib/hw-node (Pi 에서 root 로 도는 경로) — 러너에선 쓸 수 없다
+          HW_SPOOL_PATH: ${{ runner.temp }}/hw-node/spool.jsonl
+        run: |
+          for m in go1_relay_test physical_command_test physical_command_node_test unity_bridge_test; do
+            echo "== bench.$m"; python -m "bench.$m"
+          done
+      - name: 엣지 (가용성 판정 · 미디어 게이트웨이)
+        working-directory: hardware/edge
+        run: python test_edge.py
+
+  web-dashboard:
+    name: web-dashboard 타입 검사
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults: { run: { working-directory: visualization/web-dashboard } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: visualization/web-dashboard/package-lock.json }
+      - run: npm ci
+      - run: npm run -s typecheck
+
   deploy-config:
     name: 배포 설정 검증
     runs-on: ubuntu-latest

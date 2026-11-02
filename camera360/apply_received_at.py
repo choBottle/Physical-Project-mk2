@@ -28,7 +28,7 @@ apply_received_at.py — server_stream_multi_source.py 에 받은 시각(edge_re
   python apply_received_at.py --check <...>                           고칠 곳만 보여 주고 쓰지 않는다
   인자를 안 주면 지금 폴더의 server_stream_multi_source.py
 
-  예) 노트북   python apply_received_at.py "C:\Users\asdfa\physical mk2\data_stream"
+  예) 노트북   python apply_received_at.py "%USERPROFILE%\capstone\data_stream"
       서버     python3 apply_received_at.py <data_stream 폴더>
 
 되돌리기

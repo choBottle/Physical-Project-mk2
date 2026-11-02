@@ -41,7 +41,7 @@ CI(`deploy-smoke`)가 매 PR 마다 헬스체크 다음에 돌린다.
   ✅ TimescaleDB 사건 행 threshold_cleared
   ✅ MySQL 레지스트리 관측 등록
 ▶ 5. 관측 — 노드 자신의 metric
-  ✅ Prometheus hw_publish_count_total{exported_instance=wl-e2e-…}
+  ✅ Prometheus hw_publish_count_total{exported_instance=wl-e2e-probe}
 ```
 
 최대 지연 1009ms 는 노드가 브로커 접속 전에 버퍼에 쌓았다가 재전송한 첫 건이다(HW-R-09 — 의도된 동작).

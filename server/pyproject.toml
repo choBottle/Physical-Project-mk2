@@ -6,7 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "mk2-backend"
 version = "0.1.0"
 description = "MK2 백엔드 — 엣지-클라우드 관측 파이프라인 (Phase 3: 관측 파이프라인 완성)"
-requires-python = ">=3.8"
+# 하한은 CI(server-unit 3.10·3.12 매트릭스)가 실제로 돌리는 판이다. 운영 이미지는 3.12.
+requires-python = ">=3.10"
 
 # 각 Phase에서 실제로 쓰는 것만 둔다. 미디어는 그 Phase(4)에서 추가한다.
 dependencies = [
@@ -50,3 +51,6 @@ include = ["backend*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "infra: 브로커·Kafka·DB·관측 저장소·WS 입구 등 떠 있는 인프라가 필요한 테스트(conftest 가 fixture 로 자동 부착). CI 단위 잡은 -m \"not infra\" 로 뺀다.",
+]

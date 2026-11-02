@@ -531,12 +531,12 @@ class NavigateToTargetService:
 
         pedestal_distance_avg_formula = {
             "formula": "pedestal_distance_avg_cm = mean(distance_cm_i for i in pedestal_observations)",
-            "substituted": f"mean({', '.join(f'{m['distance_cm']:.1f}' for m in pedestal_measurements)}) "
+            "substituted": f"mean({', '.join('%.1f' % m['distance_cm'] for m in pedestal_measurements)}) "
                            f"= {pedestal_distance_avg_cm:.1f}",
         }
         pedestal_bearing_formula = {
             "formula": "pedestal_bearing_rotation_frame_deg = mean(rotation_deg_i for i in pedestal_observations)",
-            "substituted": f"mean({', '.join(f'{m['rotation_deg']:.1f}' for m in pedestal_measurements)}) "
+            "substituted": f"mean({', '.join('%.1f' % m['rotation_deg'] for m in pedestal_measurements)}) "
                            f"= {pedestal_bearing_deg:.1f}",
         }
 

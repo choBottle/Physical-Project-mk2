@@ -24,7 +24,7 @@ Gazebo 화면 ──noVNC 6080──> 콘솔 「3D 가상환경」
 
 ![360 사진에서 검출한 장애물이 Gazebo 에 놓인 모습](../assets/twin-demo-pipeline.jpg)
 
-저장소의 360 사진(`camera360/image backup/br40_live.jpg`, 얼굴 흐림 처리됨)을 `anchor360_live.py` 가
+저장소의 360 사진(`camera360/samples/br40_live.jpg`, 얼굴 흐림 처리됨)을 `anchor360_live.py` 가
 처리해 장애물 8개(의자 2 · 상자 3 · 수납함 · 탁자 · 벤치)를 v2 패킷으로 보냈고, 게이트웨이가
 `obs_anchor360-live_1` ~ `_8` 로 Gazebo 에 만들었다. 게이트웨이 실패 기록 0건.
 

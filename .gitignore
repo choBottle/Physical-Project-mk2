@@ -3,6 +3,7 @@
 # ── 비밀정보 — 공개 저장소이므로 절대 커밋 금지 ──
 .env
 .env.*
+.env.local
 !.env.example
 !**/.env.example
 *.pem
@@ -12,6 +13,17 @@
 
 # ── 배포 런타임 산출물 ──
 deploy/backups/
+
+# ── 배포 현장 설정 — 업그레이드(git checkout <태그>)와 부딪치지 않게 추적하지 않는다. 예시(*.example)만 추적.
+#    docs/deployment/operations.md 「현장 설정」
+deploy/docker-compose.override.yml
+deploy/edge/docker-compose.override.yml
+deploy/site/**
+deploy/edge/site/**
+!deploy/site/**/
+!deploy/edge/site/**/
+!deploy/site/**/*.example
+!deploy/edge/site/**/*.example
 
 # ── Python / Node 공통 ──
 __pycache__/
@@ -27,6 +39,8 @@ Thumbs.db
 desktop.ini
 .idea/
 *.swp
+*.bak
+*.orig
 /.claude/worktrees/
 
 # 객체 탐지 스트림 서버의 실제 로봇·드론 주소 (camera360/server_stream_multi_source.py)
@@ -37,5 +51,6 @@ hosts.local.json
 *.pth
 *.onnx
 *.engine
+*.trt
 *.ckpt
 *.safetensors

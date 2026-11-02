@@ -192,15 +192,15 @@ invariant로 유지한다.
 
 | 외부 기술 | 등급 | 채택 | 채택하지 않는 부분 |
 |---|---|---|---|
-| [IDTA Capability Description 1.0](../obsidian/papers/idta-capability-description.md) | D | capability/property/constraint/skill 및 required↔provided matching 의미 | AASX, AAS runtime, 산업 생산 ontology 강제 |
-| [IDTA AI Model Nameplate 1.0](../obsidian/papers/idta-ai-model-nameplate.md) | D | model과 deployment 분리, model metadata 참조 | template field의 무비판적 복제 |
-| [IDTA AI Deployment 1.0](../obsidian/papers/idta-ai-deployment.md) | D | HW/SW requirement, performance·monitoring·risk 정보의 책임 경계 | provider selector 또는 inference protocol로 사용 |
-| [ISO 22166-201/-202](../obsidian/papers/iso-22166-201.md) | D | vendor-neutral module 정보와 software module 특성 분리의 상위 근거 | 유료 원문 미확보 세부 field·conformance 주장 |
-| [Capability/Skill reference model](../obsidian/papers/capability-skill-reference-model.md) | D | capability와 executable implementation 분리 | 제조 domain class를 core에 강제 |
-| [TOSCA 2.0](../obsidian/papers/tosca-2.md) | D | requirement/capability allocation과 constraint filtering 원리 | TOSCA DSL, CSAR, orchestrator runtime |
-| [OWL-S 1.2](../obsidian/papers/owl-s.md) | D | profile/model/grounding 분리와 composition의 선행 근거 | ontology와 2004 runtime 전면 도입 |
-| [KServe Open Inference Protocol V2](../obsidian/papers/kserve-open-inference-protocol-v2.md) | D/선택 C | tensor metadata와 live/ready/model-ready adapter | semantic capability·safety 계약으로 간주 |
-| [MLModelScope](../obsidian/papers/mlmodelscope.md) / [MLPerf Inference](../obsidian/papers/mlperf-inference.md) | D | 조건 고정·재현 가능한 execution evidence 방법 | benchmark runtime을 core dependency로 사용, 다른 workload로 점수 일반화 |
+| [IDTA Capability Description 1.0](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/idta-capability-description.md) | D | capability/property/constraint/skill 및 required↔provided matching 의미 | AASX, AAS runtime, 산업 생산 ontology 강제 |
+| [IDTA AI Model Nameplate 1.0](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/idta-ai-model-nameplate.md) | D | model과 deployment 분리, model metadata 참조 | template field의 무비판적 복제 |
+| [IDTA AI Deployment 1.0](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/idta-ai-deployment.md) | D | HW/SW requirement, performance·monitoring·risk 정보의 책임 경계 | provider selector 또는 inference protocol로 사용 |
+| [ISO 22166-201/-202](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/iso-22166-201.md) | D | vendor-neutral module 정보와 software module 특성 분리의 상위 근거 | 유료 원문 미확보 세부 field·conformance 주장 |
+| [Capability/Skill reference model](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/capability-skill-reference-model.md) | D | capability와 executable implementation 분리 | 제조 domain class를 core에 강제 |
+| [TOSCA 2.0](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/tosca-2.md) | D | requirement/capability allocation과 constraint filtering 원리 | TOSCA DSL, CSAR, orchestrator runtime |
+| [OWL-S 1.2](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/owl-s.md) | D | profile/model/grounding 분리와 composition의 선행 근거 | ontology와 2004 runtime 전면 도입 |
+| [KServe Open Inference Protocol V2](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/kserve-open-inference-protocol-v2.md) | D/선택 C | tensor metadata와 live/ready/model-ready adapter | semantic capability·safety 계약으로 간주 |
+| [MLModelScope](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/mlmodelscope.md) / [MLPerf Inference](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/mlperf-inference.md) | D | 조건 고정·재현 가능한 execution evidence 방법 | benchmark runtime을 core dependency로 사용, 다른 workload로 점수 일반화 |
 
 ### 4.3 Selector 불변조건
 

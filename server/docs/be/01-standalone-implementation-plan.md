@@ -727,7 +727,7 @@ Phase 5 앞에 끼어든 두 갈래다. **Phase 번호는 그대로**이고, 둘
 > **HW 소스의 최신본은 `_hwsrc/upstream_<날짜>/`** 에 둔다(gitignore, 절대 고치지 않는다). 새 브랜치가
 > 오면 이전 것과 해시 비교한다 — 절차는 `_hwsrc/README.md`. 우리가 편집을 얹은 실행 사본은
 > `local_patched_*/`이며 **근거로 쓰지 않는다**(Phase 2 보고서 「발견한 것 ⑧」).
-> **2026-09-17 현재 최신 사본은 `_hwsrc/` 밖에 있다** — HW 0914 = `C:\Users\asdfa\physical mk2\compare\Physical-Project-mk2-HW_260917\`,
+> **2026-09-17 현재 최신 사본은 `_hwsrc/` 밖에 있다** — HW 0914 = `%USERPROFILE%\physical mk2\compare\Physical-Project-mk2-HW_260917\`,
 > VZ 0916 = `…\compare\Physical-Project-mk2-khw_VZ_260917\`(이동하지 않기로 함). 대조 결과와 위치는
 > `reports/2026-09-17_1159_팀브랜치_최신화_대조.md`.
 

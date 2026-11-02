@@ -70,6 +70,7 @@
 | `MK2_CAPTURE_TOKEN` | **없음** | PUT 토큰(URL 쿼리 `token=` 또는 헤더 `X-MK2-Token`). `MK2_WS_TOKEN`과 같은 규칙 — loopback 이 아닌데 비어 있으면 기동 시 죽는다 |
 | `MK2_CAPTURE_DIR` | `media_capture`(**실행 디렉터리 기준**, gitignore) | 저장 루트. 서버는 `.env`로 저장소 **밖**의 절대 경로를 준다. `<루트>/<source_id>/<세션>.tar.gz` + `.incoming/`(임시·매니페스트 대기) |
 | `MK2_CAPTURE_MAX_BYTES` | `107374182400`(100GB) | 보존 상한(아카이브 합계). 초과분은 **오래된 세션부터** 고른다 — Phase 4는 `--retention-dry-run` 선정까지만 |
+| `MK2_CAPTURE_ARCHIVE_MAX_BYTES` | `8589934592`(8GiB) | 아카이브 **한 개**의 상한. `Content-Length` 가 넘으면 본문을 받기 전에 413 |
 | `MK2_CAPTURE_URL` | `http://127.0.0.1:8767/capture`(`MK2_CAPTURE_TOKEN`이 있으면 `?token=…`) | 합성 업로더·tests 가 붙을 base URL |
 
 **토큰은 영숫자만**(특수문자 금지 — `.env`를 읽는 파서가 셋이고 인용부호 규칙이 다르다).
@@ -318,6 +319,12 @@ def capture_dir() -> Path:
 def capture_max_bytes() -> int:
     """보존 상한(아카이브 합계). 근거 0.7GB/h × 약 143h, 공용 단일 볼륨의 4%."""
     return int(os.environ.get("MK2_CAPTURE_MAX_BYTES", str(100 * 1024 ** 3)))
+
+
+def capture_archive_max_bytes() -> int:
+    """아카이브 한 개의 최대 크기. 넘으면 받기 전에 413 — 토큰을 가진 쪽이 디스크를 채우지 못하게.
+    근거: 촬영 세션 하나는 수백 MB(0.7GB/h). 기본 8GiB 는 그 10배 이상 여유."""
+    return int(os.environ.get("MK2_CAPTURE_ARCHIVE_MAX_BYTES", str(8 * 1024 ** 3)))
 
 
 def capture_url() -> str:

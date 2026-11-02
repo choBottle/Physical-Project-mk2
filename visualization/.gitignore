@@ -15,7 +15,6 @@
 !/.gitattributes
 !/README.md
 !/mqtt-command.js
-!/package-lock.json
 !/pi1_조사결과.md
 !/viz-nav-feed-report.md
 !/viz-nav-feed-s0-report.md
