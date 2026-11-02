@@ -184,13 +184,15 @@ ports to `MK2_ADMIN_BIND`; both default to `127.0.0.1`.
 | Port | Service | Used by |
 |------|---------|---------|
 | 1883, 9001 | Mosquitto (MQTT, MQTT over WebSocket) | devices, edge nodes, browser tools |
-| 4317, 4318 | OpenTelemetry Collector (gRPC, HTTP) | backend, device nodes, AI, edge collectors, browsers |
+| 4316, 4317, 4318 | OpenTelemetry Collector (OTLP gRPC on 4316 and 4317, HTTP on 4318) | backend, device nodes, AI, edge collectors, browsers |
 | 8765 | WebSocket gateway `/state`, `/media` | operator consoles (token) |
 | 8766 | WebSocket gateway `/ingest` | edge video senders (token) |
 | 8767 | Capture upload `PUT /capture` | robots (token) |
 | 9095 | Kafka edge listener | remote edge bridges |
+| 9092 | Kafka internal listener (always `127.0.0.1`) | host processes on the server (pytest) |
 | 7858, 7859 | MySQL, TimescaleDB | operators |
 | 7861, 7862 | Prometheus, Grafana | operators |
+| 3100, 3200 | Loki, Tempo | operators |
 
 [docs/PORTS.md](docs/PORTS.md) is the full registry, including the edge
 stack and the ports used between devices and Unity.
@@ -205,7 +207,7 @@ stack and the ports used between devices and Unity.
 | [Edge](docs/deployment/edge.md) | Zone edge node and device node installation |
 | [End-to-end test](docs/deployment/e2e.md) | Scope, recorded runs, procedure on real hardware |
 | [Changing server addresses](docs/deployment/endpoints.md) | What to update when the perception, stream, anchor or Unity host moves |
-| [Twin demo](docs/deployment/twin-demo.md) | Recorded run: 360 photo to detection to Gazebo, with Gazebo and the 360 camera inside the operator console (screenshots) |
+| [Twin demo](docs/deployment/twin-demo.md) | Recorded run: 360 photo to detection to Gazebo, with Gazebo, the 360 camera and a simulated robot inside the operator console (screenshots) |
 | [Swapping components](docs/deployment/pluggability.md) | Using another 360 camera, another detection model, or a twin other than Unity |
 | [Security](docs/deployment/security.md) | Exposure policy, tokens, tunnel, production checklist |
 | [Operations](docs/deployment/operations.md) | Restart, upgrade, backup, response to each alert |
