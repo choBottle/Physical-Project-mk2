@@ -26,28 +26,28 @@ SCOUT 2026, DGS CVPR 2026, OctoCross**다. 이들을 보면 현재 설계의 각
 
 | 우리 설계 계층 | 우선 참고 연구 | 최신성 / 기술적 의미 | 구현성 | 실제 가져올 부분 |
 |---|---|---|---|---|
-| Pi5 상시 Known/Unknown | [Sato & Law OSOD](obsidian/papers/sato-law-osod.md) | 2026 journal, edge용 작은 YOLO OSOD | A/B | known/unknown detector, unknown crop, 반복 unknown 관리 |
-| 최신 경량 OWOD | [YOLO-UniOW-S](obsidian/papers/yolo-uniow.md) | 7.5M params, OWOD+OVD 통합 | B | Wildcard Learning, explicit unknown |
-| OWOD 정확도 상한 | [DEUS](obsidian/papers/deus.md) | CVPR 2026 OWOD | C | unknown separation 구조 |
-| OWOD 해석가능 상한 | [IPOW](obsidian/papers/ipow.md) | ICML 2026, concept decomposition | A, 서버용 | unknown/known concept decomposition |
-| Pi5 Local Tracking | [ByteTrack](obsidian/papers/bytetrack.md) | 구형이지만 경량·범용성 최상급 (이미 `perception/tracking.py::ByteTracker`로 재현됨) | A | detector-independent local track |
-| 강한 open-vocab tracking | [COVTrack](obsidian/papers/covtrack.md) | ICCV 2025, continuous OVMOT | A/B | motion+appearance+semantic adaptive fusion |
-| 고정 카메라 cross-view | [GMT](obsidian/papers/gmt.md) | CVPR 2026 MCMT | A/B | global trajectory, cross-view association |
-| 비동기 시간 정렬 | [TraF-Align](obsidian/papers/traf-align.md) | CVPR 2025 | A/B | delayed evidence의 current-time alignment |
-| 최신 비동기 fusion | [CATNet](obsidian/papers/catnet.md) | CVPR 2026 | C | STSync, noise+latency compensation |
-| 이종 센서/agent fusion | [DisCo](obsidian/papers/disco-heterogeneous-fusion.md) | Information Sciences, 2026-09-05 | C | arbitrary modality + join/leave |
-| 이종 로봇 Active Perception | [Co-GLANCE](obsidian/papers/co-glance.md) | 2026, 현재 아이디어와 매우 근접 (이미 노트 있음, `simulation/pose_graph_alignment.py` 재현 배경) | C | uncertainty→robot allocation→re-observation |
-| Unknown/Blind 탐색 | [SCOUT](obsidian/papers/scout.md) | 2026 | C | semantic uncertainty + coverage + travel cost |
-| 구현 가능한 multi-robot exploration | [ROAM](obsidian/papers/roam.md) | T-RO 2025 | A/B | map uncertainty 기반 active mapping |
-| Capability 기반 agent 선택 | [Semantic Feasibility Reasoning](obsidian/papers/semantic-feasibility-reasoning.md) | 2026-08 | 논문+부록 | capability contract와 allocator 분리 |
-| 학습형 heterogeneous coordination | [CASH](obsidian/papers/cash.md) | CoRL 2025 | A | capability-aware robot representation |
-| Calibration | [AnyCalib](obsidian/papers/anycalib.md) | ICCV 2025 | A | 모델 독립 single-view calibration |
-| 다중 카메라 자원 스케줄링 | [OctoCross](obsidian/papers/octocross.md) | ICSOC 2025/2026 proceedings | A/B | cross-camera workload prediction/offloading |
-| Edge inference serving | [OCTOPINF](obsidian/papers/octopinf.md) | PerCom 2025 (이미 `selection/research_execution_baselines.py::OctopinfPlacementPolicy`로 재현됨) | A | resource allocation, batching, SLO |
-| 지속학습 | [DGS](obsidian/papers/dgs.md) | CVPR 2026 Highlight (이미 `continual/dgs.py`로 재현됨) | A | class+domain incremental detection |
-| Incremental detector | [P²IOD](obsidian/papers/p2iod.md) | CVPR 2026 | A | catastrophic forgetting 억제 |
-| 학습/추론 자원 경쟁 | [Ekya](obsidian/papers/ekya.md) | NSDI 2022 (이미 `continual/ekya.py`로 재현됨) | A | retraining/inference resource scheduler |
-| UAV+UGV 통합 실험 | [HERCULES](obsidian/papers/hercules.md) | 2026 | A | heterogeneous UAV/UGV simulation |
+| Pi5 상시 Known/Unknown | [Sato & Law OSOD](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/sato-law-osod.md) | 2026 journal, edge용 작은 YOLO OSOD | A/B | known/unknown detector, unknown crop, 반복 unknown 관리 |
+| 최신 경량 OWOD | [YOLO-UniOW-S](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/yolo-uniow.md) | 7.5M params, OWOD+OVD 통합 | B | Wildcard Learning, explicit unknown |
+| OWOD 정확도 상한 | [DEUS](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/deus.md) | CVPR 2026 OWOD | C | unknown separation 구조 |
+| OWOD 해석가능 상한 | [IPOW](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/ipow.md) | ICML 2026, concept decomposition | A, 서버용 | unknown/known concept decomposition |
+| Pi5 Local Tracking | [ByteTrack](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/bytetrack.md) | 구형이지만 경량·범용성 최상급 (이미 `perception/tracking.py::ByteTracker`로 재현됨) | A | detector-independent local track |
+| 강한 open-vocab tracking | [COVTrack](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/covtrack.md) | ICCV 2025, continuous OVMOT | A/B | motion+appearance+semantic adaptive fusion |
+| 고정 카메라 cross-view | [GMT](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/gmt.md) | CVPR 2026 MCMT | A/B | global trajectory, cross-view association |
+| 비동기 시간 정렬 | [TraF-Align](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/traf-align.md) | CVPR 2025 | A/B | delayed evidence의 current-time alignment |
+| 최신 비동기 fusion | [CATNet](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/catnet.md) | CVPR 2026 | C | STSync, noise+latency compensation |
+| 이종 센서/agent fusion | [DisCo](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/disco-heterogeneous-fusion.md) | Information Sciences, 2026-09-05 | C | arbitrary modality + join/leave |
+| 이종 로봇 Active Perception | [Co-GLANCE](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/co-glance.md) | 2026, 현재 아이디어와 매우 근접 (이미 노트 있음, `simulation/pose_graph_alignment.py` 재현 배경) | C | uncertainty→robot allocation→re-observation |
+| Unknown/Blind 탐색 | [SCOUT](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/scout.md) | 2026 | C | semantic uncertainty + coverage + travel cost |
+| 구현 가능한 multi-robot exploration | [ROAM](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/roam.md) | T-RO 2025 | A/B | map uncertainty 기반 active mapping |
+| Capability 기반 agent 선택 | [Semantic Feasibility Reasoning](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/semantic-feasibility-reasoning.md) | 2026-08 | 논문+부록 | capability contract와 allocator 분리 |
+| 학습형 heterogeneous coordination | [CASH](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/cash.md) | CoRL 2025 | A | capability-aware robot representation |
+| Calibration | [AnyCalib](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/anycalib.md) | ICCV 2025 | A | 모델 독립 single-view calibration |
+| 다중 카메라 자원 스케줄링 | [OctoCross](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/octocross.md) | ICSOC 2025/2026 proceedings | A/B | cross-camera workload prediction/offloading |
+| Edge inference serving | [OCTOPINF](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/octopinf.md) | PerCom 2025 (이미 `selection/research_execution_baselines.py::OctopinfPlacementPolicy`로 재현됨) | A | resource allocation, batching, SLO |
+| 지속학습 | [DGS](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/dgs.md) | CVPR 2026 Highlight (이미 `continual/dgs.py`로 재현됨) | A | class+domain incremental detection |
+| Incremental detector | [P²IOD](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/p2iod.md) | CVPR 2026 | A | catastrophic forgetting 억제 |
+| 학습/추론 자원 경쟁 | [Ekya](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/ekya.md) | NSDI 2022 (이미 `continual/ekya.py`로 재현됨) | A | retraining/inference resource scheduler |
+| UAV+UGV 통합 실험 | [HERCULES](https://github.com/sysailab/mk2-internal-docs/blob/main/ai/docs/obsidian/papers/hercules.md) | 2026 | A | heterogeneous UAV/UGV simulation |
 
 ## 2. Tier 0 — Raspberry Pi 상시 인지는 Sato OSOD부터
 

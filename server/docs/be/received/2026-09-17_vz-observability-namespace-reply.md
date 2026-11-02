@@ -10,7 +10,7 @@
 |---|---|
 | 원문 | [vz-observability-namespace.md](../vz-observability-namespace.md) (백엔드 작성 2026-09-16) |
 | 정리일 | 2026-09-17 |
-| 대조한 자료 | [요구사항 정의서 xlsx](피지컬팀%20프로젝트%20mk2%20요구사항%20정의서.xlsx)(VZ-O-03·O-04 · HW-C-05 · BE-S-02) · [요구사항정의서.md](요구사항정의서.md) · `viz-debugger` 코드 |
+| 대조한 자료 | [요구사항 정의서 xlsx](../../../../visualization/documents/요구사항/피지컬팀%20프로젝트%20mk2%20요구사항%20정의서.xlsx)(VZ-O-03·O-04 · HW-C-05 · BE-S-02) · [요구사항정의서.md](../../../../visualization/documents/요구사항/요구사항정의서.md) · `viz-debugger` 코드 |
 | 주의 | 원문이 인용한 백엔드·HW 파일(`00-architecture.md`, `contracts/common/README.md`, `backend/observability.py`, `pi/common/otel_metrics.py`)은 보지 못했다. 그 내용은 문서에 적힌 것만 옮겼다 |
 
 ---
@@ -104,9 +104,9 @@
 
 ### 6-A. 지금 코드 상태 (대조 기준)
 
-- OTel SDK가 없고 **관측 스택으로는 아무것도 발행하지 않는다.** 화면에도 「관측 스택 발행 — 연결 예정」으로 뜬다 ([observability.ts:308](../viz-debugger/src/shared/observability.ts#L308)).
-- **60초 창 집계는 이미 한다.** 기록 발생률, 로그 용량, 되감기 계산 시간, 수신 지연, 재연결, JS 메모리, 알림 병합을 재서 개발자 패널과 JSON(논문 측정축 D)으로 내보낸다 ([observability.ts](../viz-debugger/src/shared/observability.ts)).
-- 옛 대시보드 이식본은 60초마다 **목 게이트웨이**의 `/observability/client-metrics`로 JSON을 POST한다. 게이트웨이는 메모리에 20개만 들고 있다 ([selfObservability.ts](../viz-debugger/src/tabs/data/selfObservability.ts), [server.ts:300](../viz-debugger/gateway/server.ts#L300)).
+- OTel SDK가 없고 **관측 스택으로는 아무것도 발행하지 않는다.** 화면에도 「관측 스택 발행 — 연결 예정」으로 뜬다 ([observability.ts:308](../../../../visualization/viz-debugger/src/shared/observability.ts#L308)).
+- **60초 창 집계는 이미 한다.** 기록 발생률, 로그 용량, 되감기 계산 시간, 수신 지연, 재연결, JS 메모리, 알림 병합을 재서 개발자 패널과 JSON(논문 측정축 D)으로 내보낸다 ([observability.ts](../../../../visualization/viz-debugger/src/shared/observability.ts)).
+- 옛 대시보드 이식본은 60초마다 **목 게이트웨이**의 `/observability/client-metrics`로 JSON을 POST한다. 게이트웨이는 메모리에 20개만 들고 있다 ([selfObservability.ts](../../../../visualization/viz-debugger/src/tabs/data/selfObservability.ts), [server.ts:300](../../../../visualization/viz-debugger/gateway/server.ts#L300)).
 - 지표 이름은 OTel 형식이 아니라 필드 이름(camelCase)이고, 라벨은 없다.
 - 정의서에 적힌 음성 지표(`vz.stt.latency` 등)는 아직 코드에 없다.
 
@@ -114,7 +114,7 @@
 
 | # | 문서 | 우리 쪽 원문·실제 | 영향 |
 |---|---|---|---|
-| 1 | 접두사 `vz.` | [요구사항정의서.md](요구사항정의서.md)의 네 곳(§2.13 음성 지표, §3 파트 경계, §3.1 공유 계층 표, §6.2 아웃바운드)이 **`viz.*`**로 적혀 있었다. xlsx의 VZ-O-04 원문에는 접두사가 없다 | **2026-09-17 정의서 v1.3에서 네 곳 모두 `vz.*`로 고쳤다.** 발행 코드가 없어 코드 수정은 없다 |
+| 1 | 접두사 `vz.` | [요구사항정의서.md](../../../../visualization/documents/요구사항/요구사항정의서.md)의 네 곳(§2.13 음성 지표, §3 파트 경계, §3.1 공유 계층 표, §6.2 아웃바운드)이 **`viz.*`**로 적혀 있었다. xlsx의 VZ-O-04 원문에는 접두사가 없다 | **2026-09-17 정의서 v1.3에서 네 곳 모두 `vz.*`로 고쳤다.** 발행 코드가 없어 코드 수정은 없다 |
 | 2 | 주기 15초, "HW·백엔드와 같다" | VZ-O-04 원문은 **"60초 1회 집계 발행"**이고, 근거로 HW-C-05의 **export 60초** 채택을 든다. 우리 코드도 60초다 | 하드웨어 주기에 대한 사실이 요구사항과 다르다. HW 실제 코드 값은 확인하지 못했다 |
 | 3 | 발신: OTLP **gRPC만**, 서버 안이면 `127.0.0.1:4316` | 가시화 화면은 **브라우저**에서 돈다. 브라우저는 OTLP를 gRPC로 보낼 수 없고(HTTP만 가능), 브라우저의 `127.0.0.1`은 보는 사람의 PC다. 그런데 문서상 HTTP 4318은 닫혀 있다 | **화면 지표는 문서 경로로 직접 못 보낸다** |
 | 4 | 가시화 프로세스 = 뷰어·트윈 렌더러·WS 클라이언트. 예 `vz-viewer`·`vz-twin`·`vz-console` | 실제 구성: **웹 화면**(뷰어와 WS 클라이언트가 한 프로세스), **STT 서비스**(`viz-debugger/stt`, Python), **생성 서비스**(로컬 LLM 사이드카, 별도 프로세스 — 기본 주소 `127.0.0.1:8802`). VZ-O-04 원문 지표에 "음성 인식 지연·실패율, 화면 구성 보조 LLM 응답 지연"이 있는데 문서 예시에는 STT·LLM이 없다 | 컴포넌트 목록을 다시 알려야 한다. `vz-twin`·`vz-console`에 해당하는 것은 지금 없다 |
@@ -133,7 +133,7 @@
 
 | # | 정한 것 | 결정 | 이유 |
 |---|---|---|---|
-| 1 | **접두사** (⑥-1) | 통지대로 **`vz.`** | 요구사항 ID(`VZ-*`)와 같고 `hw.`·`be.`와 같은 두 글자 규칙이다. 발행 코드가 없어 비용은 [요구사항정의서.md](요구사항정의서.md)의 `viz.*` 네 곳을 고치는 것뿐이었다 — **v1.3에서 고쳤다** |
+| 1 | **접두사** (⑥-1) | 통지대로 **`vz.`** | 요구사항 ID(`VZ-*`)와 같고 `hw.`·`be.`와 같은 두 글자 규칙이다. 발행 코드가 없어 비용은 [요구사항정의서.md](../../../../visualization/documents/요구사항/요구사항정의서.md)의 `viz.*` 네 곳을 고치는 것뿐이었다 — **v1.3에서 고쳤다** |
 | 2 | **발행 주기** (⑥-2) | **60초 유지** + HW 실제 export 주기를 확인해 달라고 요청 | VZ-O-04 원문과 HW-C-05가 모두 60초이고 코드도 60초다. 자기 관측은 추세 확인용이라 고주기가 필요 없다(VZ-O-04 근거). HW가 실제로 15초라면 그때 다시 맞춘다 |
 | 3 | **브라우저 발신 경로** (⑥-3) | 수집기에 **OTLP/HTTP 수신(+CORS)을 열어 달라고 요청** | VZ-O-04 원문의 "가시화→관측 스택(직접)"과 통지의 "수집기를 거친다" 규칙을 둘 다 지키고, 백엔드에 중계 코드가 늘지 않는다. 서버 밖 브라우저가 닿아야 하므로 Phase 4 Tailscale·BE-T-08 인증과 함께 연다 |
 | 4 | **`service.name` 컴포넌트** (⑥-4) | **`vz-viewer`**(웹 화면) · **`vz-stt`**(STT 서비스) · **`vz-gen`**(생성 서비스) 셋 | VZ-O-04 원문 지표(화면 반영 지연·질의 지연, 음성 인식, LLM 응답)가 이 셋에서 나온다. STT·생성은 각자 별도 프로세스다. **Unity 트윈은 가시화 담당 여부가 미정이라 목록에 넣지 않는다** — 없는 것으로 친다 |

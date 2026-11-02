@@ -31,11 +31,11 @@
 | 문서 | 무엇이 들어 있나 | 언제 보나 |
 |---|---|---|
 | **이 문서** | 현장 절차 전부 | 현장에서 |
-| [`SETUP_REPORT.md`](SETUP_REPORT.md) | 하드웨어·OS, 바꾼 시스템 설정, FC 장치 경로, 설치 패키지 | 환경이 의심될 때 |
-| [`PROGRESS.md`](PROGRESS.md) | 전체 작업 이력. 맨 뒤가 최신 | 원인을 못 찾을 때 |
+| `SETUP_REPORT.md` | 하드웨어·OS, 바꾼 시스템 설정, FC 장치 경로, 설치 패키지 | 환경이 의심될 때 |
+| `PROGRESS.md` | 전체 작업 이력. 맨 뒤가 최신 | 원인을 못 찾을 때 |
 | [`CONTRACT_x500.md`](../규약/CONTRACT_x500.md) | MQTT 가시화 계약(`ping` 만). **비행 제어와 무관** | 웹 연동 볼 때 |
-| [`config/drone.env`](config/drone.env) | 장치 경로·포트·타임아웃 전부 | 값을 확인할 때 |
-| [`config/requirements.lock.txt`](config/requirements.lock.txt) | 파이썬 패키지 고정 + mavsdk 업그레이드 금지 사유 | 패키지가 깨졌을 때 |
+| `config/drone.env` | 장치 경로·포트·타임아웃 전부 | 값을 확인할 때 |
+| `config/requirements.lock.txt` | 파이썬 패키지 고정 + mavsdk 업그레이드 금지 사유 | 패키지가 깨졌을 때 |
 
 ### 장비 체크리스트
 
@@ -395,7 +395,7 @@ vcgencmd get_throttled                          # 비행 중 전원 문제 흔�
 ```
 
 - **FC의 SD 카드에서 ulog를 회수한다.** 가장 중요한 기록이다
-- 결과를 [`PROGRESS.md`](PROGRESS.md) 맨 뒤에 덧붙인다 — 통과/실패, 실제 수치, 예상과 달랐던 점
+- 결과를 `PROGRESS.md` 맨 뒤에 덧붙인다 — 통과/실패, 실제 수치, 예상과 달랐던 점
 - 3·5단계가 통과했다면 §7의 "아직 모르는 것" 표를 갱신한다
 
 ---

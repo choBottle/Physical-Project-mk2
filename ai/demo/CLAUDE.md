@@ -21,8 +21,8 @@ python3 detect_api_server.py --port 8000   # 관제 웹용 HTTP 창구(별도 �
 ```
 
 - **테스트/린트 설정이 없다.** 검증 수단은 파이프라인을 돌리고 `demo/test/try1/` 아래 산출물(프레임별 `evidence.json`, 오버레이 이미지, `localization/`, `navigation/`)을 직접 확인하는 것뿐이다. `try1`은 고정 이름이라 재실행하면 덮어쓴다 — 이전 결과를 비교하려면 실행 전에 따로 복사해 두거나 `RUN_DIR`을 바꾼다(두 서비스 파일 모두에서).
-- **빠른 반복**: 8프레임 전체는 프레임당 수 초(사전 CLIP provider가 1.3~1.8초) + `FRAME_INTERVAL_SEC=1.5` 지연이 걸린다. 일부만 돌리려면 [mock_stream_receiver.py:34](demo/test/mock_stream_receiver.py#L34)의 `ROTATION_FRAMES`를 줄이고 `FRAME_INTERVAL_SEC`를 0으로 둔다. 단 프레임을 줄이면 위치 추정에 쓰이는 pedestal 관측이 사라져 `localize()`가 실패할 수 있다.
-- `target_class`는 [mock_stream_receiver.py:101](demo/test/mock_stream_receiver.py#L101)에 하드코딩돼 있고, `class_features.json`에 등록된 클래스(door/pedestal/person)만 쓸 수 있다.
+- **빠른 반복**: 8프레임 전체는 프레임당 수 초(사전 CLIP provider가 1.3~1.8초) + `FRAME_INTERVAL_SEC=1.5` 지연이 걸린다. 일부만 돌리려면 [mock_stream_receiver.py:34](test/mock_stream_receiver.py#L34)의 `ROTATION_FRAMES`를 줄이고 `FRAME_INTERVAL_SEC`를 0으로 둔다. 단 프레임을 줄이면 위치 추정에 쓰이는 pedestal 관측이 사라져 `localize()`가 실패할 수 있다.
+- `target_class`는 [mock_stream_receiver.py:101](test/mock_stream_receiver.py#L101)에 하드코딩돼 있고, `class_features.json`에 등록된 클래스(door/pedestal/person)만 쓸 수 있다.
 
 ## 실행 전 확인해야 하는 것
 
@@ -89,4 +89,4 @@ mqtt 쪽만의 전제 셋 — 규약의 authoritative 출처는 로봇 쪽에서
 
 `_run_unidepth()`는 경로 단위 캐시(`self._depth_cache`)가 붙어 있다(2026-09-14, 관제 웹이 1.5초 주기로 폴링하는 실시간 연동 때문에 추가). 같은 프레임을 여러 단계에서 다시 재도 추론은 한 번이다 — 프레임 내용이 바뀌는데 경로가 같은 상황(같은 이름으로 덮어쓰기)에서는 캐시를 비워야 한다.
 
-`sys.path.insert(REPO_ROOT / "research" / "oln_training")`([class_finder_service.py:83](demo/test/class_finder_service.py#L83))은 원본 저장소에서 넘어온 잔재다 — 현재 그 디렉터리에는 `yolo_weights/`만 있고 import되는 모듈은 없다.
+`sys.path.insert(REPO_ROOT / "research" / "oln_training")`([class_finder_service.py:83](test/class_finder_service.py#L83))은 원본 저장소에서 넘어온 잔재다 — 현재 그 디렉터리에는 `yolo_weights/`만 있고 import되는 모듈은 없다.
