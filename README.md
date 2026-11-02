@@ -281,6 +281,12 @@ the development setup, test commands and pull-request guidelines, and
 
 <a href="docs/assets/readme-unity-twin.jpg"><img src="docs/assets/g-unity-twin.jpg" width="49%"></a> <a href="docs/assets/readme-unity-path.jpg"><img src="docs/assets/g-unity-path.jpg" width="49%"></a>
 
+#### Real Go1
+
+*The real Go1 walking through the lab with the digital twin running on the tablet on its back: the map view with the planned route on the left, the robot's view in the twin on the right (4.5x speed).*
+
+<a href="docs/assets/g-real-go1.gif"><img src="docs/assets/g-real-go1.gif" width="66%"></a>
+
 #### Object detection
 
 *YOLO-World on a 360-degree photo: the view turns through the room and each view is detected (`camera360/anchor360_live.py`).*
