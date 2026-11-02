@@ -24,6 +24,14 @@ receivers:
             - ${env:MK2_OTLP_CORS_EXTRA_ORIGIN}
           max_age: 7200
 
+  # 4316 = 백엔드 문서·기본값의 입구(gRPC). 4317 과 같은 내용을 받지만 컨테이너 안에서도 따로 연다.
+  # 호스트 포트 두 개를 컨테이너 4317 하나에 붙이면 Docker Desktop(Windows)이 127.0.0.1 이 아닌
+  # MK2_EDGE_BIND 에서 바인딩에 실패하기 때문이다(수집기가 뜨지 않는다).
+  otlp/4316:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4316
+
   # 데이터 볼륨 디스크 사용량 — node_exporter 를 따로 띄우지 않고 Collector 가 잰다.
   # compose 가 DB·백엔드 볼륨을 /mk2-data/<이름> 에 읽기 전용으로 붙인다. 컨테이너 안에서 그 마운트 지점의
   # statfs 는 **볼륨이 놓인 호스트 파일시스템**의 크기·여유를 돌려준다(파일 내용은 읽지 않는다).
@@ -66,15 +74,15 @@ service:
   extensions: [health_check]
   pipelines:
     metrics:
-      receivers: [otlp, hostmetrics]
+      receivers: [otlp, otlp/4316, hostmetrics]
       processors: [batch]
       exporters: [prometheus]
     traces:
-      receivers: [otlp]
+      receivers: [otlp, otlp/4316]
       processors: [batch]
       exporters: [otlp_grpc]
     logs:
-      receivers: [otlp]
+      receivers: [otlp, otlp/4316]
       processors: [batch]
       exporters: [otlp_http]
   telemetry:

@@ -115,8 +115,11 @@ follows the data up to the operator-screen subscription ([e2e.md](../deployment/
 > volume initialization, so the volumes hold **the old `.env`'s passwords**; they do not match the newly generated `.env` and
 > the backend cannot connect to the DB. `init-env.sh` prints a warning when it finds such volumes. Then choose one of:
 > ① to keep the old data, restore the old `.env`; ② to run a separate deployment next to it, change `COMPOSE_PROJECT_NAME` in
-> `deploy/.env` to another name (e.g. `mk2test`) before starting (running both at once also collides on ports — move operator
-> ports with `MK2_PORT_*`, and the fixed device-facing ports only on a test host with an override — §6); ③ to discard the old
+> `deploy/.env` to another name (e.g. `mk2test`) before starting. If the old deployment's network is still there (a stopped
+> deployment counts), the subnets collide too, so change `MK2_NET_SUBNET` and `MK2_DB_APP_HOST` as a pair (e.g.
+> `172.29.0.0/16` and `172.29.%`) — `init-env.sh` picks a free subnet and prints it when it finds a collision. Running both at
+> once also collides on ports — move operator ports with `MK2_PORT_*`, and the fixed device-facing ports only on a test host
+> with an override — §6; ③ to discard the old
 > data, after confirming that is intended, `docker volume rm <name>_mysql_data <name>_timescale_data` (irreversible).
 > A `COMPOSE_PROJECT_NAME` shell environment variable takes precedence over `.env`.
 
@@ -204,6 +207,7 @@ do not collide with site settings.
 |---|---|
 | `Bind for 127.0.0.1:7862 failed: port is already allocated` (Docker prints the actual bind address — `127.0.0.1` by default, or your `MK2_ADMIN_BIND` / `MK2_EDGE_BIND` value) | Another service on the server uses the port. Move **operator ports** (MySQL 7858 · TimescaleDB 7859 · Prometheus 7861 · Grafana 7862 · Loki 3100 · Tempo 3200) with the `MK2_PORT_*` variables in `deploy/.env`. **Device-facing ports** (1883 · 9001 · 4316–4318 · 8765–8767 · 9095) are fixed — devices and edges are configured with these numbers, so changing them on the server disconnects the devices. If one of them is already taken on a test host, override only that service's ports in a gitignored `deploy/docker-compose.override.yml` (example below). **Never do this on a production host** — remove the conflicting service instead |
 | A freshly generated `.env` (even on a new clone) but the backend cannot connect to the DB · `init-env.sh` printed a volume warning | Old volumes with the same `COMPOSE_PROJECT_NAME` (default `mk2`) are being reused — they hold the old passwords. Follow the "Project name" warning in §3: restore the old `.env`, use a different `COMPOSE_PROJECT_NAME`, or remove the volumes deliberately. Check with `docker volume ls \| grep _mysql_data` |
+| `failed to create network …: invalid pool request: Pool overlaps with other one on this address space` | Another Docker network (an old deployment, a deployment with a different `COMPOSE_PROJECT_NAME`, or another tool) already uses `MK2_NET_SUBNET` (default `172.28.0.0/16`). Change `MK2_NET_SUBNET` and `MK2_DB_APP_HOST` in `deploy/.env` as a pair to a free range (e.g. `172.29.0.0/16` and `172.29.%` — the MySQL application account's host restriction follows the subnet). The subnet is written into the application account's grants (MySQL host · TimescaleDB `pg_hba`) when the DB volumes are first initialized, so change it **only for a deployment that starts with new volumes** ([database.md §3](database.md)). List the subnets in use: `docker network inspect -f '{{.Name}} {{range .IPAM.Config}}{{.Subnet}}{{end}}' $(docker network ls -q)` |
 | `mysql`/`timescaledb` stays `unhealthy` | `docker compose logs mysql \| grep mk2-init` — see which init step stopped. If shell scripts were checked out with CRLF they die with `bad interpreter` → `git config core.autocrlf false` and check out again (the repository's `.gitattributes` enforces LF) |
 | Backend cannot connect to the DB after regenerating `.env` | DB passwords are set **at first volume initialization**. The new `.env` and the existing volume disagree. On a test server, `docker compose down -v` to delete volumes and start over; on production, see [database.md §5](database.md#5-password-rotation) |
 | be-gateway exits with `exit 2` | Bound to a non-loopback address with an empty token. Check `MK2_WS_TOKEN`, `MK2_EDGE_TOKEN` |
