@@ -105,12 +105,12 @@ Windows 에서는 Git Bash 나 WSL2 에서 스크립트를 실행한다.
 
 ```
 ./scripts/seed-demo.sh       # 선택: 데모 구역 2개와 장치 선언
-./scripts/healthcheck.sh     # 32항목
+./scripts/healthcheck.sh     # 35항목
 ./scripts/e2e-sim.sh         # 10항목, pip 설치에 인터넷 필요
 ```
 
 `healthcheck.sh` 는 서비스가 떠 있는지, 시험 메시지가 MQTT → Kafka → TimescaleDB · MySQL 까지 가는지, metric · log ·
-trace 가 저장소에 닿는지, 앱 DB 계정이 감사·임무 기록을 고치지 못하는지 본다. 성공하면 `결과: 통과 32 · 실패 0` 을 찍는다.
+trace 가 저장소에 닿는지, 앱 DB 계정이 감사·임무 기록을 고치지 못하는지 본다. 성공하면 `결과: 통과 35 · 실패 0` 을 찍는다.
 
 시험 데이터를 보내고 확인하기:
 

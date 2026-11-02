@@ -96,6 +96,10 @@ ports, database migrations and image versions.
 
 ### Fixed
 
+- A fresh install could fail with `mkdir …/media_capture: file exists`: the
+  four backend services copied the image's `/data` into the new
+  `backend_data` volume at the same time. A one-shot `backend-volume-init`
+  service now does it first; `healthcheck.sh` checks it (35 checks).
 - **Security:** `camera360/pano_receiver.py` accepted `..` as a camera or
   capture id and wrote outside its root, listened on all interfaces without
   authentication and read whole uploads into memory. It now rejects those

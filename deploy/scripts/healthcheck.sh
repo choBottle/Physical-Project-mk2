@@ -36,6 +36,8 @@ for svc in mosquitto kafka mysql timescaledb otel-collector prometheus loki temp
 done
 init="$(dc ps -a --format '{{.State}} {{.ExitCode}}' kafka-init 2>/dev/null | head -1)"
 [[ "${init}" == "exited 0" ]] && ok "kafka-init (토픽 생성 완료)" || bad "kafka-init (${init:-없음})"
+vinit="$(dc ps -a --format '{{.State}} {{.ExitCode}}' backend-volume-init 2>/dev/null | head -1)"
+[[ "${vinit}" == "exited 0" ]] && ok "backend-volume-init (백엔드 볼륨 준비 완료)" || bad "backend-volume-init (${vinit:-없음})"
 
 if [[ "${1:-}" == "--quick" ]]; then
   echo; echo "결과: 통과 ${PASS} · 실패 ${FAIL}"; [[ ${FAIL} -eq 0 ]]; exit $?

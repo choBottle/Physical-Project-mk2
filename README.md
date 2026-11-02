@@ -131,7 +131,7 @@ After `docker compose up`, run the checks from `deploy/`:
 
 ```
 ./scripts/seed-demo.sh       # optional: declare two demo zones and devices
-./scripts/healthcheck.sh     # 32 checks
+./scripts/healthcheck.sh     # 35 checks
 ./scripts/e2e-sim.sh         # 10 checks, needs internet access for pip
 ```
 
@@ -139,7 +139,7 @@ After `docker compose up`, run the checks from `deploy/`:
 passes from MQTT through Kafka into TimescaleDB and MySQL, that metrics,
 logs and traces reach their stores, and that the application database
 account cannot modify audit and mission records. It prints
-`결과: 통과 32 · 실패 0` (32 passed, 0 failed) on success.
+`결과: 통과 35 · 실패 0` (35 passed, 0 failed) on success.
 
 Send test data and look at it:
 

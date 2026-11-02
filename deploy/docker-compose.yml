@@ -61,6 +61,7 @@ x-backend: &backend
     mysql: { condition: service_healthy }
     timescaledb: { condition: service_healthy }
     otel-collector: { condition: service_started }
+    backend-volume-init: { condition: service_completed_successfully }
 
 services:
 
@@ -196,6 +197,16 @@ services:
       timeout: 5s
       retries: 18
       start_period: 30s
+
+  # ── 백엔드 볼륨 초기화 (1회용) ────────────────────────────────────────────
+  # 새 named volume 을 처음 붙이면 Docker 가 이미지의 /data(media_capture 폴더 · mk2 소유)를 볼륨으로 복사한다.
+  # 백엔드 4개가 동시에 처음 붙으면 이 복사가 겹쳐 "mkdir …/media_capture: file exists" 로 기동이 실패할 수 있다
+  # (rc.2 새 설치에서 실측). 이 서비스가 먼저 한 번 붙어 복사를 끝내고, 4개는 이것이 끝난 뒤에 뜬다.
+  backend-volume-init:
+    <<: *backend
+    command: ["python", "-c", "import os; assert os.path.isdir('/data/media_capture')"]
+    restart: "no"
+    depends_on: {}
 
   # ── 백엔드 상주 4개 (같은 이미지, command 만 다르다) ──────────────────────
 

@@ -96,7 +96,7 @@ docker compose up -d --build --wait
 ./scripts/healthcheck.sh
 ```
 
-마지막 줄이 `결과: 통과 32 · 실패 0` 이면 배포가 끝난 것이다.
+마지막 줄이 `결과: 통과 35 · 실패 0` 이면 배포가 끝난 것이다.
 
 말단 장치까지 이어 보려면 `./scripts/e2e-sim.sh` — 실제 노드 코드를 가짜 센서로 붙여 관제 화면 구독까지 본다([e2e.md](e2e.md)).
 
@@ -196,6 +196,8 @@ docker compose up -d     # 바뀐 서비스만 재생성된다
 |---|---|---|
 | 2026-10-26 | Windows 11 · Docker Desktop 29.5 (볼륨 전부 삭제 후 이 문서 §3 그대로) | 13개 서비스 healthy · `healthcheck.sh` **32/32** · 백엔드 회귀 `pytest` **351 passed, 2 skipped, 0 failed** · 백업 → 복구 왕복 후 32/32. (앞선 회차에서 타이밍 의존 시험 1건이 한 번 실패 — [operations.md](operations.md#알려진-사항)) |
 | 2026-10-26 | 같은 환경 · `deploy/edge` | 엣지 Collector 로 보낸 log 가 중앙 Loki 에 `zone_id`·`agg_layer=edge` 로 도착 |
+| 2026-11-02 | Windows 11 · Docker Desktop 29.5 · GitHub 에서 새로 clone (`main` 6ba9e49) | 13개 서비스 healthy · `healthcheck.sh` **34/34** · `migrate.sh --dry-run` 대기 0 · `e2e-sim.sh` **10/10**(발행→화면 중앙값 11 ms) · 저장소 루트에서 `backup.sh`/`restore.sh` 왕복 · 엣지 스택을 실제 중앙에 브리지 — 엣지에 보낸 state 5건이 중앙 TimescaleDB 에, birth 가 MySQL 등록에, 중앙 downlink 가 엣지에 도착 · Grafana 대시보드·데이터소스 3종 · Prometheus 대상 5/5 · viz-debugger `npm ci`/typecheck/build |
+| 2026-11-02 | 같은 환경 · **업그레이드** `v1.0.0-rc.2` → `main` | rc.2 새 설치(32/32) + 데이터 적재 → operations.md 「업그레이드」 그대로(소스 빌드) → `migrate.sh` 전 healthcheck 31/34(예상대로 추적표 없음) → `migrate.sh` 가 baseline 표시 → **34/34** · rc.2 때 적재한 행·장치 등록 유지. rc.2 새 설치에서 백엔드 볼륨 복사 경합 1회 관찰 → `backend-volume-init` 로 해소(이후 새 설치 3회 연속 성공, 35/35) |
 | 매 PR | GitHub Actions `ubuntu-latest` | [`deploy-smoke`](../../.github/workflows/deploy-smoke.yml) — 빈 러너에서 `up --wait` → `healthcheck.sh` → `e2e-sim.sh` |
 
 **"우리 개발 환경에서는 되는데 새 환경에서는 안 된다"를 사람이 아니라 CI 가 매번 확인한다.**
