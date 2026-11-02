@@ -75,28 +75,63 @@
 
 ## 4. 스키마 변경 절차 (마이그레이션)
 
-최초 초기화 스크립트는 **빈 볼륨에서 한 번만** 돈다. 이미 운영 중인 DB 에 변경을 반영하는 규칙:
+최초 초기화 스크립트는 **빈 볼륨에서 한 번만** 돈다. 이미 운영 중인 DB 에 변경을 반영하는 것은
+[`deploy/scripts/migrate.sh`](../../deploy/scripts/migrate.sh) 이다.
+
+### 스키마 판 추적 — `schema_migrations`
+
+두 DB 모두 `schema_migrations(version, applied_at, applied_by)` 표가 **어느 마이그레이션이 적용됐는지**를 기억한다
+(정본: `server/infra/sql/mk2_schema_migrations_{mysql,tsdb}.sql`).
+
+| 행 | 뜻 |
+|---|---|
+| `00000000_baseline` | 추적 도입 시점의 정본 스키마 |
+| `<파일 이름>` · `applied_by=init` | 새 서버 — 정본에 이미 들어 있어 최초 초기화가 "적용됨"으로 표시 |
+| `<파일 이름>` · `applied_by=migrate.sh` | `migrate.sh` 가 적용 |
+| `<파일 이름>` · `applied_by=manual` | 파일 끝의 자기 기록 줄로 남은 것(손으로 적용한 경우) |
+
+- 표는 root(MySQL)·postgres(TimescaleDB)만 쓴다. **앱 계정 `mk2_app` 에는 권한이 없다** — `mk2_grants_*.sql.example` 에
+  줄을 두지 않는다(MySQL GRANT 는 테이블 단위라 줄이 없으면 읽기도 못 한다). `healthcheck.sh` 5번 절이 쓰기 거부를 음성 대조한다.
+- **추적 도입 전에 초기화된 서버**(표가 없는 볼륨): `migrate.sh` 가 표를 만들고 `00000000_baseline` 으로 표시한다. 이
+  시점까지 저장소에 마이그레이션 파일이 없었으므로 baseline = 그 서버의 실제 스키마다.
+
+### 절차
 
 1. **정본 파일을 고친다** — `server/infra/sql/mk2_*.sql` 의 `CREATE TABLE` 을 최종 모양으로. 새 서버는 이것만으로 맞는다.
-2. **기존 서버용 변경분을 따로 쓴다** — `server/infra/sql/migrations/YYYYMMDD_<주제>.sql` (`ALTER …`, 재실행 안전하게).
-   MySQL 용과 TimescaleDB 용은 파일을 나눈다(아래 예시의 `_tsdb` 접미사).
-   새 테이블이면 테이블별 GRANT 를 `mk2_grants_*.sql.example` 에도 더한다(MySQL GRANT 에는 테이블 와일드카드가 없다).
-3. **적용은 사람이 root 로**, 백업 뒤에. 아래 파일 이름(`20261101_example*.sql`)은 **자리표시자**다 — 저장소에 그런
-   파일은 없다. 2번에서 만든 실제 마이그레이션 파일 이름으로 바꿔 쓴다:
+2. **기존 서버용 변경분을 따로 쓴다** — `server/infra/sql/migrations/` 에:
+
+   | 엔진 | 파일 이름 | 판 이름(version) |
+   |---|---|---|
+   | MySQL | `YYYYMMDD_<주제>.sql` | `YYYYMMDD_<주제>` |
+   | TimescaleDB | `YYYYMMDD_<주제>_tsdb.sql` | `YYYYMMDD_<주제>_tsdb` |
+
+   - `<주제>` 는 영숫자·`_` 만. 같은 날 여러 개면 `YYYYMMDD_1_<주제>` 처럼 번호를 붙인다 — **적용 순서 = 엔진별 파일 이름 사전순**.
+     규약 밖 이름이 있으면 `migrate.sh` 가 멈춘다(조용히 건너뛰지 않는다).
+   - 재실행 안전하게 쓴다(`IF NOT EXISTS` 등). MySQL DDL 은 트랜잭션이 안 돼 실패 시 일부만 반영될 수 있다.
+     TimescaleDB 파일은 `migrate.sh` 가 **한 트랜잭션**으로 넣는다 — `CREATE INDEX CONCURRENTLY` 처럼 트랜잭션 밖 문장은 쓰지 않는다.
+   - 파일 끝에 **자기 기록 줄**을 둔다(손으로 적용해도 기록이 남게 — `migrate.sh` 도 같은 행을 멱등하게 남긴다):
+     ```sql
+     -- MySQL
+     INSERT IGNORE INTO mk2.schema_migrations (version, applied_by) VALUES ('20261215_add_foo', 'manual');
+     -- TimescaleDB
+     INSERT INTO schema_migrations (version, applied_by) VALUES ('20261215_add_foo_tsdb', 'manual') ON CONFLICT DO NOTHING;
+     ```
+   - 새 테이블이면 테이블별 GRANT 를 `mk2_grants_*.sql.example` 에도 더한다(MySQL GRANT 에는 테이블 와일드카드가 없다).
+3. **적용은 백업 뒤 `migrate.sh` 로** (`deploy/` 에서):
    ```bash
-   # 예시 — 파일 이름은 실제 마이그레이션으로 바꾼다
-   ./deploy/scripts/backup.sh
-   docker compose -f deploy/docker-compose.yml exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' \
-     < server/infra/sql/migrations/20261101_example.sql
-   docker compose -f deploy/docker-compose.yml exec -T timescaledb psql -U postgres -d mk2 -v ON_ERROR_STOP=1 \
-     < server/infra/sql/migrations/20261101_example_tsdb.sql
+   ./scripts/backup.sh
+   ./scripts/migrate.sh --dry-run    # 적용됨 / 대기 목록만 — DB 를 바꾸지 않는다
+   ./scripts/migrate.sh              # 대기분을 순서대로 적용 → 보존·압축 정책 반영(§6)
    ```
+   첫 오류에서 멈춘다 — 실패한 파일은 기록되지 않고 그 뒤 파일은 적용하지 않는다. 원인을 고친 뒤 다시 실행하면 남은 것부터 이어 간다.
+   보존·압축 정책을 건드리지 않으려면 `--no-retention`.
 4. **CI 가 빈 DB 에서 정본으로 다시 세워** 시험한다(deploy-smoke) — 정본과 마이그레이션 결과가 갈라지면 여기서 드러난다.
+   같은 잡이 `migrate.sh` 의 "대기 0"·추적표 없는 서버의 baseline 처리·보존/압축 정책 반영과 재실행 멱등을 확인한다.
 5. `CHANGELOG.md` 해당 판의 `### Deployment changes` 절에 "DB migration required" 와 파일 이름을 적는다(릴리스 노트에
    올라간다 — 운영자는 업그레이드 때 이 절을 본다: [operations.md 「업그레이드」](operations.md#업그레이드-새-릴리스로)).
 
-> 자동 마이그레이션 도구(Flyway·Alembic 류) 도입은 v1.x 로드맵 항목이다([RELEASE.md](../RELEASE.md)). 지금은 변경 빈도가
-> 낮고, 권한 설계상 앱이 DDL 을 못 하므로 사람 적용이 원칙에도 맞는다.
+> 범용 마이그레이션 도구(Flyway·Alembic 류)는 쓰지 않는다 — 변경 빈도가 낮고, 권한 설계상 앱이 DDL 을 못 하므로
+> 사람이 root 로 적용하는 원칙에 `migrate.sh`(목록·순서·기록만 하는 얇은 셸)가 맞는다.
 
 ## 5. 비밀번호 교체
 
@@ -125,5 +160,31 @@ TimescaleDB 도 같은 방식(`ALTER ROLE mk2_app WITH PASSWORD '…'` → `MK2_
 - **백업하지 않는 것**: Kafka(7일 버퍼일 뿐 장기 저장소가 아니다) · Prometheus/Loki/Tempo(보존 기간이 곧 정책) ·
   촬영본 아카이브(`backend_data` 볼륨의 `/data/media_capture` — 용량이 커서 파일시스템/스냅샷 수준 백업 대상).
 - **`deploy/.env` 는 백업에 들어가지 않는다** — 비밀번호 관리 도구 등 별도 안전한 곳에 둔다.
-- TimescaleDB 보존·압축 정책은 아직 없다(BE-S-04, 발동 조건 미충족). 하이퍼테이블이라 정책만 붙이면 된다:
-  `SELECT add_retention_policy('telemetry', INTERVAL '365 days');`
+
+### TimescaleDB 보존 · 압축 (선택 — 기본 꺼짐)
+
+계측 하이퍼테이블 `telemetry` 에 붙는 정책을 `deploy/.env` 두 값으로 정한다. **비우면 끔**(기본):
+
+| 변수 | 뜻 | 정책 |
+|---|---|---|
+| `MK2_TSDB_RETENTION_DAYS` | 이보다 오래된 청크를 **영구 삭제** | `add_retention_policy(drop_after)` |
+| `MK2_TSDB_COMPRESS_AFTER_DAYS` | 이보다 오래된 청크를 압축(컬럼 저장 — 보통 수 배 작아진다) | `add_compression_policy(compress_after)` |
+
+```bash
+# deploy/.env
+MK2_TSDB_RETENTION_DAYS=365
+MK2_TSDB_COMPRESS_AFTER_DAYS=7
+
+./scripts/apply-retention.sh --dry-run   # 지금 정책과 원하는 값
+./scripts/apply-retention.sh             # 반영 (migrate.sh 도 끝에 이것을 부른다 — 배포 때 한 번)
+```
+
+- **선언형·재실행 안전**: 값이 같으면 아무것도 하지 않고, 바뀌면 정책을 지우고 새 값으로 다시 건다(한 트랜잭션).
+  값을 비우면 그 정책을 지운다 — 이미 지워진 청크는 돌아오지 않고, 압축된 청크는 풀지 않는다.
+- 압축은 처음 켤 때 `segmentby = stream_topic, stream_partition` · `orderby = ts DESC, stream_offset DESC` 로 설정한다 —
+  유일 키(`ts, stream_topic, stream_partition, stream_offset`)의 칼럼이 segmentby/orderby 에 있어야 해서다. 늦게 도착한
+  데이터가 압축 청크에 들어가는 것은 TimescaleDB 가 처리한다(`ON CONFLICT DO NOTHING` 멱등 유지). 압축 시점은 보통의
+  지연 도착(spool 재전송)보다 넉넉히 길게 잡는다.
+- 확인: `docker compose exec timescaledb psql -U postgres -d mk2 -c "SELECT job_id, proc_name, config FROM timescaledb_information.jobs WHERE hypertable_name='telemetry'"`
+- ⚠ 보존을 켜기 전에 기관의 보존 의무(재난 데이터)와 백업 주기를 확인한다 — 보존 기간보다 오래된 계측은 백업에만 남는다.
+  디스크 여유는 `DataVolumeDiskUsageHigh` 알림(85%)이 본다([observability.md §4](observability.md#4-알림-규칙)).

@@ -63,10 +63,16 @@ OTel 이름(`be.ingest.received`)이 Prometheus 에서 `be_ingest_received_total
 |---|---|---|
 | `ScrapeTargetDown` | critical | 수집 대상 `up == 0` 2분 |
 | `BackendSelfTelemetryAbsent` | warning | 백엔드 지표 10분 부재 |
+| `DataVolumeDiskUsageHigh` | warning | 데이터 볼륨 파일시스템 사용률 85% 초과 10분 (Collector `hostmetrics` filesystem — 아래 주) |
 | `KafkaProduceFailing` | critical | produce `outcome!="ok"` 발생 |
 | `StorageWriteFailing` | critical | 적재 실패 발생 |
 | `IngestRejectRateHigh` | warning | 격리 비율 10% 초과 10분 |
 | `PipelineLagHigh` | warning | 지연 p90 > 5초 10분 |
+
+디스크 지표는 node_exporter 없이 중앙 Collector 의 `hostmetrics` 수신단(filesystem, 30초)이 잰다. compose 가 데이터 볼륨
+(`timescale_data` · `mysql_data` · `backend_data` · `kafka_data`)을 Collector 의 `/mk2-data/<이름>` 에 읽기 전용으로 붙이고,
+그 마운트 지점의 statfs 가 볼륨이 놓인 호스트 파일시스템의 크기·여유를 준다(파일 내용은 읽지 않는다). 지표:
+`system_filesystem_usage_bytes{mountpoint="/mk2-data/…", state="used|free|reserved"}`.
 
 각 알림의 대응 절차는 [operations.md](operations.md). **알림을 사람에게 보내려면** Alertmanager 를 붙인다(기본 미포함 — 받는
 채널(메일·메신저)이 기관마다 달라서다). 추적 파일은 고치지 않는다:

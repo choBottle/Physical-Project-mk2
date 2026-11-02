@@ -25,6 +25,22 @@ groups:
           summary: "백엔드 지표가 10분째 없다 — 백엔드 컨테이너 또는 Collector 경로 확인"
           runbook: docs/deployment/operations.md#backend-telemetry-absent
 
+      # 데이터 볼륨(TimescaleDB·MySQL·백엔드 촬영본·Kafka)이 놓인 파일시스템 — Collector hostmetrics(30초).
+      # used / (used + free) = df 의 Use% (reserved = root 예약분은 분모에서 뺀다).
+      # 지표 이름은 exporter 의 단위 접미사 유무에 무관하게 잡는다(system_filesystem_usage[_bytes]).
+      - alert: DataVolumeDiskUsageHigh
+        expr: |
+          max by (mountpoint) (
+            sum by (mountpoint, device) ({__name__=~"system_filesystem_usage(_bytes)?", mountpoint=~"/mk2-data/.*", state="used"})
+            /
+            sum by (mountpoint, device) ({__name__=~"system_filesystem_usage(_bytes)?", mountpoint=~"/mk2-data/.*", state=~"used|free"})
+          ) > 0.85
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "데이터 볼륨 파일시스템 사용률 {{ $value | humanizePercentage }} ({{ $labels.mountpoint }}) — 85% 초과"
+          runbook: docs/deployment/operations.md#data-volume-disk-usage-high
+
   - name: mk2-pipeline
     rules:
       - alert: KafkaProduceFailing
