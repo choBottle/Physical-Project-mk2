@@ -62,7 +62,8 @@ jobs:
           echo "정책: ${j1}"
           [[ "${j1}" == policy_compression:*'"compress_after": "7 days"'*policy_retention:*'"drop_after": "365 days"'* ]]
           # 재실행 — 바뀌는 것이 없어야 한다(job 을 다시 만들지 않는다)
-          ./scripts/migrate.sh --dry-run | grep -q '대기 합계 0'
+          ./scripts/migrate.sh --dry-run > "${RUNNER_TEMP}/m3"
+          grep -q '대기 합계 0' "${RUNNER_TEMP}/m3"
           ./scripts/apply-retention.sh
           j2="$(docker compose exec -T timescaledb psql -U postgres -d mk2 -tAc "${q}" | tr -d '\r')"
           [[ "${j1}" == "${j2}" ]] || { echo "재실행에 정책이 바뀌었다: ${j2}"; exit 1; }
