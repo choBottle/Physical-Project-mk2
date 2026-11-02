@@ -6,31 +6,35 @@ on:
   push:
     tags: ["v*.*.*"]
 
+# 기본은 읽기 전용. 쓰기 권한은 필요한 잡에만 준다(최소 권한).
+# 서드파티 액션은 커밋 SHA 로 고정한다(태그는 옮겨질 수 있다) — 갱신 시 주석의 판도 같이 바꾼다.
 permissions:
-  contents: write
-  packages: write
+  contents: read
 
 jobs:
   backend-image:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write   # GHCR 게시
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
           images: ghcr.io/${{ github.repository_owner }}/mk2-backend
           tags: |
             type=ref,event=tag
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: server
           push: true
@@ -40,11 +44,14 @@ jobs:
   github-release:
     needs: backend-image
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write   # Release 초안 생성
     steps:
       - uses: actions/checkout@v4
       # GHCR 이미지 이름은 소문자만 된다(owner 가 choBottle 이어도 ghcr.io/chobottle/...).
       - run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
