@@ -10,6 +10,21 @@ ports, database migrations and image versions.
 
 ### Added
 
+- One canonical `hardware/schema/physical_command.proto`; the viz and AI
+  copies are regenerated from it and AI now speaks the hardware wire format.
+  `scripts/check_contracts.py` (CI) fails on proto, generated-code, golden-byte
+  or example drift (#38).
+- Backend MQTT credentials, opt-in (`MK2_MQTT_USERNAME` / `MK2_MQTT_PASSWORD`),
+  so the central broker can require passwords; CI job `mqtt-auth` checks it.
+  The backend image is published for `linux/amd64` and `linux/arm64` (#43).
+- DB schema version tracking: `schema_migrations` table in MySQL and
+  TimescaleDB and `deploy/scripts/migrate.sh` (`--dry-run`). Opt-in TimescaleDB
+  retention/compression and a `DataVolumeDiskUsageHigh` alert (>85%) (#44).
+- ESLint (correctness rules only) for `viz-debugger` and `web-dashboard`; first
+  unit tests for `camera360` and `osmocam` (#45).
+- Air-gapped installation: `deploy/scripts/bundle-offline.sh` /
+  `load-offline.sh` and `docs/deployment/offline.md`. English deployment docs
+  under `docs/en/` (Korean remains authoritative) (#46).
 - Edge → central MQTT bridge (#36): the edge Mosquitto forwards
   `+/+/+/state|status|heartbeat` and `terminal/+/uplink` to the central broker
   and receives `terminal/+/downlink`. CI's edge-stack job checks both
@@ -35,6 +50,11 @@ ports, database migrations and image versions.
 
 ### Changed
 
+- AI requirements (53 `AI-*` items) moved verbatim from `ai/CLAUDE.md` to
+  `ai/docs/requirements.md` (#45).
+- AI messages use envelope 2.0 and the current frame-reference shape, validated
+  against `server/contracts/common`. String command parameters now raise
+  instead of being dropped (the wire carries numbers only) (#38).
 - `server/Dockerfile` installs runtime dependencies from a hashed
   `server/requirements.lock` and no longer ships test dependencies; the base
   image is pinned by digest. The server requires Python 3.10 or later (#37).
@@ -102,6 +122,15 @@ ports, database migrations and image versions.
 
 ### Deployment changes
 
+- **Existing servers: run `./scripts/migrate.sh` once after upgrading** — it
+  creates `schema_migrations` and marks the baseline. Run it on every upgrade
+  from now on (no-op when nothing is pending) (#44).
+- New optional: `MK2_TSDB_RETENTION_DAYS`, `MK2_TSDB_COMPRESS_AFTER_DAYS`
+  (empty = off; retention deletes old telemetry permanently) (#44);
+  `MK2_MQTT_USERNAME`, `MK2_MQTT_PASSWORD` (empty = anonymous; when enabling,
+  recreate `mosquitto` and `be-ingest`) (#43).
+- `otel-collector` mounts the data volumes read-only for the disk alert — run
+  `docker compose up -d` so it is recreated (#44).
 - **pano_receiver listens on 127.0.0.1 by default.** To receive from the
   camera laptop set `MK2_PANO_BIND=<tunnel IP>` and `MK2_PANO_TOKEN` on the
   server and the same `MK2_PANO_TOKEN` on the laptop. Also new:
