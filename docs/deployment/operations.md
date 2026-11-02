@@ -15,6 +15,7 @@
 | 정지 (데이터 유지) | `docker compose down` |
 | ⚠ 완전 삭제 (데이터 포함) | `docker compose down -v` — 시험 서버에서만 |
 | 백업 / 복구 | `./scripts/backup.sh` / `./scripts/restore.sh <디렉터리>` — [database.md §6](database.md#6-백업--복구--보존) |
+| DB 마이그레이션 · 보존 정책 | `./scripts/migrate.sh --dry-run` / `./scripts/migrate.sh` — [database.md §4](database.md#4-스키마-변경-절차-마이그레이션) |
 
 ## 재부팅 뒤
 
@@ -75,13 +76,20 @@ echo 'net.ipv4.ip_nonlocal_bind=1' | sudo tee /etc/sysctl.d/90-mk2-nonlocal-bind
 git status --short                        #    추적 파일에 현장 수정이 없어야 한다(있으면 site/·override 로 옮긴다)
 git fetch --tags && git checkout v1.1.0   # 2. 코드
 diff .env.example .env                    # 3. 새 환경변수 — CHANGELOG 해당 판의 `### Deployment changes` 절
-#    같은 절에 DB 마이그레이션이 적혀 있으면 database.md §4 절차로 먼저 적용
+#    MK2_TSDB_RETENTION_DAYS · MK2_TSDB_COMPRESS_AFTER_DAYS 는 비우면 끔 — database.md §6
 #    게시 이미지를 쓰면 .env 의 MK2_BACKEND_IMAGE 태그를 새 판으로 올린다:
 #      MK2_BACKEND_IMAGE=ghcr.io/<owner>/mk2-backend:v1.1.0
 docker compose pull && docker compose up -d --wait            # 4a. 게시 이미지 — 바뀐 서비스만 재생성
 # docker compose up -d --build --wait                        # 4b. 소스에서 빌드(MK2_BACKEND_IMAGE=mk2-backend:local)
-./scripts/healthcheck.sh                  # 5. 검증
+./scripts/migrate.sh --dry-run            # 5. DB 마이그레이션 — 대기 목록 확인
+./scripts/migrate.sh                      #    대기분 적용 + 보존·압축 정책 반영(할 일 없으면 그대로 끝난다)
+./scripts/healthcheck.sh                  # 6. 검증
 ```
+
+`migrate.sh` 는 매 업그레이드마다 돌린다 — 대기 마이그레이션이 없으면 아무것도 바꾸지 않는다. 추적 도입(#41) 전에
+초기화된 서버는 첫 실행에서 `schema_migrations` 표를 만들고 baseline 으로 표시한다([database.md §4](database.md#4-스키마-변경-절차-마이그레이션)).
+마이그레이션 중 백엔드가 새 칼럼을 기대하면 잠깐 오류를 낼 수 있다 — CHANGELOG 가 "백엔드 정지 후 적용"을 요구하면
+`docker compose stop be-ingest be-storage be-gateway be-capture` → `migrate.sh` → `up -d --wait` 순서로 한다.
 
 `MK2_BACKEND_IMAGE` 태그를 올리지 않으면 코드는 새 판인데 백엔드는 옛 이미지로 돈다. 게시 이미지를 쓸 때 `--build` 를
 붙이면 compose 가 그 이름으로 로컬 빌드를 만들어 게시 이미지를 가린다 — 붙이지 않는다.
@@ -121,6 +129,16 @@ DB 변경이 있었다면 백업으로 `restore.sh`.
 `PipelineLagHigh` — 발행 → 적재 지연. 먼저 `clock_skew`(장치 시계) 가능성: TimescaleDB 에서
 `SELECT source_id, avg(lag_s) FROM telemetry WHERE ts > now() - interval '10 min' GROUP BY 1 ORDER BY 2 DESC LIMIT 5;`
 특정 장치만 크면 그 장치의 재전송(spool) 또는 시계 문제, 전체가 크면 Kafka 소비 지연(`be-storage` 부하·DB 지연).
+
+### data-volume-disk-usage-high
+`DataVolumeDiskUsageHigh` — 데이터 볼륨(`/mk2-data/<timescaledb|mysql|backend|kafka>`)이 놓인 호스트 파일시스템이 85% 를 넘었다
+(볼륨이 같은 디스크에 있으면 여러 개가 함께 뜬다). 차오르면 DB 가 쓰기를 멈추고 적재가 실패한다(→ `StorageWriteFailing`).
+1. 무엇이 큰지: `docker system df -v` (볼륨별 크기) · 호스트 `df -h`
+2. 계측(TimescaleDB)이면 보존·압축 정책 — `.env` 의 `MK2_TSDB_RETENTION_DAYS` · `MK2_TSDB_COMPRESS_AFTER_DAYS` →
+   `./scripts/apply-retention.sh` ([database.md §6](database.md#6-백업--복구--보존)). 압축은 다음 정책 실행(하루 몇 번) 때 반영된다.
+3. 촬영본(`backend`)이면 오래된 세션을 고른다(`docker compose exec be-capture python -m backend.gateway.capture --retention-dry-run`) → 아카이브를 다른 저장소로 옮긴다.
+4. Kafka 는 7일 보존(`KAFKA_LOG_RETENTION_HOURS`) — 평소보다 크면 소비 지연(소비자가 멈췄는지) 확인.
+5. 오래된 백업(`deploy/backups/`)이 같은 디스크에 쌓였는지 — 백업은 다른 디스크에 둔다.
 
 ## 알려진 사항
 

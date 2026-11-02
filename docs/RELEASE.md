@@ -113,6 +113,5 @@
 | 엣지 compose 에 업무 브릿지(엣지 ingest → 중앙 Kafka 9095) 포함 | [edge.md §4](deployment/edge.md#4-현재-한계-v10-범위-밖) |
 | 가시화(viz-debugger) · AI 프레임워크 컨테이너 이미지 · compose 프로필 | 한 번에 전 파트 시연 |
 | Alertmanager · 알림 채널 | [observability.md §4](deployment/observability.md#4-알림-규칙) |
-| DB 마이그레이션 도구 | [database.md §4](deployment/database.md#4-스키마-변경-절차-마이그레이션) |
 | Helm 차트 / k3s 매니페스트 (다구역 운영) | 기관 단위 배포 |
 | 이미지 digest 고정 · 취약점 스캔 · SBOM | 공급망 보안(공공기관 도입 요건) |

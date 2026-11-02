@@ -3,6 +3,7 @@
 #   metric → Prometheus 가 :8889 를 scrape
 #   trace  → Tempo  (도커 망 tempo:4317)
 #   log    → Loki   (도커 망 http://loki:3100/otlp — Loki 의 네이티브 OTLP 수집)
+#   host   → hostmetrics(filesystem) — 데이터 볼륨이 놓인 파일시스템 사용량(→ DataVolumeDiskUsageHigh 알림)
 #
 # ⚠ 컴포넌트 이름은 0.150 계열의 정식명(otlp_grpc · otlp_http)이다. 이미지를 올릴 때는 먼저
 #   `docker run --rm -v $PWD/otel-collector.yaml:/c.yaml otel/opentelemetry-collector-contrib:<새 버전> validate --config=/c.yaml`
@@ -22,6 +23,21 @@ receivers:
             - http://127.0.0.1:*
             - ${env:MK2_OTLP_CORS_EXTRA_ORIGIN}
           max_age: 7200
+
+  # 데이터 볼륨 디스크 사용량 — node_exporter 를 따로 띄우지 않고 Collector 가 잰다.
+  # compose 가 DB·백엔드 볼륨을 /mk2-data/<이름> 에 읽기 전용으로 붙인다. 컨테이너 안에서 그 마운트 지점의
+  # statfs 는 **볼륨이 놓인 호스트 파일시스템**의 크기·여유를 돌려준다(파일 내용은 읽지 않는다).
+  # 지표: system_filesystem_usage(_bytes){mountpoint="/mk2-data/…", state="used|free|reserved"}
+  hostmetrics:
+    collection_interval: 30s
+    scrapers:
+      filesystem:
+        # ⚠ 볼륨 마운트는 커널 입장에서 bind 마운트(root != /)라, 이 값이 false 면 gopsutil 이 목록에서 뺀다.
+        #   true 로 모든 마운트를 받고 아래 include_mount_points 로 /mk2-data/* 만 남긴다.
+        include_virtual_filesystems: true
+        include_mount_points:
+          mount_points: ["/mk2-data/.*"]
+          match_type: regexp
 
 processors:
   batch:
@@ -50,7 +66,7 @@ service:
   extensions: [health_check]
   pipelines:
     metrics:
-      receivers: [otlp]
+      receivers: [otlp, hostmetrics]
       processors: [batch]
       exporters: [prometheus]
     traces:

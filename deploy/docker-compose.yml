@@ -235,6 +235,12 @@ services:
       - "${MK2_EDGE_BIND:-127.0.0.1}:4318:4318"     # OTLP/HTTP (브라우저, CORS)
     volumes:
       - ./server/config/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+      # 디스크 사용량 측정용(hostmetrics filesystem → DataVolumeDiskUsageHigh). 읽기 전용이고 Collector 는 statfs 만 한다.
+      # 이 볼륨들이 놓인 파일시스템이 85% 를 넘으면 알린다 — 볼륨을 다른 디스크로 옮겨도 그 디스크를 잰다.
+      - timescale_data:/mk2-data/timescaledb:ro
+      - mysql_data:/mk2-data/mysql:ro
+      - backend_data:/mk2-data/backend:ro
+      - kafka_data:/mk2-data/kafka:ro
     networks: [mk2]
     depends_on: [prometheus, loki, tempo]
 

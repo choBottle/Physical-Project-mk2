@@ -42,10 +42,15 @@ if [[ "${1:-}" == "--quick" ]]; then
 fi
 
 echo "▶ 2. 저장 축 스키마"
-check "MySQL mk2 테이블 9개" bash -c \
-  "[[ \$(docker compose exec -T mysql sh -c 'mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" -N -e \"SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=\\\"mk2\\\"\"' 2>/dev/null | tr -d '\r') == 9 ]]"
+check "MySQL mk2 테이블 10개 (schema_migrations 포함)" bash -c \
+  "[[ \$(docker compose exec -T mysql sh -c 'mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" -N -e \"SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=\\\"mk2\\\"\"' 2>/dev/null | tr -d '\r') == 10 ]]"
 check "TimescaleDB telemetry 하이퍼테이블" bash -c \
   "docker compose exec -T timescaledb psql -U postgres -d mk2 -tAc \"SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name='telemetry'\" | grep -q 1"
+# 스키마 판 추적 — 최초 초기화 또는 migrate.sh 가 baseline 을 남긴다(database.md §4)
+sm_my="$(mysql_q "SELECT COUNT(*) FROM mk2.schema_migrations WHERE version='00000000_baseline'" | tail -1)"
+sm_ts="$(dc exec -T timescaledb psql -U postgres -d mk2 -tAc "SELECT count(*) FROM schema_migrations WHERE version='00000000_baseline'" 2>/dev/null | tr -d '[:space:]')"
+[[ "${sm_my}" == 1 && "${sm_ts}" == 1 ]] && ok "스키마 판 추적 baseline (MySQL · TimescaleDB)" \
+  || bad "스키마 판 추적 baseline 없음 (MySQL='${sm_my}' TimescaleDB='${sm_ts}') — ./scripts/migrate.sh"
 check "Kafka 토픽 3개" bash -c \
   "[[ \$(docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list | grep -c '^mk2\.telemetry\.') == 3 ]]"
 
@@ -116,28 +121,38 @@ for _ in $(seq 1 12); do
   sleep 5
 done
 [[ -n "${tseen}" ]] && ok "trace 경로 (Collector → Tempo)" || bad "trace 경로 (시험 span 이 Tempo 에 없음)"
+# 데이터 볼륨 파일시스템 사용률(Collector hostmetrics, 30초 주기) — DataVolumeDiskUsageHigh 알림의 재료
+fsseen=""
+for _ in $(seq 1 12); do
+  fsseen="$(prom 'http://localhost:9090/api/v1/query?query=count(%7B__name__%3D~%22system_filesystem_usage(_bytes)%3F%22%2Cmountpoint%3D~%22%2Fmk2-data%2F.%2A%22%7D)' | grep -o '"value"' | head -1)"
+  [[ -n "${fsseen}" ]] && break
+  sleep 5
+done
+[[ -n "${fsseen}" ]] && ok "데이터 볼륨 디스크 지표 (hostmetrics filesystem)" || bad "데이터 볼륨 디스크 지표 없음 (Collector hostmetrics → Prometheus)"
 check "Grafana API" bash -c "docker compose exec -T prometheus wget -qO- http://grafana:3000/api/health | grep -q '\"database\": *\"ok\"'"
 
 echo "▶ 5. 권한 — 앱 계정이 감사·실행기록을 고치지 못해야 한다(음성 대조)"
-check "MySQL mk2_app: UPDATE audit_log · DELETE mission_event · CREATE 거부" \
+check "MySQL mk2_app: UPDATE audit_log · DELETE mission_event · CREATE · schema_migrations 쓰기 거부" \
   docker compose exec -T be-storage python -c "
 import os, sys, pymysql
 c = pymysql.connect(host='mysql', user='mk2_app', password=os.environ['MK2_MYSQL_PASSWORD'], database='mk2')
 cur = c.cursor()
-for q in ('UPDATE audit_log SET actor_kind=actor_kind', 'DELETE FROM mission_event', 'CREATE TABLE hc_x(i int)'):
+for q in ('UPDATE audit_log SET actor_kind=actor_kind', 'DELETE FROM mission_event', 'CREATE TABLE hc_x(i int)',
+          'INSERT INTO schema_migrations (version) SELECT version FROM schema_migrations', 'DROP TABLE schema_migrations'):
     try:
         cur.execute(q); sys.exit('허용됨: ' + q)
     except pymysql.err.OperationalError as e:
         if e.args[0] != 1142: raise
 "
-check "TimescaleDB mk2_app: DELETE telemetry 거부" \
+check "TimescaleDB mk2_app: DELETE telemetry · schema_migrations 쓰기 거부" \
   docker compose exec -T be-storage python -c "
 import os, sys, psycopg
 c = psycopg.connect(host='timescaledb', dbname='mk2', user='mk2_app', password=os.environ['MK2_TSDB_PASSWORD'])
-try:
-    c.execute('DELETE FROM telemetry WHERE false'); sys.exit('허용됨')
-except psycopg.errors.InsufficientPrivilege:
-    pass
+for q in ('DELETE FROM telemetry WHERE false', 'INSERT INTO schema_migrations (version) SELECT version FROM schema_migrations'):
+    try:
+        c.execute(q); sys.exit('허용됨: ' + q)
+    except psycopg.errors.InsufficientPrivilege:
+        c.rollback()
 "
 
 echo
