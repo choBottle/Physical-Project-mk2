@@ -34,33 +34,31 @@ Every pull request rebuilds it on an empty CI runner and runs the health
 check, an end-to-end test with the real device-node code, the backend
 regression suite and a backup/restore round trip.
 
-The current release is `v1.0.0-rc.2`, a release candidate. Authentication,
+The current release is `v1.0.0-rc.3`, a release candidate. Authentication,
 role-based access control and TLS are not implemented yet; until they are,
 run the platform only inside a private network or tunnel (see
 [Security](#security)).
 
-### New in 1.0.0-rc.2
+### New in 1.0.0-rc.3
 
-- **360-degree camera to Unity on data contract v2.** `camera360/anchor360_live.py`
-  and the Unity receiver `Anchor360ObstacleReceiver.cs` now use the v2 field
-  names (`label`, `position`, `ground_dist_m`, `size_m`, `bbox`,
-  `confidence`). The receiver still accepts v1 packets so that the server
-  and Unity can be updated on different days.
-- **Replaceable parts.** The detector is chosen in configuration, any
-  equirectangular 360 camera can upload, stream-server sources come from
-  `camera360/sources.json`, and a twin gateway feeds Gazebo or another twin
-  next to Unity. See [docs/deployment/pluggability.md](docs/deployment/pluggability.md).
-- **One operator console.** The drone team's copy of the console was merged
-  into `visualization/viz-debugger`, and the drone Python packages moved to
-  [`drone/`](drone/).
-- **End-to-end test without hardware.** `deploy/scripts/e2e-sim.sh` runs the
-  Raspberry Pi sensor node in a container against the central stack and
-  checks that its readings reach the console subscription, the databases
-  and Prometheus.
-- **Regression fixes** found by comparing the merged repository against the
-  original team branches: model paths in the camera360 configuration, empty
-  environment variables on the Go1 robot node, and image quality of the
-  blurred sample photos. `CHANGELOG.md` lists the details.
+- **Edge to central over MQTT.** The edge broker bridges device topics to the
+  central broker and receives commands back; verified against a real central
+  stack and in CI ([docs/deployment/edge.md](docs/deployment/edge.md)).
+- **Upgrades that keep site settings.** Site changes live in gitignored
+  override files, `deploy/scripts/migrate.sh` tracks the DB schema version, and
+  the upgrade procedure in [operations.md](docs/deployment/operations.md) was
+  run from rc.2 to this release with data kept.
+- **Security fixes.** The 360-camera upload receiver no longer accepts `..`
+  paths, has a size limit and needs a token off loopback; capture archives
+  have a size limit; optional MQTT passwords for the backend.
+- **One command contract.** A single `physical_command.proto` for hardware,
+  console and AI, with a CI check against drift.
+- **Air-gapped install** ([offline.md](docs/deployment/offline.md)), English
+  deployment docs ([docs/en/](docs/en/)), and backend images for amd64 and arm64.
+- **Before upgrading from rc.2** read the "Deployment changes" section of
+  `CHANGELOG.md`: run `./scripts/migrate.sh` once, set `MK2_PANO_BIND` /
+  `MK2_PANO_TOKEN` for the 360-camera receiver, and `MK2_CENTRAL_MQTT_HOST`
+  on edge nodes.
 
 ## Repository layout
 

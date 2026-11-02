@@ -8,6 +8,13 @@ ports, database migrations and image versions.
 
 ## [Unreleased]
 
+## [1.0.0-rc.3] - 2026-11-02
+
+Third release candidate. Verified on a fresh Windows 11 / Docker Desktop host
+from a GitHub clone, by an upgrade from rc.2 with data, by an install that
+followed only the English docs, and from an offline bundle
+(`docs/deployment/README.md` §7). Real-hardware end-to-end is still open.
+
 ### Added
 
 - One canonical `hardware/schema/physical_command.proto`; the viz and AI
@@ -50,6 +57,11 @@ ports, database migrations and image versions.
 
 ### Changed
 
+- `init-env.sh` warns when data volumes for the same `COMPOSE_PROJECT_NAME`
+  already exist (they keep the old DB passwords); `backup.sh` notes that
+  pg_dump's circular foreign-key hint is harmless (#49).
+- Docs: `COMPOSE_PROJECT_NAME` and volume reuse, port conflicts, Git Bash
+  `MSYS_NO_PATHCONV=1`, restore prompt; new `docs/en/database.md` (#49).
 - AI requirements (53 `AI-*` items) moved verbatim from `ai/CLAUDE.md` to
   `ai/docs/requirements.md` (#45).
 - AI messages use envelope 2.0 and the current frame-reference shape, validated
@@ -96,6 +108,8 @@ ports, database migrations and image versions.
 
 ### Fixed
 
+- `restore.sh` takes `-y`/`--yes`; without a terminal and without an answer
+  it now says so instead of exiting silently (#49).
 - A fresh install could fail with `mkdir …/media_capture: file exists`: the
   four backend services copied the image's `/data` into the new
   `backend_data` volume at the same time. A one-shot `backend-volume-init`
