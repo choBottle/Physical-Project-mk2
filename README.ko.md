@@ -81,7 +81,13 @@ docker compose up -d --build --wait
 게시되고, `deploy/docker-compose.yml` 의 고정 서드파티 이미지도 모두 arm64 판이 있어 Docker 가 맞는 쪽을 받는다.
 arm64 에서 소스로 빌드해도 같다 — 백엔드 의존성은 미리 빌드된 휠로 설치된다.
 
-Windows 에서는 Git Bash 나 WSL2 에서 스크립트를 실행한다.
+Windows 에서는 Git Bash 나 WSL2 에서 스크립트를 실행한다. Git Bash 에서는 먼저 `export MSYS_NO_PATHCONV=1` 을
+실행한다 — 문서의 `docker compose exec … /opt/…` · `promtool check config /etc/prometheus/…` 같은 명령에서 Git Bash 가
+컨테이너 안 경로를 Windows 경로로 바꾸지 않게 한다.
+
+`deploy/.env` 의 `COMPOSE_PROJECT_NAME`(기본 `mk2`)이 볼륨 이름 앞에 붙는다(`mk2_mysql_data` …). 같은 호스트에 이전
+배포의 볼륨이 남아 있으면 새 배포가 그 볼륨과 옛 DB 비밀번호를 그대로 쓴다 — `init-env.sh` 가 경고를 찍는다.
+[배포 가이드 §3](docs/deployment/README.md#3-설치--다섯-단계).
 
 ## 요구 사항
 
@@ -99,6 +105,12 @@ Windows 에서는 Git Bash 나 WSL2 에서 스크립트를 실행한다.
 - 장치 노드는 Python 3 이 있는 Raspberry Pi OS. Go1 노드는 Unitree Legged SDK 가 추가로 필요하다(저장소에 없다)
 - camera360 비전 서버는 CUDA GPU (`requirements-vision.txt`)
 
+전 구간 시험(`deploy/scripts/e2e-sim.sh`):
+
+- `python:3.12-slim` 이미지를 받는다
+- 그 컨테이너 안에서 노드 라이브러리를 pip 로 설치하므로 인터넷이 필요하다. 폐쇄망이면 `MK2_WHEELHOUSE=<휠 디렉터리>`
+  (`bundle-offline.sh` 가 만드는 `wheels/e2e`)를 주어 PyPI 대신 거기서 설치한다 — [폐쇄망 설치](docs/deployment/offline.md)
+
 ## 빠른 시작
 
 `docker compose up` 뒤 `deploy/` 에서:
@@ -106,11 +118,14 @@ Windows 에서는 Git Bash 나 WSL2 에서 스크립트를 실행한다.
 ```
 ./scripts/seed-demo.sh       # 선택: 데모 구역 2개와 장치 선언
 ./scripts/healthcheck.sh     # 35항목
-./scripts/e2e-sim.sh         # 10항목, pip 설치에 인터넷 필요
+./scripts/e2e-sim.sh         # 10항목, pip 설치에 인터넷 필요(MK2_WHEELHOUSE 를 주면 불필요)
 ```
 
 `healthcheck.sh` 는 서비스가 떠 있는지, 시험 메시지가 MQTT → Kafka → TimescaleDB · MySQL 까지 가는지, metric · log ·
 trace 가 저장소에 닿는지, 앱 DB 계정이 감사·임무 기록을 고치지 못하는지 본다. 성공하면 `결과: 통과 35 · 실패 0` 을 찍는다.
+
+운영 스크립트는 진행과 결과를 한국어로 찍는다. 항목마다 ✅(통과) 또는 ❌(실패)로 시작하고, `healthcheck.sh`·`e2e-sim.sh` 를
+끝까지 돌리면 마지막 줄이 `결과: 통과 N · 실패 M` 이다. M 이 0 일 때만 성공이며 그때 종료 코드도 0 이다.
 
 시험 데이터를 보내고 확인하기:
 
@@ -118,7 +133,8 @@ trace 가 저장소에 닿는지, 앱 DB 계정이 감사·임무 기록을 고�
 docker compose exec be-ingest python tests/publisher.py --host mosquitto --count 10
 ```
 
-Grafana 는 <http://127.0.0.1:7862> 이고 로그인 정보는 `deploy/.env` 의 `GRAFANA_ADMIN_*` 다. **MK2 Backend Overview**
+Grafana 는 <http://127.0.0.1:7862> 이다(포트는 `deploy/.env` 의 `MK2_PORT_GRAFANA`). 로그인은 `deploy/.env` 의
+`GRAFANA_ADMIN_USER`(기본 `admin`) / `GRAFANA_ADMIN_PASSWORD`(`init-env.sh` 가 생성)다. **MK2 Backend Overview**
 대시보드를 연다.
 
 관제 화면으로 실시간 상태 보기:
@@ -179,7 +195,7 @@ npm run dev
 | [보안](docs/deployment/security.md) | 노출 정책, 토큰, 터널, 운영 전환 체크리스트 |
 | [운영](docs/deployment/operations.md) | 재기동, 업그레이드, 백업, 알림별 대응 |
 | [폐쇄망 설치](docs/deployment/offline.md) | 이미지·저장소·파이썬 휠을 한 묶음으로 반입해 인터넷 없이 설치 |
-| [English docs](docs/en/README.md) | 배포 가이드 · 운영 · 보안 · 엣지 영문판 (어긋나면 한국어 문서가 기준) |
+| [English docs](docs/en/README.md) | 배포 가이드 · 운영 · DB · 보안 · 엣지 영문판 (어긋나면 한국어 문서가 기준) |
 | [릴리스 정책](docs/RELEASE.md) | 버전 규칙, 릴리스 절차, 1.0 기준, 1.x 로드맵 |
 | [아키텍처](server/docs/be/00-architecture.md) | 백엔드 설계 원칙 |
 

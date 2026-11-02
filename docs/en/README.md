@@ -1,7 +1,7 @@
 # Deployment guide — standing up the MK2 platform on an empty server
 
 > Translated from the Korean source [docs/deployment/README.md](../deployment/README.md) at commit
-> [`3fcbcf4`](https://github.com/choBottle/Physical-Project-mk2/blob/3fcbcf4b5de212d64e81fd077f1481d0e00e7d59/docs/deployment/README.md);
+> [`a694208`](https://github.com/choBottle/Physical-Project-mk2/blob/a6942082abe114864dbdc422e0c8dd1463745d41/docs/deployment/README.md);
 > if they disagree, the Korean document is authoritative.
 
 > Goal of this document: **someone who has never seen this project (another institution, a new contributor) can bring up
@@ -14,7 +14,7 @@
 | [operations.md](operations.md) | Operations runbook — restart · upgrade · backup · response per alert |
 | [edge.md](edge.md) | Zone edge node (Raspberry Pi) setup · connecting to the central server |
 | [security.md](security.md) | Exposure policy · tokens · tunnel · production checklist |
-| [database.md](../deployment/database.md) (Korean) | DB schema (MySQL · TimescaleDB) · grants · schema change procedure · backup/restore |
+| [database.md](database.md) | DB schema (MySQL · TimescaleDB) · grants · schema change procedure (migrations) · password rotation · backup/restore/retention |
 | [observability.md](../deployment/observability.md) (Korean) | Prometheus · Loki · Tempo · Grafana · metric list · alerts · edge federation |
 | [offline.md](../deployment/offline.md) (Korean) | Air-gapped install — one bundle of images, repository and Python wheels |
 | [e2e.md](../deployment/e2e.md) (Korean) | End-to-end test — real device node code → central → operator screen |
@@ -75,6 +75,11 @@ Design rationale: [`server/docs/be/00-architecture.md`](../../server/docs/be/00-
 
 > Docker Desktop on Windows/macOS runs the same stack for development and demos (this procedure was verified on Docker
 > Desktop 29). Production deployments assume Linux.
+>
+> On Windows, run the scripts from Git Bash or WSL2. **In Git Bash, run `export MSYS_NO_PATHCONV=1` first** — otherwise Git
+> Bash rewrites container paths in documented commands such as `docker compose exec … /opt/kafka/…` and
+> `promtool check config /etc/prometheus/…` into Windows paths like `C:/Program Files/Git/opt/…` (the repository scripts set
+> it themselves).
 
 ---
 
@@ -103,6 +108,18 @@ The deployment is done when the last line reads `결과: 통과 35 · 실패 0` 
 To extend the check to the device end, run `./scripts/e2e-sim.sh` — it attaches the real node code with a fake sensor and
 follows the data up to the operator-screen subscription ([e2e.md](../deployment/e2e.md), Korean).
 
+> ⚠ **Project name `COMPOSE_PROJECT_NAME`** — the first value in `deploy/.env` (default `mk2`; `init-env.sh` copies it
+> unchanged from `.env.example`). Compose prefixes container, network and **volume** names with it (`mk2_mysql_data`,
+> `mk2_timescale_data`, …). If the host already had an `mk2` deployment (including a clone in another folder) or volumes of a
+> removed deployment are left over, the new deployment **reuses those volumes as they are.** DB passwords are set at first
+> volume initialization, so the volumes hold **the old `.env`'s passwords**; they do not match the newly generated `.env` and
+> the backend cannot connect to the DB. `init-env.sh` prints a warning when it finds such volumes. Then choose one of:
+> ① to keep the old data, restore the old `.env`; ② to run a separate deployment next to it, change `COMPOSE_PROJECT_NAME` in
+> `deploy/.env` to another name (e.g. `mk2test`) before starting (running both at once also collides on ports — move operator
+> ports with `MK2_PORT_*`, and the fixed device-facing ports only on a test host with an override — §6); ③ to discard the old
+> data, after confirming that is intended, `docker volume rm <name>_mysql_data <name>_timescale_data` (irreversible).
+> A `COMPOSE_PROJECT_NAME` shell environment variable takes precedence over `.env`.
+
 No internet on the target server: see [offline.md](../deployment/offline.md) (Korean) — use the published backend image
 instead of `--build`.
 
@@ -119,7 +136,7 @@ server.**
 | Observability wiring | Grafana provisioning | Prometheus, Loki, Tempo datasources + `MK2 Backend Overview` dashboard |
 
 > ⚠ The init scripts run **only once, when the data volume is empty**. To apply a schema change to an existing server,
-> see [database.md §4](../deployment/database.md) (Korean).
+> see [database.md §4](database.md#4-schema-change-procedure-migrations).
 
 ### Addresses (on the server)
 
@@ -185,14 +202,31 @@ do not collide with site settings.
 
 | Symptom | Cause · action |
 |---|---|
-| `Bind for 0.0.0.0:7862 failed: port is already allocated` | Another service on the server uses the port. Move operator ports with `MK2_PORT_*` in `deploy/.env` (edge entry ports are paired with device configuration and stay fixed) |
+| `Bind for 127.0.0.1:7862 failed: port is already allocated` (Docker prints the actual bind address — `127.0.0.1` by default, or your `MK2_ADMIN_BIND` / `MK2_EDGE_BIND` value) | Another service on the server uses the port. Move **operator ports** (MySQL 7858 · TimescaleDB 7859 · Prometheus 7861 · Grafana 7862 · Loki 3100 · Tempo 3200) with the `MK2_PORT_*` variables in `deploy/.env`. **Device-facing ports** (1883 · 9001 · 4316–4318 · 8765–8767 · 9095) are fixed — devices and edges are configured with these numbers, so changing them on the server disconnects the devices. If one of them is already taken on a test host, override only that service's ports in a gitignored `deploy/docker-compose.override.yml` (example below). **Never do this on a production host** — remove the conflicting service instead |
+| A freshly generated `.env` (even on a new clone) but the backend cannot connect to the DB · `init-env.sh` printed a volume warning | Old volumes with the same `COMPOSE_PROJECT_NAME` (default `mk2`) are being reused — they hold the old passwords. Follow the "Project name" warning in §3: restore the old `.env`, use a different `COMPOSE_PROJECT_NAME`, or remove the volumes deliberately. Check with `docker volume ls \| grep _mysql_data` |
 | `mysql`/`timescaledb` stays `unhealthy` | `docker compose logs mysql \| grep mk2-init` — see which init step stopped. If shell scripts were checked out with CRLF they die with `bad interpreter` → `git config core.autocrlf false` and check out again (the repository's `.gitattributes` enforces LF) |
-| Backend cannot connect to the DB after regenerating `.env` | DB passwords are set **at first volume initialization**. The new `.env` and the existing volume disagree. On a test server, `docker compose down -v` to delete volumes and start over; on production, see [database.md §5](../deployment/database.md) (Korean) |
+| Backend cannot connect to the DB after regenerating `.env` | DB passwords are set **at first volume initialization**. The new `.env` and the existing volume disagree. On a test server, `docker compose down -v` to delete volumes and start over; on production, see [database.md §5](database.md#5-password-rotation) |
 | be-gateway exits with `exit 2` | Bound to a non-loopback address with an empty token. Check `MK2_WS_TOKEN`, `MK2_EDGE_TOKEN` |
 | Tempo `/ready` returns 503 | 15-second warm-up after start. If still 503 after that, check `ingester.lifecycler` in `tempo.yaml` |
 | Edge device data missing from the central DB | Check the edge bridge — on the edge, `docker compose exec mosquitto mosquitto_sub -t '$SYS/broker/connection/#' -v -C 1 -W 5` must print `1`. If `0` or no answer, check `MK2_CENTRAL_MQTT_HOST` in `deploy/edge/.env`, central `MK2_EDGE_BIND`, and the tunnel ([edge.md](edge.md)) |
 | (experimental) Edge connects to Kafka 9095 but no data arrives | `MK2_KAFKA_EDGE_ADVERTISED` is `localhost` — the broker tells clients to "come to localhost" |
 | No backend metrics in Grafana | Backend export interval 15 s + scrape 5 s. Wait one minute, then section 4 of `./scripts/healthcheck.sh` |
+
+When a fixed device-facing port is already in use on a test host (e.g. another MQTT broker on the host uses 1883), create
+`deploy/docker-compose.override.yml` (gitignored; compose reads it automatically; `!override` needs Compose 2.24.4+):
+
+```yaml
+services:
+  mosquitto:
+    ports: !override          # replace the list instead of merging it
+      - "127.0.0.1:11883:1883"
+      - "127.0.0.1:19001:9001"
+```
+
+Check the merged result with `docker compose config`, then `docker compose up -d`. Keep the container-side number (right)
+and change only the host side (middle) — `healthcheck.sh` and `e2e-sim.sh` test inside the container network and are not
+affected, but devices outside the host must use the new number. **Do not use this on a production server** (it no longer
+matches the device configuration).
 
 If it still fails, open an [issue](../../.github/ISSUE_TEMPLATE/deployment.yml) with the `./scripts/healthcheck.sh` output,
 `docker compose ps -a`, and the logs of the affected service.

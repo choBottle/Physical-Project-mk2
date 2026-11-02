@@ -73,6 +73,10 @@ MK2 는 다섯 구간으로 나뉜다. 이 저장소의 `deploy/` 는 **구간 2
 
 > Windows/macOS 의 Docker Desktop 에서도 개발·시연 용도로 그대로 돈다(이 문서의 절차는 Docker Desktop 29 에서 검증했다).
 > 단 운영 배치는 리눅스를 기준으로 한다.
+>
+> Windows 에서는 스크립트를 Git Bash 나 WSL2 에서 실행한다. **Git Bash 에서는 먼저 `export MSYS_NO_PATHCONV=1`** 을
+> 실행한다 — 그러지 않으면 Git Bash 가 문서의 `docker compose exec … /opt/kafka/…` · `promtool check config /etc/prometheus/…`
+> 같은 명령에서 컨테이너 안 경로를 `C:/Program Files/Git/opt/…` 처럼 Windows 경로로 바꿔 버린다(저장소 스크립트는 스스로 설정한다).
 
 ---
 
@@ -99,6 +103,17 @@ docker compose up -d --build --wait
 마지막 줄이 `결과: 통과 35 · 실패 0` 이면 배포가 끝난 것이다.
 
 말단 장치까지 이어 보려면 `./scripts/e2e-sim.sh` — 실제 노드 코드를 가짜 센서로 붙여 관제 화면 구독까지 본다([e2e.md](e2e.md)).
+
+> ⚠ **프로젝트 이름 `COMPOSE_PROJECT_NAME`** — `deploy/.env` 의 첫 값(기본 `mk2`, `init-env.sh` 가 `.env.example` 에서 그대로
+> 복사한다)이다. compose 는 컨테이너·네트워크·**볼륨** 이름 앞에 이것을 붙인다(`mk2_mysql_data` · `mk2_timescale_data` …).
+> 같은 호스트에 이미 `mk2` 배포가 있었거나(다른 폴더에 clone 한 것 포함) 지운 배포의 볼륨이 남아 있으면, 새 배포가 **그
+> 볼륨을 그대로 다시 쓴다.** DB 비밀번호는 볼륨 최초 초기화 때 박히므로 볼륨 안에는 **옛 `.env` 의 비밀번호**가 있고,
+> 새로 만든 `.env` 의 비밀번호와 어긋나 백엔드가 DB 에 붙지 못한다. `init-env.sh` 는 이런 볼륨을 찾으면 경고를 찍는다.
+> 이때 셋 중 하나를 고른다: ① 옛 데이터를 이어 쓴다면 옛 `.env` 를 되살린다 ② 별도 배포를 나란히 세운다면 `deploy/.env` 의
+> `COMPOSE_PROJECT_NAME` 을 다른 이름(예: `mk2test`)으로 바꾼 뒤 기동한다(두 배포를 동시에 띄우면 포트도 겹친다 — 운영자
+> 포트는 `MK2_PORT_*` 로 옮기고, 장치 쪽 고정 포트는 시험 호스트에서만 override 로 — §6)
+> ③ 옛 데이터를 버린다면 의도를 확인한 뒤 `docker volume rm <이름>_mysql_data <이름>_timescale_data`(되돌릴 수 없다).
+> 셸 환경변수 `COMPOSE_PROJECT_NAME` 이 있으면 `.env` 보다 우선한다.
 
 ### 처음 기동할 때 자동으로 일어나는 일
 
@@ -176,7 +191,8 @@ docker compose up -d     # 바뀐 서비스만 재생성된다
 
 | 증상 | 원인 · 조치 |
 |---|---|
-| `Bind for 0.0.0.0:7862 failed: port is already allocated` | 같은 서버에 다른 서비스가 그 포트를 쓴다. `deploy/.env` 의 `MK2_PORT_*` 로 운영자 포트를 옮긴다(엣지 입구 포트는 장치 설정과 짝이라 고정) |
+| `Bind for 127.0.0.1:7862 failed: port is already allocated` (주소는 실제 바인딩 — 기본 `127.0.0.1`, 바꿨다면 `MK2_ADMIN_BIND`·`MK2_EDGE_BIND` 값) | 같은 서버에 다른 서비스가 그 포트를 쓴다. **운영자 포트**(MySQL 7858 · TimescaleDB 7859 · Prometheus 7861 · Grafana 7862 · Loki 3100 · Tempo 3200)는 `deploy/.env` 의 `MK2_PORT_*` 로 옮긴다. **장치 쪽 포트**(1883 · 9001 · 4316~4318 · 8765~8767 · 9095)는 고정이다 — 장치·엣지 설정에 이 번호가 박혀 있어 서버에서 바꾸면 장치가 못 붙는다. 시험 호스트에서 그중 하나가 이미 쓰이면 gitignore 된 `deploy/docker-compose.override.yml` 로 그 서비스의 포트만 덮어쓴다(아래 예). **운영 서버에서는 하지 않는다** — 겹치는 서비스를 치운다 |
+| `.env` 를 새로 만들었는데 (새 clone 인데도) 백엔드가 DB 에 못 붙는다 · `init-env.sh` 가 볼륨 경고를 찍었다 | 같은 `COMPOSE_PROJECT_NAME`(기본 `mk2`)의 옛 볼륨을 다시 쓰고 있다 — 볼륨에는 옛 비밀번호가 있다. §3 의 「프로젝트 이름」 경고대로 옛 `.env` 를 되살리거나, 다른 `COMPOSE_PROJECT_NAME` 을 쓰거나, 의도적으로 볼륨을 지운다. `docker volume ls \| grep _mysql_data` 로 확인 |
 | `mysql`/`timescaledb` 가 `unhealthy` 에 머문다 | `docker compose logs mysql \| grep mk2-init` — 초기화 스크립트가 어느 단계에서 멈췄는지 본다. 셸 스크립트가 CRLF 로 체크아웃되면 `bad interpreter` 로 죽는다 → `git config core.autocrlf false` 후 다시 체크아웃(저장소 `.gitattributes` 가 LF 를 강제한다) |
 | `.env` 를 다시 만들었더니 백엔드가 DB 에 못 붙는다 | DB 비밀번호는 **볼륨 최초 초기화 때** 박힌다. 새 `.env` 와 기존 볼륨이 어긋난 것. 시험 서버면 `docker compose down -v` 로 볼륨까지 지우고 다시, 운영 서버면 [database.md §5](database.md#5-비밀번호-교체) |
 | be-gateway 가 `exit 2` | loopback 밖 바인딩인데 토큰이 비었다. `MK2_WS_TOKEN`·`MK2_EDGE_TOKEN` 확인 |
@@ -184,6 +200,21 @@ docker compose up -d     # 바뀐 서비스만 재생성된다
 | 엣지 장치의 데이터가 중앙 DB 에 없다 | 엣지 브릿지 연결 확인 — 엣지에서 `docker compose exec mosquitto mosquitto_sub -t '$SYS/broker/connection/#' -v -C 1 -W 5` 가 `1` 이어야 한다. `0`/무응답이면 `deploy/edge/.env` 의 `MK2_CENTRAL_MQTT_HOST` · 중앙 `MK2_EDGE_BIND` · 터널을 본다([edge.md](edge.md)) |
 | (실험 배치) 엣지가 Kafka 9095 에 붙는데 데이터가 안 간다 | `MK2_KAFKA_EDGE_ADVERTISED` 가 `localhost` 다 — 브로커가 "localhost 로 오라"고 답한다 |
 | Grafana 에 백엔드 지표가 없다 | 백엔드 export 주기 15초 + scrape 5초. 1분 기다린 뒤 `./scripts/healthcheck.sh` 의 4번 절 |
+
+시험 호스트에서 장치 쪽 고정 포트가 이미 쓰일 때(예: 호스트에 다른 MQTT 브로커가 1883 을 쓴다) — `deploy/docker-compose.override.yml`
+(gitignore, compose 가 자동으로 함께 읽는다. `!override` 는 Compose 2.24.4 이상):
+
+```yaml
+services:
+  mosquitto:
+    ports: !override          # 목록을 합치지 않고 통째로 바꾼다
+      - "127.0.0.1:11883:1883"
+      - "127.0.0.1:19001:9001"
+```
+
+`docker compose config` 로 합쳐진 결과를 확인한 뒤 `docker compose up -d`. 컨테이너 안쪽 번호(오른쪽)는 그대로 두고 호스트
+쪽(가운데)만 바꾼다 — `healthcheck.sh`·`e2e-sim.sh` 는 컨테이너 네트워크 안에서 시험하므로 영향을 받지 않지만, 호스트 밖 장치는
+바뀐 번호로 붙어야 한다. **운영 서버에서는 쓰지 않는다**(장치 설정과 어긋난다).
 
 그래도 안 되면 [이슈](../../.github/ISSUE_TEMPLATE/deployment.yml)에 `./scripts/healthcheck.sh` 출력과
 `docker compose ps -a` · 해당 서비스 로그를 붙여 올린다.

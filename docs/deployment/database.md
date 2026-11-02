@@ -70,6 +70,8 @@
 - MySQL 계정 host = `MK2_DB_APP_HOST`(기본 `172.28.%`), TimescaleDB `pg_hba` = `MK2_NET_SUBNET`(기본 `172.28.0.0/16`)의 `mk2_app` 만.
   compose 가 도커 대역을 **고정**하므로 네트워크를 다시 만들어도 깨지지 않는다.
 - TimescaleDB `postgres` 슈퍼유저는 TCP 로 못 붙고 컨테이너 안 소켓으로만: `docker compose exec timescaledb psql -U postgres -d mk2`.
+  (Windows Git Bash 에서 이 문서의 `docker compose exec …` 명령에 컨테이너 안 경로가 들어가면 먼저 `export MSYS_NO_PATHCONV=1`
+  — [README.md §2](README.md#2-요구-사양))
 
 `./scripts/healthcheck.sh` 5번 절이 이 권한을 **음성 대조**(UPDATE·DELETE·CREATE 가 실제로 거부되는지)로 매번 확인한다.
 
@@ -151,11 +153,26 @@ TimescaleDB 도 같은 방식(`ALTER ROLE mk2_app WITH PASSWORD '…'` → `MK2_
 ## 6. 백업 · 복구 · 보존
 
 ```bash
+# 저장소 루트에서
 ./deploy/scripts/backup.sh                         # → deploy/backups/<UTC>/  (MySQL 덤프 + TimescaleDB pg_dump -Fc + MANIFEST)
 ./deploy/scripts/restore.sh deploy/backups/<UTC>   # 백엔드 정지 → 복구 → 권한 재적용 → 기동
+
+# deploy/ 에서 (operations.md 의 방식) — 같은 스크립트다
+./scripts/backup.sh                                # → 역시 deploy/backups/<UTC>/
+./scripts/restore.sh backups/<UTC>
 ```
 
-- 검증: 2026-10-26 백업 → `telemetry` 비우기 · 선언 레지스트리 삭제 → 복구 → `healthcheck.sh` 32/32.
+- **어디서 실행해도 된다.** 인자 없이 부르면 백업은 실행 위치와 상관없이 항상 `deploy/backups/<UTC 시각>/`(예:
+  `deploy/backups/20261026T061500Z/`)에 생긴다. 인자로 준 경로(백업 위치·복구할 디렉터리)는 **명령을 실행한 위치 기준**이다
+  (절대경로도 된다) — 그래서 저장소 루트에서는 `deploy/backups/<UTC>`, `deploy/` 에서는 `backups/<UTC>` 로 쓴다.
+- **복구 확인 질문**: `restore.sh` 는 덮어쓰기 전에 `계속할까? [y/N]` 을 묻고 `y` 일 때만 진행한다. 스크립트·cron 처럼
+  사람이 없으면 `--yes`(`-y`)로 질문을 건너뛴다: `./scripts/restore.sh --yes backups/<UTC>`. 표준입력이 터미널이 아닌데
+  `--yes` 도 입력도 없으면 `--yes` 를 주라는 안내를 찍고 1 로 끝난다. 파이프로 답을 넣는 것도 된다(`echo y | ./scripts/restore.sh backups/<UTC>` — CI 가 이렇게 쓴다).
+- 백업 중 `pg_dump: warning: there are circular foreign-key constraints on this table: …` 와 `hint: …` 가 매번 찍힌다 —
+  **무해하다.** TimescaleDB 내부 카탈로그 표(`hypertable`·`chunk` 등)의 순환 외래키 때문이고, `restore.sh` 가
+  `timescaledb_pre_restore()`/`timescaledb_post_restore()` 사이에서 풀어 문제없이 복구된다. `backup.sh` 도 덤프 뒤 이 안내를 한 줄 찍는다.
+- 검증: 2026-10-26 백업 → `telemetry` 비우기 · 선언 레지스트리 삭제 → 복구 → `healthcheck.sh` 32/32(당시 항목 수 — 현재
+  `healthcheck.sh` 는 35항목이고 복구 뒤에도 `결과: 통과 35 · 실패 0` 이어야 한다. CI `deploy-smoke` 는 매 PR 백업 → 복구 왕복 뒤 `healthcheck.sh --quick` 을 돌린다).
 - 주기: `cron` 으로 매일(예: `0 3 * * * cd /opt/mk2/deploy && ./scripts/backup.sh /backup/mk2/$(date +\%u)` — 요일별 7개 순환).
 - **백업하지 않는 것**: Kafka(7일 버퍼일 뿐 장기 저장소가 아니다) · Prometheus/Loki/Tempo(보존 기간이 곧 정책) ·
   촬영본 아카이브(`backend_data` 볼륨의 `/data/media_capture` — 용량이 커서 파일시스템/스냅샷 수준 백업 대상).
