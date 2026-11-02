@@ -9,9 +9,9 @@
 조건을 실행 전에 다시 제시한다.
 
 최종 판정과 수치 요약은
-[2026-09-02_system-generality-experiment-result.md](../../../reports/2026-09-02_system-generality-experiment-result.md),
+`2026-09-02_system-generality-experiment-result.md`,
 SSD 시각 품질 후속 분석은
-[2026-09-02_ssd-visual-quality-analysis.md](../../../reports/2026-09-02_ssd-visual-quality-analysis.md)를
+`2026-09-02_ssd-visual-quality-analysis.md`를
 따른다. `experiments/system-generality/runs/`의 raw event·metrics·영상·dashboard와
 `perception-framework/deploy/integration/artifacts/`의 OTel 증거는 결과를 문서로 기록한 뒤
 삭제했다. **(2026-09 갱신)** `experiments/`의 실행 코드·manifest 자체도 재사용 계획이 없어

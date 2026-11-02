@@ -79,9 +79,12 @@
 
 1. **정본 파일을 고친다** — `server/infra/sql/mk2_*.sql` 의 `CREATE TABLE` 을 최종 모양으로. 새 서버는 이것만으로 맞는다.
 2. **기존 서버용 변경분을 따로 쓴다** — `server/infra/sql/migrations/YYYYMMDD_<주제>.sql` (`ALTER …`, 재실행 안전하게).
+   MySQL 용과 TimescaleDB 용은 파일을 나눈다(아래 예시의 `_tsdb` 접미사).
    새 테이블이면 테이블별 GRANT 를 `mk2_grants_*.sql.example` 에도 더한다(MySQL GRANT 에는 테이블 와일드카드가 없다).
-3. **적용은 사람이 root 로**, 백업 뒤에:
+3. **적용은 사람이 root 로**, 백업 뒤에. 아래 파일 이름(`20261101_example*.sql`)은 **자리표시자**다 — 저장소에 그런
+   파일은 없다. 2번에서 만든 실제 마이그레이션 파일 이름으로 바꿔 쓴다:
    ```bash
+   # 예시 — 파일 이름은 실제 마이그레이션으로 바꾼다
    ./deploy/scripts/backup.sh
    docker compose -f deploy/docker-compose.yml exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' \
      < server/infra/sql/migrations/20261101_example.sql
@@ -89,7 +92,8 @@
      < server/infra/sql/migrations/20261101_example_tsdb.sql
    ```
 4. **CI 가 빈 DB 에서 정본으로 다시 세워** 시험한다(deploy-smoke) — 정본과 마이그레이션 결과가 갈라지면 여기서 드러난다.
-5. `CHANGELOG.md` 에 "DB 변경 — 마이그레이션 필요"로 적는다(릴리스 노트에 올라간다).
+5. `CHANGELOG.md` 해당 판의 `### Deployment changes` 절에 "DB migration required" 와 파일 이름을 적는다(릴리스 노트에
+   올라간다 — 운영자는 업그레이드 때 이 절을 본다: [operations.md 「업그레이드」](operations.md#업그레이드-새-릴리스로)).
 
 > 자동 마이그레이션 도구(Flyway·Alembic 류) 도입은 v1.x 로드맵 항목이다([RELEASE.md](../RELEASE.md)). 지금은 변경 빈도가
 > 낮고, 권한 설계상 앱이 DDL 을 못 하므로 사람 적용이 원칙에도 맞는다.

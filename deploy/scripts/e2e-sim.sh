@@ -14,7 +14,9 @@
 #   ⑤ 관측   — 노드 자신의 metric(OTel → Collector → Prometheus)이 오는가
 #
 # 노드 컨테이너는 python:3.12-slim 에 Pi 와 같은 라이브러리(pi_base_setup.sh)를 받아 쓴다 — 인터넷이 필요하다.
-# 종료 코드: 0 = 전부 통과, 1 = 하나 이상 실패. 시험 행은 source_id 접두사 wl-e2e- 로 구분된다.
+# 종료 코드: 0 = 전부 통과, 1 = 하나 이상 실패.
+# 시험 장치 이름은 고정(wl-e2e-probe)이다 — 실행마다 새 이름을 쓰면 레지스트리에 유령 장치가 쌓인다. 이번 실행의
+# 행은 적재 시각(TimescaleDB ingest_at · MySQL last_recorded_at 이 이번 실행 시작 이후)으로 가린다.
 set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
@@ -26,7 +28,7 @@ bad() { echo "  ❌ $*"; FAIL=$((FAIL+1)); }
 dc()  { docker compose "$@"; }
 prom(){ dc exec -T prometheus wget -qO- "$1" 2>/dev/null; }
 
-EID="wl-e2e-$(date +%s)"
+EID="wl-e2e-probe"
 NODE="mk2-e2e-sensor"
 LOG="$(mktemp)"
 PROBE_PID=""
@@ -41,6 +43,13 @@ trap cleanup EXIT
 NET="$(docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' "$(dc ps -q mosquitto)" 2>/dev/null | awk '{print $1}')"
 [[ -n "${NET}" ]] || { echo "중앙 스택이 떠 있지 않다 — docker compose up -d --wait 먼저"; exit 1; }
 PI_DIR="$(cd ../hardware/pi && (pwd -W 2>/dev/null || pwd))"
+
+# 이번 실행의 시작 시각 — 각 DB 자신의 시계로 잰다
+T_TSDB="$(dc exec -T timescaledb psql -U postgres -d mk2 -tAc "SELECT now()" 2>/dev/null | tr -d '\r' | xargs)"
+# shellcheck disable=SC2016  # $MYSQL_ROOT_PASSWORD 는 컨테이너 안에서 펼친다
+T_MYSQL="$(dc exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N -e "SELECT UTC_TIMESTAMP(6)" 2>/dev/null' | tr -d '\r' | tail -1)"
+[[ -n "${T_TSDB}" && -n "${T_MYSQL}" ]] || { echo "DB 시각 조회 실패 — 중앙 스택(timescaledb·mysql) 확인"; exit 1; }
+NEW="ingest_at >= '${T_TSDB}'::timestamptz"
 
 echo "▶ 0. 말단 노드 기동 (hardware/pi/sensor — entity=${EID})"
 docker rm -f "${NODE}" >/dev/null 2>&1
@@ -120,17 +129,17 @@ fi
 echo "▶ 4. 저장 — 같은 값이 남는가"
 rows=0
 for _ in $(seq 1 15); do
-  rows="$(dc exec -T timescaledb psql -U postgres -d mk2 -tAc "SELECT count(*) FROM telemetry WHERE source_id='${EID}' AND channel='state'" 2>/dev/null | tr -d '[:space:]')"
+  rows="$(dc exec -T timescaledb psql -U postgres -d mk2 -tAc "SELECT count(*) FROM telemetry WHERE source_id='${EID}' AND channel='state' AND ${NEW}" 2>/dev/null | tr -d '[:space:]')"
   [[ "${rows:-0}" -ge "${received:-1}" ]] && break
   sleep 2
 done
 [[ "${rows:-0}" -ge "${received:-1}" && "${rows:-0}" -gt 0 ]] \
   && ok "TimescaleDB state ${rows}행 (화면 수신 ${received}건 이상)" || bad "TimescaleDB state ${rows:-0}행 (화면 수신 ${received}건)"
 for r in threshold_exceeded threshold_cleared; do
-  n="$(dc exec -T timescaledb psql -U postgres -d mk2 -tAc "SELECT count(*) FROM telemetry WHERE source_id='${EID}' AND reason='${r}'" 2>/dev/null | tr -d '[:space:]')"
+  n="$(dc exec -T timescaledb psql -U postgres -d mk2 -tAc "SELECT count(*) FROM telemetry WHERE source_id='${EID}' AND reason='${r}' AND ${NEW}" 2>/dev/null | tr -d '[:space:]')"
   [[ "${n:-0}" -ge 1 ]] && ok "TimescaleDB 사건 행 ${r}" || bad "TimescaleDB 사건 행 ${r} 없음"
 done
-dc exec -T mysql sh -c "mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" -N -e \"SELECT entity_id FROM mk2.registry_entity_observed WHERE entity_id='${EID}'\"" 2>/dev/null \
+dc exec -T mysql sh -c "mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" -N -e \"SELECT entity_id FROM mk2.registry_entity_observed WHERE entity_id='${EID}' AND last_recorded_at >= '${T_MYSQL}'\"" 2>/dev/null \
   | grep -q "${EID}" && ok "MySQL 레지스트리 관측 등록" || bad "MySQL 레지스트리에 ${EID} 없음"
 
 echo "▶ 5. 관측 — 노드 자신의 metric"

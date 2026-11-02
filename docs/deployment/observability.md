@@ -56,7 +56,8 @@ OTel 이름(`be.ingest.received`)이 Prometheus 에서 `be_ingest_received_total
 
 ## 4. 알림 규칙
 
-`deploy/server/config/prometheus-rules.yml` — Prometheus UI 의 **Alerts** 탭에서 상태를 본다.
+`deploy/server/config/prometheus-rules.yml` — Prometheus UI 의 **Alerts** 탭에서 상태를 본다. 이 파일은 저장소가 관리한다 —
+현장 전용 규칙은 `deploy/site/prometheus/rules/*.yml`(gitignore, 예시 `site.yml.example`)에 더한다([operations.md 「현장 설정」](operations.md#현장-설정--추적-파일을-고치지-않는다)).
 
 | 알림 | 심각도 | 판정 |
 |---|---|---|
@@ -67,9 +68,14 @@ OTel 이름(`be.ingest.received`)이 Prometheus 에서 `be_ingest_received_total
 | `IngestRejectRateHigh` | warning | 격리 비율 10% 초과 10분 |
 | `PipelineLagHigh` | warning | 지연 p90 > 5초 10분 |
 
-각 알림의 대응 절차는 [operations.md](operations.md). **알림을 사람에게 보내려면** Alertmanager 를 붙인다(현재 미포함 — 받는
-채널(메일·메신저)이 기관마다 달라서다). `prometheus.yml` 에 `alerting.alertmanagers` 를 추가하고 compose 에
-`prom/alertmanager` 서비스를 더하는 것이 다음 단계다.
+각 알림의 대응 절차는 [operations.md](operations.md). **알림을 사람에게 보내려면** Alertmanager 를 붙인다(기본 미포함 — 받는
+채널(메일·메신저)이 기관마다 달라서다). 추적 파일은 고치지 않는다:
+
+1. `deploy/docker-compose.override.yml.example` → `docker-compose.override.yml` (alertmanager 서비스), 받는 채널 설정은
+   `deploy/site/alertmanager/alertmanager.yml`.
+2. `deploy/site/prometheus/alertmanagers/alertmanager.yml.example` → `alertmanager.yml` — `prometheus.yml` 의
+   `alerting` 이 이 폴더를 file_sd 로 읽는다.
+3. `docker compose up -d` → Prometheus UI **Status → Runtime & Build Information** 의 Alertmanagers 에 주소가 보이면 연결됨.
 
 > 장치 **최종 가용성** 판정은 이 규칙이 아니라 백엔드 단일 지점의 몫이다(MQTT 세션 우선 — 아키텍처 원칙 7).
 
@@ -89,9 +95,12 @@ OTel 이름(`be.ingest.received`)이 Prometheus 에서 `be_ingest_received_total
 엣지가 raw 를 보관하고 중앙은 **요약만** 당긴다 — 중앙 부하가 장치 수가 아니라 구역 수에 비례한다.
 
 1. 엣지에 `deploy/edge` 스택을 세운다([edge.md](edge.md)) — 엣지 Prometheus 가 `MK2_EDGE_TUNNEL_BIND:9090` 에 뜬다.
-2. 중앙 `deploy/server/config/prometheus.yml` 의 `edge_federate` 잡 주석을 풀고 타깃을 엣지 터널 주소로.
-3. `curl -X POST http://127.0.0.1:7861/-/reload` (재생성 불필요).
+2. 중앙에서 `deploy/site/prometheus/edge-targets/edge.yml.example` 을 `edge.yml` 로 복사하고 타깃을 엣지 터널 주소로
+   (구역마다 항목 하나). 이 폴더는 gitignore 라 업그레이드와 부딪치지 않는다. `edge_federate` 잡 자체(`match[]`)는
+   `prometheus.yml` 에 이미 있다 — 고치지 않는다.
+3. 반영은 자동이다(file_sd — reload·재생성 불필요).
 4. 확인: `up{job="edge_federate"} == 1`, 그리고 `{agg_layer="edge"}` 시계열이 `match[]` 로 고른 것만 왔는지.
    `match[]` 를 넓히지 않는다 — 엣지 raw 전량을 끌어오면 2계층의 의미가 없다.
 
 log·trace 는 요약하지 않는다 — 엣지 Collector 가 원본을 중앙으로 그대로 보낸다(`zone_id`·`agg_layer=edge` 리소스 속성을 붙여서).
+단 장치 노드(`hardware/pi`)는 log 를 OTel 로 내보내지 않는다(Pi 의 journald) — 엣지 경로의 확인은 metric(페더레이션)으로 한다.

@@ -17,6 +17,7 @@ tests: 10-1 저장·바이트 동일·행 1·매니페스트 원본 / 10-2 kind 
 from __future__ import annotations
 
 import json
+from urllib.parse import urlsplit
 import socket
 import threading
 import time
@@ -456,6 +457,34 @@ def test_c4_truncated_archive_leaves_nothing(capture_server, tmp_path: Path, mon
     result = up.upload_session(capture_server["base_url"], session_dir, manifest, tmp_path / "staged2")
     assert result["archive_status"] == 201, result
     assert final.read_bytes() == Path(result["archive"]).read_bytes()
+
+
+def test_c6_archive_over_size_limit_rejected_before_body(capture_server, tmp_path: Path, monkeypatch) -> None:
+    """`Content-Length` 가 MK2_CAPTURE_ARCHIVE_MAX_BYTES 를 넘으면 본문을 읽기 전에 413 — 디스크에 아무것도 안 쓴다."""
+    import http.client
+    monkeypatch.setenv("MK2_CAPTURE_ARCHIVE_MAX_BYTES", "1024")
+    session_dir, manifest, entity = new_session(tmp_path)
+    raw = json.dumps(manifest).encode("utf-8")
+    status, _ = up.http_put(up.join_url(capture_server["base_url"], session_dir.name + ".manifest.json"), raw, "application/json")
+    assert status == 200
+    url = urlsplit(up.join_url(capture_server["base_url"], session_dir.name + ".tar.gz"))
+    conn = http.client.HTTPConnection(url.hostname, url.port, timeout=10)
+    try:
+        conn.putrequest("PUT", url.path + ("?" + url.query if url.query else ""))
+        conn.putheader("Content-Type", "application/gzip")
+        conn.putheader("Content-Length", str(10 * 1024 ** 3))      # 10GiB 를 보내겠다고만 하고 본문은 안 보낸다
+        conn.endheaders()
+        resp = conn.getresponse()
+        body = json.loads(resp.read() or b"{}")
+    finally:
+        conn.close()
+    assert resp.status == 413 and body.get("error") == "archive_too_large", (resp.status, body)
+    assert not _final(capture_server["root"], entity, session_dir.name).exists()
+    assert not list(capture_server["storage"].incoming.glob("*.part"))
+    # 매니페스트 대기분을 치워 뒤 시험의 '.incoming 이 비어 있다' 전제를 지킨다
+    monkeypatch.delenv("MK2_CAPTURE_ARCHIVE_MAX_BYTES")
+    result = up.upload_session(capture_server["base_url"], session_dir, manifest, tmp_path / "staged")
+    assert result["archive_status"] == 201, result
 
 
 def test_c5_retention_dry_run_over_store(capture_server, tmp_path: Path) -> None:

@@ -109,7 +109,7 @@ Get-NetTCPConnection -LocalPort 8787 -State Listen |
 
 ### 접속 주소 바꾸기 — 실제 게이트웨이로 전환
 
-`web-dashboard/.env.local` 에 두 줄이면 끝난다. 코드 변경은 없다.
+`web-dashboard/.env.local`(`cp .env.example .env.local` 로 만든다) 에 두 줄이면 끝난다. 코드 변경은 없다.
 
 ```
 VITE_GATEWAY_WS=ws://<백엔드-호스트>:<포트>

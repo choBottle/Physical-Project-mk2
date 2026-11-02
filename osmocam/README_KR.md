@@ -199,7 +199,7 @@ IEnumerator Poll(string url, RawImage target) {
 
 ## 9. 원본 대비 변경 사항
 
-수정한 파일은 `osmocam.py` 하나다. 원본은 같은 폴더의 `osmocam.py.orig`에 있다.
+수정한 파일은 `osmocam.py` 하나다. 원본은 [luisreysan/osmocam](https://github.com/luisreysan/osmocam) 1.2.1 의 `osmocam.py` 다.
 
 - HTTP 서버 바인딩 주소를 `--bind`로 지정할 수 있게 하고 기본값을 `0.0.0.0`(모든 어댑터)으로 둠 (원본은 127.0.0.1 고정)
 - 스트림의 20fps 고정 sleep 제거, `--stream-fps`로 상한 선택
@@ -212,7 +212,7 @@ IEnumerator Poll(string url, RawImage target) {
 
 가상캠 경로와 BLE·Wi‑Fi 연결 로직은 손대지 않았다.
 
-원래대로 되돌리려면 `osmocam.py`를 지우고 `osmocam.py.orig`의 이름을 `osmocam.py`로 바꾸면 된다.
+원래대로 되돌리려면 원본 저장소 1.2.1 의 `osmocam.py` 로 덮어쓰면 된다.
 
 ## 10. 주의
 

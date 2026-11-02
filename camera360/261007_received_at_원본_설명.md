@@ -262,8 +262,8 @@ STOP = threading.Event()
 - 파이썬 3.6 이상, 추가 패키지 없음.
 
 ```
-python apply_received_at.py --check "C:\Users\asdfa\physical mk2\data_stream"     ← 고칠 곳만 본다 (쓰지 않음)
-python apply_received_at.py "C:\Users\asdfa\physical mk2\data_stream"             ← 적용
+python apply_received_at.py --check "%USERPROFILE%\physical mk2\data_stream"     ← 고칠 곳만 본다 (쓰지 않음)
+python apply_received_at.py "%USERPROFILE%\physical mk2\data_stream"             ← 적용
 python3 apply_received_at.py <서버의 data_stream 폴더>                              ← 서버
 ```
 

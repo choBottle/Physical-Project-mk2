@@ -96,6 +96,12 @@ import requests
 DEF_IP         = os.environ.get("MK2_PRO2_IP", "198.51.100.124")  # 카메라 IP (예시 주소)
 # 서버 주소는 환경변수로 받는다 (기본 localhost). 예: MK2_SERVER_HOST=<server-ip>
 SERVER_HOST    = os.environ.get("MK2_SERVER_HOST", "127.0.0.1")
+def _upload_headers():
+    """pano_receiver 가 토큰을 요구하면 MK2_PANO_TOKEN 을 헤더로 보낸다."""
+    tok = os.environ.get("MK2_PANO_TOKEN", "")
+    return {"X-MK2-Token": tok} if tok else {}
+
+
 DEF_UPLOAD     = os.environ.get("MK2_UPLOAD_URL", f"http://{SERVER_HOST}:7866/upload_pano")
 DEF_UPLOAD_STREAM = os.environ.get(  # 데이터 스트림 360 입구 (2026-10-01 추가)
     "MK2_UPLOAD_STREAM_URL", f"http://{SERVER_HOST}:10001/upload_pano")
@@ -341,7 +347,7 @@ class ExtraUploader:
             if meta is not None:
                 files["meta"] = (None, meta, "application/json")
             try:
-                r = sess.post(self.url, data=form, files=files, timeout=15)
+                r = sess.post(self.url, data=form, files=files, timeout=15, headers=_upload_headers())
                 self.status = r.json().get("status", "?")
                 self.sent += 1
             except Exception as e:

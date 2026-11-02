@@ -87,8 +87,12 @@ stats = {"shot": 0, "stitched": 0, "uploaded": 0, "failed": 0}
 #  다시 걸리므로, 실행 시마다 백업 폴더와 동기화해 이를 방지한다.
 #    - %TEMP%에 엔진이 없고 백업에 있으면  → 복원 (콜드 빌드 방지)
 #    - %TEMP%에 최신 엔진이 있으면          → 백업 갱신 (재빌드 후 자동 보존)
-#  ※ _TRT_BACKUP_DIR 경로는 이 PC(asdfa 계정) 기준. 계정/경로 바뀌면 수정.
-_TRT_BACKUP_DIR = r"C:\Users\asdfa\docx2026_code\trt_cache"
+#  ※ 백업 폴더는 환경변수 MK2_TRT_BACKUP_DIR 로 바꾼다(~ 허용).
+#    기본값은 이 스크립트 옆의 trt_cache/ 폴더.
+_TRT_BACKUP_DIR = os.path.expanduser(os.environ.get(
+    "MK2_TRT_BACKUP_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "trt_cache"),
+))
 _TRT_GLOB = "*_fp16.trt"
 
 
@@ -264,7 +268,9 @@ def upload_stitched(equirect_path, capture_id):
         with open(equirect_path, "rb") as f:
             files = {"file": ("equirect.jpg", f, "image/jpeg")}
             form = {"capture_id": capture_id, "camera_id": CAMERA_ID}
-            resp = requests.post(SERVER_UPLOAD_URL, files=files, data=form, timeout=60)
+            tok = os.environ.get("MK2_PANO_TOKEN", "")
+            resp = requests.post(SERVER_UPLOAD_URL, files=files, data=form, timeout=60,
+                                 headers={"X-MK2-Token": tok} if tok else {})
         return resp.status_code == 200
     except Exception as e:
         print(f"{ts()} [worker] upload error: {e}")
