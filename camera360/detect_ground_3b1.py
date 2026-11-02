@@ -123,7 +123,13 @@ for d in kept:
         d["ground"] = (X, Z, D)
     cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
     cv2.circle(img, (bcx, bcy), 5, (0, 0, 255), -1)
-    label = f'{d["name"]} {d["conf"]:.2f}' + ("" if g is None else f' D={math.hypot(*g):.2f}m')
+    # 박스 위 글자: 앵커 좌표 x,y,z(m, +x 오른쪽 · +y 위(지면 0) · +z 정면). 예전 거리 표시는 MK2_LABEL=dist
+    if g is None:
+        label = f'{d["name"]} {d["conf"]:.2f}'
+    elif os.environ.get("MK2_LABEL") == "dist":
+        label = f'{d["name"]} {d["conf"]:.2f} D={math.hypot(*g):.2f}m'
+    else:
+        label = f'{d["name"]} {d["conf"]:.2f} x={g[0]:+.2f} y=0.00 z={g[1]:+.2f}'
     cv2.putText(img, label, (x1, max(y1 - 5, 12)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
     print(f'{d["name"]:14}{d["group"]:14}{d["conf"]:5.2f}  ({bcx:3d},{bcy:3d})  {Xs}{Zs}{Ds}{clipped:>8}   wy={wy:+.3f}')
 
