@@ -32,6 +32,9 @@ receivers:
     collection_interval: 30s
     scrapers:
       filesystem:
+        # ⚠ 볼륨 마운트는 커널 입장에서 bind 마운트(root != /)라, 이 값이 false 면 gopsutil 이 목록에서 뺀다.
+        #   true 로 모든 마운트를 받고 아래 include_mount_points 로 /mk2-data/* 만 남긴다.
+        include_virtual_filesystems: true
         include_mount_points:
           mount_points: ["/mk2-data/.*"]
           match_type: regexp
