@@ -11,7 +11,7 @@ preview_probe.py — Insta360 Pro2 인카메라 실시간 스티칭 프리뷰 �
   camera._startPreview 응답의 _previewUrl 은 rtmp://127.0.0.1/live/preview 이다.
   이건 "카메라 자기 자신 기준" 주소다. RTMP 서버는 카메라 안에서 돌고 있다.
   PC 에서 열 때는 호스트를 카메라 IP 로 바꿔야 한다:
-      rtmp://192.168.100.124:1935/live/preview
+      rtmp://<camera-ip>:1935/live/preview
   이 스크립트가 자동으로 치환해서 출력한다.
 
 [세션은 하나뿐]
@@ -30,6 +30,7 @@ preview_probe.py — Insta360 Pro2 인카메라 실시간 스티칭 프리뷰 �
   requests (필수).  --measure 쓸 때만 opencv-python.
 """
 
+import os
 import re
 import sys
 import json
@@ -40,7 +41,7 @@ import threading
 
 import requests
 
-DEF_IP = "192.168.100.124"
+DEF_IP = os.environ.get("MK2_PRO2_IP", "198.51.100.124")  # 카메라 IP (예시 주소, 현장 값은 환경변수로)
 
 fingerprint = None
 cam_ip_hint = [DEF_IP]

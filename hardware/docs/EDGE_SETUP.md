@@ -49,7 +49,7 @@ firewall=false
 
 ```powershell
 wsl -d Ubuntu -- bash -lc "ip -4 addr show scope global | grep inet"
-# 호스트와 같은 192.168.50.x 가 보이면 성공
+# 호스트와 같은 192.0.2.x 가 보이면 성공
 ```
 
 ### 2-2. K3s server 설치
@@ -89,8 +89,8 @@ sudo systemctl restart k3s-agent      # ⚠ start 는 이미 active 면 무동�
 ```bash
 kubectl get nodes -o wide
 # NAME       STATUS   ROLES           VERSION        INTERNAL-IP
-# edge-wsl   Ready    control-plane   v1.36.4+k3s1   192.168.50.244
-# pi7        Ready    <none>          v1.35.4+k3s1   192.168.50.172   ← 워커
+# edge-wsl   Ready    control-plane   v1.36.4+k3s1   192.0.2.244
+# pi7        Ready    <none>          v1.35.4+k3s1   192.0.2.172   ← 워커
 ```
 
 ---

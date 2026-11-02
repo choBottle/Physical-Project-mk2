@@ -2,8 +2,8 @@
 anchor360_bridge.py — 서버 JSON → 유니티 UDP 중계기
 
 [왜 필요한가]
-  서버(<server-ip>, 학교망)에서 유니티 PC(192.168.50.244, 사설망)로
-  UDP 직송이 안 된다. 서버에 192.168.50.x 경로가 없어서 패킷이 기본
+  서버(<server-ip>, 학교망)에서 유니티 PC(<unity-pc>, 사설망)로
+  UDP 직송이 안 된다. 서버에 유니티 PC 사설망 경로가 없어서 패킷이 기본
   게이트웨이로 나가 버려진다. (에러 없이 조용히 사라지므로 UDP 송신은
   계속 '성공'으로 찍힌다.)
 
@@ -21,8 +21,8 @@ anchor360_bridge.py — 서버 JSON → 유니티 UDP 중계기
       열리면:  python anchor360_bridge.py --unity-ip 127.0.0.1
 
   (2) 랩실 PC(Pro2 연결된 PC)에서 실행
-      유니티 PC가 서버에 못 닿을 때. 이 PC가 192.168.50.x 에 있어야 한다.
-      python anchor360_bridge.py --unity-ip 192.168.50.244
+      유니티 PC가 서버에 못 닿을 때. 이 PC가 유니티 PC와 같은 사설망에 있어야 한다.
+      python anchor360_bridge.py --unity-ip <unity-pc>
 
 [하트비트 겸용]
   새 JSON이 없어도 마지막 것을 --poll 주기마다 계속 재송출한다.
@@ -70,7 +70,7 @@ import requests
 SERVER_HOST = os.environ.get("MK2_SERVER_HOST", "127.0.0.1")
 DEF_SERVER = os.environ.get("MK2_ANCHOR360_URL",
                             f"http://{SERVER_HOST}:7866/anchor360_latest")
-DEF_UNITY_IP = "192.168.50.244"
+DEF_UNITY_IP = os.environ.get("MK2_UNITY_IP", "127.0.0.1")
 DEF_PORT = 5010
 DEF_POLL = 2.0
 

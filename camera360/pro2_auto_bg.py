@@ -46,7 +46,7 @@ from concurrent.futures import ThreadPoolExecutor
 from stitch_prostitcher import stitch_folder, DEFAULT_STITCHER
 
 # =========================================================
-CAMERA_IP = "192.168.100.124"
+CAMERA_IP = os.environ.get("MK2_PRO2_IP", "198.51.100.124")  # 카메라 IP (예시 주소, 현장 값은 환경변수로)
 # 서버 주소는 환경변수로 받는다 (기본 localhost). 예: MK2_SERVER_HOST=<server-ip>
 SERVER_IP = os.environ.get("MK2_SERVER_HOST", "127.0.0.1")
 SERVER_PORT = 7866

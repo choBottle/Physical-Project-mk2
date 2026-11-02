@@ -6,11 +6,11 @@
  상태(15101)·명령미러(15102)·waypoint(15104)를 Unity 로 되돌려 보낸다.
 
  원래 별도 "SDK PC"가 하던 이 역할을 라즈베리파이(pi7)가 대신한다. pi7 은
- eth0(192.168.123.x, 로봇 내부망)와 wlan0(192.168.50.x, Unity 망)에 동시에 붙어
+ eth0(192.168.123.x, 로봇 내부망)와 wlan0(Unity 망)에 동시에 붙어
  있어 양쪽을 중계할 수 있는 유일한 지점이다.
 
    기본 robot_ip = 192.168.123.161 (Go1, eth0 경유)
-   기본 unity_ip = 192.168.50.244  (Unity PC, wlan0 경유)
+   기본 unity_ip = 환경변수 HW_GO1_SDK_UNITY_IP, 없으면 127.0.0.1 (Unity PC, wlan0 경유)
    --robot_ip / --unity_ip 인자로 덮어쓴다.
 
  상태(world_x/z)는 명령 dead-reckoning 으로 만든다(yaw 만 실 IMU).
@@ -125,7 +125,7 @@ class Custom
 {
 public:
   Custom(uint8_t level)
-    : Custom(level,"192.168.123.161","192.168.50.244")
+    : Custom(level,"192.168.123.161","127.0.0.1")
   {}
 
   Custom(uint8_t level,const std::string& robot_host_in,const std::string& unity_host_in)
@@ -1994,6 +1994,7 @@ int main(int argc,char** argv)
 
   std::string robot_ip=get_arg_value(argc,argv,"--robot_ip");
   std::string unity_ip=get_arg_value(argc,argv,"--unity_ip");
+  if(unity_ip.empty()){ const char* e=std::getenv("HW_GO1_SDK_UNITY_IP"); if(e) unity_ip=e; }
   std::string relay_ip=get_arg_value(argc,argv,"--relay_ip");
   std::string relay_port_s=get_arg_value(argc,argv,"--relay_port");
   std::string robot_uid=get_arg_value(argc,argv,"--robot_id");
@@ -2001,7 +2002,7 @@ int main(int argc,char** argv)
   Custom custom=(!robot_ip.empty()||!unity_ip.empty())
     ? Custom(HIGHLEVEL,
              robot_ip.empty()?"192.168.123.161":robot_ip,
-             unity_ip.empty()?"192.168.50.244":unity_ip)
+             unity_ip.empty()?"127.0.0.1":unity_ip)
     : Custom(HIGHLEVEL);
 
   custom.enable_relay(relay_ip,

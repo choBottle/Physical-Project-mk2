@@ -145,7 +145,7 @@ Phase 0이 남긴 서버 관측 스택의 gap을 정리한다.
 | **4-c** | 로그 경로 | **OTel Logs SDK → OTLP → Collector → Loki.** journald는 운영자용으로 병존 | systemd로 올리면 stdout이 journald로 간다. Collector는 컨테이너라 호스트 journald를 못 읽는다. 지표와 같은 경로·같은 resource 속성을 쓰면 Grafana에서 같은 주체로 묶인다 |
 | **5-a** | C층 파생 지점 | **저장 소비자(`consumer.py`) 안.** 새 소비자·새 컨슈머 그룹을 만들지 않는다(레지스트리와 같은 방식). 조건 둘 — 파생 실패가 저장을 막지 않고, **저장 성공 여부와 무관하게 파생** | `tsdb_writer._fail()`이 예외를 삼키고 계속 도는 것을 코드로 확인했다. **TSDB가 죽어도 소비는 계속되므로 C층은 계속 나온다.** ingest에서 파생하면 produce 실패 시 원본과 어긋난다 |
 | **5-b** | C층 범위 | `$comment` 전수 **22개를 대상으로 확정**하되, 이번 Phase는 **gauge 9 + counter 3 = 12개**를 계측. **log/event 10개는 Phase 5 이월** | log/event 10개는 전부 상태 어휘이고 *"언제 바뀌었나"*가 의미의 전부다. 그 판정이 Phase 5(가용성)의 일이다. 지금 그대로 내면 **로봇 1대당 초당 60줄**이 Loki로 간다(임무 중 20Hz × 항목 3) |
-| **6** | 엣지 2계층 | **컴퓨터를 엣지로 쓴다**(서버 안 임시 컨테이너 아님). **Tailscale**로 연결. **엣지 Collector(Agent) + 엣지 Prometheus 둘 다.** 실행 파일 2개, Docker 없음. **DoD 원문 유지.** **8-D 포함** — 엣지 log·trace 원본을 서버 Collector로 넘겨 Agent→Gateway 사슬을 닫는다 | 서버 안에서 자기 자신을 긁는 것은 2계층이 아니라 네트워크 경로·구역 비례가 검증되지 않는다. 컴퓨터가 Wi-Fi 사설망(`192.168.50.203`)이라 직접 도달 불가, 공유기 포워딩 불가, sshd는 `gatewayports no`. **Tailscale은 Phase 4 자산을 앞당겨 쓰는 것**이고 sshd를 건드리지 않는다 |
+| **6** | 엣지 2계층 | **컴퓨터를 엣지로 쓴다**(서버 안 임시 컨테이너 아님). **Tailscale**로 연결. **엣지 Collector(Agent) + 엣지 Prometheus 둘 다.** 실행 파일 2개, Docker 없음. **DoD 원문 유지.** **8-D 포함** — 엣지 log·trace 원본을 서버 Collector로 넘겨 Agent→Gateway 사슬을 닫는다 | 서버 안에서 자기 자신을 긁는 것은 2계층이 아니라 네트워크 경로·구역 비례가 검증되지 않는다. 컴퓨터가 Wi-Fi 사설망(`192.0.2.203`)이라 직접 도달 불가, 공유기 포워딩 불가, sshd는 `gatewayports no`. **Tailscale은 Phase 4 자산을 앞당겨 쓰는 것**이고 sshd를 건드리지 않는다 |
 | **7** | traceparent 회신 | **싣는다.** protobuf **본문에 `traceparent` 필드**(W3C Trace Context 형식). `tracestate`는 넣지 않는다. **실배선은 Phase 6**, 이번엔 회신 초안만 | HW `otel_trace.py`가 `extract(carrier=cmd)`로 **본문에서 찾도록 이미 짜 뒀다.** 명령은 백엔드가 만드는 메시지라 *"원본 무손상"*의 대상이 아니다(Phase 2가 Kafka 헤더를 쓴 이유가 여기엔 없다) |
 
 ### 5-A. 결정 7에 딸린 주의 — protobuf는 필드를 "그냥 추가"할 수 없다
@@ -263,7 +263,7 @@ allow_structured_metadata: false   ← 파일에 명시. 주석 사유: "v11 스
 
 | 항목 | 실측 |
 |---|---|
-| **`HW_OTEL_ENDPOINT`** | `hw-node.env.example`에 **주석 처리**돼 있고 값은 `http://192.168.50.244:4317` — **엣지**(`EDGE_SETUP.md`의 `edge-wsl`) 주소다. **우리 서버가 아니다.** `config.OTEL_ENDPOINT`가 비면 `create()`가 `_Noop()`을 돌려주므로 **말단은 지금 관측을 아예 발신하지 않는다** |
+| **`HW_OTEL_ENDPOINT`** | `hw-node.env.example`에 **주석 처리**돼 있고 값은 `http://192.0.2.244:4317` — **엣지**(`EDGE_SETUP.md`의 `edge-wsl`) 주소다. **우리 서버가 아니다.** `config.OTEL_ENDPOINT`가 비면 `create()`가 `_Noop()`을 돌려주므로 **말단은 지금 관측을 아예 발신하지 않는다** |
 | HW export 주기 | **15초.** `BACKEND_AGENDA` §10-1이 *"백엔드 값(15초) 채택으로 종결"*이고 부록 B에도 ✅. 전체 공유 스프레드시트의 60초만 낡았다. `otel_metrics.py` 머리말 주석에 60초가 남아 있으나 **동작은 `config.OTEL_EXPORT_INTERVAL`을 읽으므로 15초** |
 | 엣지 실물 | **철수됨**(`EDGE_SETUP.md` §6, 2026-08-31). K3s 정지, pi7은 원래 클러스터로 복귀 |
 | 증강 분석 | **돌고 있지 않다** — 이미지 미빌드(매니페스트에 digest 자리표시자), K3s 제어평면 철수 |

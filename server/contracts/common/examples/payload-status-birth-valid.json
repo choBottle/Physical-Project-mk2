@@ -16,7 +16,7 @@
     "device_type": "water_level",
     "fw_version": "0.3.0",
     "mac": "b8:27:eb:aa:bb:cc",
-    "ip": "192.168.50.31"
+    "ip": "192.0.2.31"
   },
   "uptime_s": 0.3,
   "buffer": { "pending": 0, "dropped": 0, "thinned": 0 },

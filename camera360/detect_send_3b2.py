@@ -7,7 +7,7 @@ detect_send_3b2.py — 3b-② 360 사각지대 장애물 → JSON → UDP 송출
   python3 detect_send_3b2.py <슬라이스> <config.yaml> [imgsz] [cam_h] [pitch] [unity_ip] [port] [json_out]
 예:
   python3 detect_send_3b2.py ~/capstone-db/image_server/pano_captures/sliced_test/360cam_u-60_v-35.jpg \
-      ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml 640 1.85 -35 192.168.50.246 5010 obstacles_360.json
+      ~/capstone-db/image_server/unidepth_dual_yolo_config.yaml 640 1.85 -35 <unity-pc> 5010 obstacles_360.json
 
 좌표 규약(anchor360, Unity 전달용):
   +x=오른쪽, +z=카메라 정면(=맵 GO1 주행방향, u-60 슬라이스 정면), y=0(바닥). 단위 m.
@@ -22,7 +22,7 @@ cfg_path = sys.argv[2]
 imgsz    = int(sys.argv[3])   if len(sys.argv) > 3 else 640
 CAM_H    = float(sys.argv[4]) if len(sys.argv) > 4 else 1.85
 PITCH    = float(sys.argv[5]) if len(sys.argv) > 5 else -35.0
-UNITY_IP = sys.argv[6]        if len(sys.argv) > 6 else "192.168.50.246"
+UNITY_IP = sys.argv[6]        if len(sys.argv) > 6 else os.environ.get("MK2_UNITY_IP", "127.0.0.1")
 PORT     = int(sys.argv[7])   if len(sys.argv) > 7 else 5010
 JSON_OUT = sys.argv[8]        if len(sys.argv) > 8 else "obstacles_360.json"
 

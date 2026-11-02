@@ -96,9 +96,9 @@ ROBOT <node_id> <robot_type> <robot_id> <seq> <tms> <x> <z> <yaw> <vx> <vy> <wz>
 
 ```bash
 # pi7
-python3 ~/hw/pi/robot/robot_state_relay.py --node_id pi7 --unity_ip 192.168.50.244
+python3 ~/hw/pi/robot/robot_state_relay.py --node_id pi7 --unity_ip 192.0.2.244
 # pi1
-python3 ~/hw/pi/robot/robot_state_relay.py --node_id pi1 --unity_ip 192.168.50.244
+python3 ~/hw/pi/robot/robot_state_relay.py --node_id pi1 --unity_ip 192.0.2.244
 ```
 
 가상 로봇을 붙인다.
@@ -111,7 +111,7 @@ python3 pi/robot/virtual_robot_feeder.py --relay <파이IP> --type robomaster_ep
 실물 Go1 을 이 화면에 합류시키려면 SDK 에 릴레이 주소를 준다(기본은 꺼져 있다).
 
 ```bash
-go1_sdk_pc --robot_ip 192.168.123.161 --unity_ip 192.168.50.244 \
+go1_sdk_pc --robot_ip 192.168.123.161 --unity_ip 192.0.2.244 \
            --relay_ip 127.0.0.1 --robot_id go1-real
 ```
 

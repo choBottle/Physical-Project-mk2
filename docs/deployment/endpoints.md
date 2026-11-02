@@ -75,6 +75,8 @@ journalctl -u go1-front-upload -n 20
 | 360 카메라 노트북 `stream_to_server.py`, `pro2_auto_bg.py` | `MK2_UPLOAD_URL` | `http://<new-host>:7866/upload_pano` |
 | `anchor360_bridge.py` | `MK2_ANCHOR360_URL` | `http://<new-host>:7866/anchor360_latest` |
 
+Insta360 Pro2 카메라 자체의 주소는 `MK2_PRO2_IP`(`--ip` 기본값)로 준다.
+
 세 값이 모두 같은 기기를 가리키면 `MK2_SERVER_HOST=<new-host>` 하나로 대신할 수 있다.
 변수 목록은 [`camera360/README.md`](../../camera360/README.md)와
 [`camera360/.env.example`](../../camera360/.env.example)에 있다.
@@ -85,9 +87,15 @@ Unity는 UDP로 받기만 하므로 Unity 쪽에는 바꿀 것이 없다. 보내
 
 | 보내는 쪽 | 설정 | 포트 |
 |-----------|------|------|
-| `camera360/anchor360_live.py` | `--unity-ip <unity-pc>` | 5010 |
+| `camera360/anchor360_live.py` | `MK2_TWIN_HOSTS` 또는 `--unity-ip <unity-pc>` | 5010 |
+| `camera360/anchor360_bridge.py`, `relay_loop.py`, `detect_send_3b2*.py` | `MK2_UNITY_IP` 또는 `--unity-ip`/위치 인자 | 5010 |
 | Go1 Pi `go1-detect-forward` | `/etc/hw-robot.env`의 `HW_UNITY_IP` | 5009 |
+| Go1 Pi `robot-relay` (`robot_state_relay.py`) | `/etc/hw-robot.env`의 `HW_UNITY_IP` | 15201 |
+| Go1 Pi `go1-sdk` (`go1_sdk_pc`) | `/etc/hw-robot.env`의 `HW_GO1_SDK_UNITY_IP` | 15101 |
 | 로봇 상태 중계 (`twin_relay_out.py`) | `HW_TWIN_RELAY_HOST` | 15200 (`HW_TWIN_RELAY_PORT`) |
+
+값을 비워 두면 모두 `127.0.0.1`로 보낸다. `go1-detect-forward`·`robot-relay`·`go1-sdk`를
+이 버전 이전 유닛 파일로 쓰는 Pi는 `hardware/pi/deploy/install-units.sh`로 유닛을 다시 설치한다.
 
 Unity PC의 Windows 방화벽에서 해당 UDP 포트의 수신을 허용해야 한다. 포트 전체 목록은
 [docs/PORTS.md](../PORTS.md)에 있다.

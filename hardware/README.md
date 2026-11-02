@@ -154,7 +154,9 @@ pi/deploy/install-units.sh --print go1-sdk             # 치환 결과만 확인
 |---|---|---|
 | `HW_UPLOAD_URL` | `robot/go1_front_upload.py` | `http://127.0.0.1:7864/upload` |
 | `HW_DETECT_BASE` | `robot/go1_detect_forward.py` | `http://127.0.0.1:7864` |
-| `HW_UNITY_IP` | `robot/go1_detect_forward.py` (장애물 UDP 5009 받는 곳). 쉼표로 여러 곳, 곳마다 `:포트` | 코드 기본값 |
+| `HW_UNITY_IP` | `robot/go1_detect_forward.py` (장애물 UDP 5009 받는 곳), `robot/robot_state_relay.py`(`robot-relay`, 상태 UDP 15201), `bench/unity_state_test.py`. 쉼표로 여러 곳, 곳마다 `:포트` | `127.0.0.1` |
+| `HW_GO1_SDK_UNITY_IP` | `robot/go1_sdk_pc.cpp`(`go1-sdk`, 상태 UDP 15101) — Unity PC 한 곳. `--unity_ip` 가 있으면 그쪽이 우선 | `127.0.0.1` |
+| `HW_BROKER_HOST` | `common/config.py` (모든 노드의 MQTT 브로커), `k8s/augment-analyzer*.yaml`(envsubst) | `127.0.0.1` / k8s: 필수 |
 | `HW_GO1_DAEMON` | `robot/unity_bridge.py` (로봇 쪽 경로) | `~/hw_highcmd_daemon` |
 | `MK2_PI_DIR` | `docker-compose.yml`(ep-dev 코드 마운트), `k8s/augment-analyzer-dev.yaml`(envsubst) | compose: `..` / k8s: 필수 |
 | `COMPOSE_FILE` | `deploy/robot-autoselect.sh` | 스크립트와 같은 폴더의 `docker-compose.yml` |

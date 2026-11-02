@@ -15,7 +15,7 @@
 -기본적인 설정값
 --스트림 : 카메라 인카메라 실시간 스티칭, equirect 3840x1920, H.264 10240kbps
 --카메라가 주는 주소는 rtmp://127.0.0.1/live/preview (카메라 자기 자신 기준)
-  → PC 에서 열 때는 rtmp://192.168.100.124:1935/live/preview
+  → PC 에서 열 때는 rtmp://<camera-ip>:1935/live/preview
   → stream_to_server.py 가 자동 치환하므로 직접 입력할 일 없음
 
 --슬라이스 각도 (※ 사진 방식과 180도 다르다. 실측 NCC 3회 전부 편차 0.00도)
@@ -41,7 +41,7 @@
 1. 카메라 켜기
 1-0. 360도 카메라 전원 → 송신기 켜고 15초 대기 → 수신기(Farsight) 파란불 대기
 1-1. 카메라 화면에서 IP 확인 후 도달 확인 (보통 ip가 바뀌지 않아서 스킵해도 됨. 카메라 연결 실패하면 그때 확인해보기.)
-  ping -n 2 192.168.100.124
+  ping -n 2 <camera-ip>
   다르면 stream_to_server.py 의 DEF_IP 수정
 
 2. 서버 기동 (터미널 2개)
@@ -76,7 +76,7 @@ python3 anchor360_live.py --u 230 --v -36.35 --pitch -35 \
 
 3-1. 유니티 중계기 (컴퓨터 터미널 1)
 cd "C:\Users\asdfa\physical mk2\360camera_work"
-python anchor360_bridge.py --unity-ip 192.168.50.244 --poll 0.3
+python anchor360_bridge.py --unity-ip 192.0.2.244 --poll 0.3
 
 3-2. 스트림 공급 (컴퓨터 터미널 2) ※ pro2_auto_bg.py 를 대체하는 자리
 cd "C:\Users\asdfa\physical mk2\360camera_work"
@@ -95,7 +95,7 @@ cd 360camera_work
 3-1. 유니티 중계기 (노트북 터미널 1)
 python anchor360_bridge.py --unity-ip <유니티 PC IP> --poll 0.3
 
-※ 유니티 PC IP 확인: 유니티 PC 에서 ipconfig → IPv4 주소 (예전 값 192.168.50.244, 매번 확인)
+※ 유니티 PC IP 확인: 유니티 PC 에서 ipconfig → IPv4 주소 (예전 값 192.0.2.244, 매번 확인)
 ※ 유니티를 이 노트북에서 돌리면 --unity-ip 127.0.0.1
 ※ 이때, 360도 카메라 영상을 받는 노트북과 유니티 돌리는 노트북은 같은 네트워크(와이파이)에 연결되어야 함.
 

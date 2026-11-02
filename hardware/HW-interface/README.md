@@ -109,7 +109,7 @@
 2. **온디바이스** (pi1, protobuf 7.36.1 / Python 3.13 / aarch64)
    위 두 벤치 동일 실행 → **전부 통과**.
 
-3. **라이브 브로커 E2E** (pi1 → 192.168.50.244)
+3. **라이브 브로커 E2E** (pi1 → 192.0.2.244)
    실제 downlink 로 Protobuf Command 발행, uplink 관찰:
    - `ping` → `acceptance{accepted=true}` → `status(EXECUTING)`×2 → `result{SUCCEEDED, uptime_s}`
    - `teleport`(미선언) → `acceptance{accepted=false, UNIMPLEMENTED}`, result 없음

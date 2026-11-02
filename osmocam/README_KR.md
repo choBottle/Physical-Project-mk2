@@ -44,8 +44,8 @@ Osmo Nano ──BLE(페어링·Wi-Fi 정보)──▶ PC
 ========================================================================
 STREAM URLS
   This PC     http://127.0.0.1:38090/stream
-  Tailscale   http://100.101.7.42:38090/stream
-  LAN (이더넷) http://192.168.0.23:38090/stream
+  Tailscale   http://<tailscale-ip>:38090/stream
+  LAN (이더넷) http://203.0.113.23:38090/stream
   Firewall: allow inbound TCP 38090 if another machine can't connect.
   Also: /snapshot.jpg (one frame)  /status (JSON)  / (preview page)
 ========================================================================

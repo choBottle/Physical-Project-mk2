@@ -111,7 +111,7 @@ def main():
     ap = argparse.ArgumentParser(description="인지 서버 탐지 결과 -> Unity 5009")
     ap.add_argument("--base", default=os.environ.get("HW_DETECT_BASE") or DEFAULT_BASE)
     ap.add_argument("--camera-id", default=os.environ.get("HW_UPLOAD_CAMERA_ID", "go1_front"))
-    ap.add_argument("--unity-ip", default=os.environ.get("HW_UNITY_IP", "192.168.50.244"),
+    ap.add_argument("--unity-ip", default=os.environ.get("HW_UNITY_IP", "127.0.0.1"),
                     help="받는 곳. 쉼표로 여러 곳, 곳마다 :포트 가능 (Unity 와 다른 뷰어를 같이)")
     ap.add_argument("--unity-port", type=int, default=UNITY_OBSTACLE_PORT)
     ap.add_argument("--hz", type=float, default=float(os.environ.get("HW_DETECT_HZ", "10")))
