@@ -60,9 +60,12 @@ if [[ -n "${MK2_WHEELHOUSE:-}" ]]; then
   WHEELS=(-v "$(cd "${MK2_WHEELHOUSE}" && (pwd -W 2>/dev/null || pwd)):/wheels:ro")
   PIP_SRC="--no-index --find-links /wheels"
 fi
+# 중앙 Mosquitto 가 운영 프로파일(익명 거부)이면 노드도 계정으로 붙는다 — 백엔드 계정을 빌린다(비어 있으면 익명)
+MQTT_USER="$(dc exec -T be-ingest printenv MK2_MQTT_USERNAME 2>/dev/null | tr -d '\r')"
+MQTT_PASS="$(dc exec -T be-ingest printenv MK2_MQTT_PASSWORD 2>/dev/null | tr -d '\r')"
 docker run -d --name "${NODE}" --hostname e2e-pi --network "${NET}" -v "${PI_DIR}:/pi:ro" ${WHEELS[@]+"${WHEELS[@]}"} -w /pi \
   -e HW_ENTITY_ID="${EID}" -e HW_ZONE_ID=zoneA \
-  -e HW_BROKER_HOST=mosquitto -e HW_OTEL_ENDPOINT=http://otel-collector:4317 \
+  -e HW_BROKER_HOST=mosquitto -e HW_MQTT_USER="${MQTT_USER}" -e HW_MQTT_PASS="${MQTT_PASS}" -e HW_OTEL_ENDPOINT=http://otel-collector:4317 \
   -e HW_REPORT_INTERVAL_NORMAL=5 -e HW_SPOOL_PATH=/tmp/spool.jsonl -e PYTHONUNBUFFERED=1 \
   python:3.12-slim sh -c "pip install -q --root-user-action=ignore --disable-pip-version-check ${PIP_SRC} \
     paho-mqtt opentelemetry-sdk opentelemetry-exporter-otlp psutil protobuf && exec python -m sensor.sensor_node" >/dev/null \
