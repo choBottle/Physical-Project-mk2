@@ -1,6 +1,6 @@
 # AI 프레임워크 구조 (진나영 담당분)
 
-CLAUDE.md §4 구조도를 그대로 따른다.
+[요구사항 정의서](../requirements.md) §4 구조도를 그대로 따른다.
 
 ```text
 Domain / Application Logic

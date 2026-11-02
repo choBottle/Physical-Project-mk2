@@ -6,7 +6,7 @@ implements: AI-S-05
 이 모듈은 원래 구 요구사항 AI-D-03("추가 정보 요청")을 구현했었다. AI-D 계열
 (서브태스크 생성·검증)은 최신 요구사항 시트에서 전부 제거되어 가시화 파트로
 이관됐고, AI-D-03의 실질 기능만 신규 AI-S-05("추가 정보 판단·선택·요청")로
-흡수됐다(CLAUDE.md, docs/ai/requirement-traceability.md 참고) — 코드는 그대로
+흡수됐다(docs/requirements.md, docs/ai/requirement-traceability.md 참고) — 코드는 그대로
 유효하므로 옮기지 않고 요구사항 ID만 정정한다.
 
 AI-S-05: "미확인, 근거 부족·충돌 또는 위험 분석 등에서 현재 업무가 요구하는
