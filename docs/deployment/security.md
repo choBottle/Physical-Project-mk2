@@ -8,7 +8,8 @@
 
 | 묶음 | 포트 | 기본 바인딩 | 인증 |
 |---|---|---|---|
-| 엣지 입구 (`MK2_EDGE_BIND`) | MQTT 1883 · MQTT/WS 9001 · OTLP 4316/4317/4318 · Kafka EDGE 9095 | `127.0.0.1` | **없음** (익명 MQTT · 평문 OTLP · PLAINTEXT Kafka) |
+| 엣지 입구 (`MK2_EDGE_BIND`) | MQTT 1883 · MQTT/WS 9001 · OTLP 4316/4317/4318 | `127.0.0.1` | **없음** (익명 MQTT · 평문 OTLP) |
+| Kafka EDGE (`MK2_KAFKA_EDGE_BIND`) | 9095 | `127.0.0.1` | **없음** (PLAINTEXT). 1.0 에서는 엣지가 쓰지 않으므로 열 필요가 없다 |
 | 백엔드 입구 (`MK2_EDGE_BIND`) | WS 8765 · 미디어 8766 · 촬영본 8767 | `127.0.0.1` | URL 쿼리 토큰 (`MK2_WS_TOKEN`·`MK2_EDGE_TOKEN`·`MK2_CAPTURE_TOKEN`) |
 | 운영자 (`MK2_ADMIN_BIND`) | Grafana · Prometheus · Loki · Tempo · MySQL · TimescaleDB | `127.0.0.1` | Grafana 계정 · DB 계정 (Prometheus·Loki·Tempo 는 없음) |
 | 내부 전용 | Kafka 9092 | `127.0.0.1` 고정 | 없음 |
@@ -29,7 +30,7 @@
 
 | # | 항목 | 현재 | 조치 |
 |---|---|---|---|
-| 1 | MQTT 인증 | 익명 | `mosquitto.conf` 의 「운영 프로파일」(password_file + ACL) |
+| 1 | MQTT 인증 | 익명 | `deploy/site/mosquitto/auth.conf.example` 을 복사해 password_file + ACL. 단 백엔드(be-ingest)에 아직 MQTT 계정 설정이 없어 켜면 백엔드가 끊긴다 — 1.1.0 ([#29](https://github.com/choBottle/Physical-Project-mk2/issues/29)) |
 | 2 | MQTT TLS | 없음 | 8883 리스너 + 인증서 |
 | 3 | Kafka EDGE | PLAINTEXT | SASL_SSL (BE-Q-04 와 함께) |
 | 4 | OTLP 수신 인증 | 없음 | Collector `bearertokenauth` 확장, 엣지 Collector 에 토큰 |

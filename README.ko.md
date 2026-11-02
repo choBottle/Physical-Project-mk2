@@ -152,7 +152,7 @@ npm run dev
 | 8765 | WebSocket 게이트웨이 `/state`, `/media` | 관제 화면 (토큰) |
 | 8766 | WebSocket 게이트웨이 `/ingest` | 엣지 영상 송신 (토큰) |
 | 8767 | 촬영본 업로드 `PUT /capture` | 로봇 (토큰) |
-| 9095 | Kafka 엣지 리스너 | 원격 엣지 브릿지 |
+| 9095 | Kafka 엣지 리스너 (`MK2_KAFKA_EDGE_BIND`, 1.0 에서는 미사용) | 이후 엣지 Kafka 브릿지 |
 | 9092 | Kafka 내부 리스너 (`127.0.0.1` 고정) | 서버 안 호스트 프로세스(pytest) |
 | 7858, 7859 | MySQL, TimescaleDB | 운영자 |
 | 7861, 7862 | Prometheus, Grafana | 운영자 |
