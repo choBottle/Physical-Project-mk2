@@ -616,6 +616,8 @@ class CaptureHandler(BaseHTTPRequestHandler):
             else:
                 if length <= 0:
                     raise CaptureError(400, "empty_body")
+                if length > settings.capture_archive_max_bytes():
+                    raise CaptureError(413, "archive_too_large")
                 status, payload = service.put_archive(stem, self.rfile, length)
             self._reply(status, payload)
         except CaptureError as exc:
