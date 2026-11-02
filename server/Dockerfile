@@ -7,7 +7,13 @@
 # 달라지는 것은 접속 주소뿐이다 — 컨테이너 안에서는 localhost 대신 compose 서비스 이름
 # (mosquitto · kafka:9094 · mysql:3306 · timescaledb:5432 · otel-collector:4317)으로 붙는다.
 
-FROM python:3.12-slim
+#
+# 재현성: 베이스는 digest 로, 런타임 의존성은 requirements.lock(해시 고정)으로 고정한다.
+# 시험 도구(pytest)는 운영 이미지에 넣지 않는다 — 회귀가 필요하면 requirements-dev.lock 을
+# 컨테이너 안에서 `pip install --user --require-hashes -r requirements-dev.lock` 으로 얹는다(deploy-smoke ⑤).
+# 베이스 갱신: docker buildx imagetools inspect python:3.12-slim → Digest 를 아래에 바꿔 적는다.
+
+FROM python:3.12-slim@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -17,12 +23,12 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # 의존성 층을 먼저 — 코드만 바뀌면 이 층은 캐시에서 온다.
-COPY pyproject.toml ./
-RUN mkdir -p backend && touch backend/__init__.py \
- && pip install ".[dev]" \
- && pip uninstall -y mk2-backend \
- && rm -rf backend build *.egg-info
+# 패키지 자체는 설치하지 않는다(/app 에서 `python -m backend...` 로 돈다).
+COPY requirements.lock requirements-dev.lock ./
+RUN pip install --require-hashes -r requirements.lock
 
+# pyproject.toml 은 설치용이 아니라 pytest 설정(testpaths·markers)을 위해 둔다.
+COPY pyproject.toml ./
 COPY backend ./backend
 COPY contracts ./contracts
 COPY tests ./tests

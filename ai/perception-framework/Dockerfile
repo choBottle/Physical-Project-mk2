@@ -8,7 +8,8 @@
 # 벤더 가속기 런타임을 베이스 이미지에 넣지 않는다 — 가속기는 노드 태그로 발견되는
 # 선택 자원이다 (원칙 #1, AI-B-04).
 
-FROM python:3.10-slim
+# 베이스 판은 CI(ci.yml ai 잡)가 시험하는 판과 같게 둔다(3.12). digest 로 고정한다.
+FROM python:3.12-slim@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159
 
 # opencv-python-headless를 쓰므로 GUI 라이브러리는 설치하지 않는다.
 ENV PYTHONDONTWRITEBYTECODE=1 \

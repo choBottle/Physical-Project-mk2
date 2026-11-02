@@ -14,6 +14,9 @@ on:
     paths: ["drone/**", "visualization/viz-debugger/**", ".github/workflows/drone.yml"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   python:
     runs-on: ubuntu-latest

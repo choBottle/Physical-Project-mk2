@@ -12,6 +12,9 @@ on:
     paths: ["deploy/**", "server/**", "hardware/pi/**", ".github/workflows/deploy-smoke.yml"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: deploy-smoke-${{ github.ref }}
   cancel-in-progress: true
@@ -40,7 +43,9 @@ jobs:
         run: ./scripts/e2e-sim.sh
 
       - name: ⑤ 백엔드 회귀 (게이트웨이 컨테이너 안에서 — 시험이 127.0.0.1 의 WS 입구를 쓴다)
+        # 운영 이미지에는 pytest 가 없다 — 고정된 시험 의존성을 사용자 영역에 얹고 돌린다.
         run: |
+          docker compose exec -T be-gateway pip install --user -q --require-hashes -r requirements-dev.lock
           docker compose exec -T \
             -e MK2_PROMETHEUS_URL=http://prometheus:9090 \
             -e MK2_LOKI_URL=http://loki:3100 \
