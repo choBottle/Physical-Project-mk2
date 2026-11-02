@@ -275,9 +275,9 @@ the development setup, test commands and pull-request guidelines, and
 
 #### Digital twin
 
-*Unity and Gazebo receive the same packets from the robots and the 360-degree camera.*
+*Left: a Go1 walking through the Unity digital twin of the lab (top view, walkable area in blue, 2x speed). Right: Gazebo receiving the same packets from the robots and the 360-degree camera.*
 
-<a href="docs/assets/g-unity-twin.gif"><img src="docs/assets/g-unity-twin.gif" width="49%"></a> <a href="docs/assets/g-gazebo.gif"><img src="docs/assets/g-gazebo.gif" width="49%"></a>
+<a href="docs/assets/g-twin-sim.gif"><img src="docs/assets/g-twin-sim.gif" width="49%"></a> <a href="docs/assets/g-gazebo.gif"><img src="docs/assets/g-gazebo.gif" width="49%"></a>
 
 <a href="docs/assets/readme-unity-twin.jpg"><img src="docs/assets/g-unity-twin.jpg" width="49%"></a> <a href="docs/assets/readme-unity-path.jpg"><img src="docs/assets/g-unity-path.jpg" width="49%"></a>
 
