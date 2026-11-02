@@ -275,9 +275,9 @@ the development setup, test commands and pull-request guidelines, and
 
 #### Digital twin
 
-*Left: a Go1 walking through the Unity digital twin of the lab (top view, walkable area in blue, 2x speed). Right: the same lab in Gazebo, where Nav2 drives the robot autonomously to its goal around obstacles (green: path so far).*
+*The same Go1 route in both twins of the lab. Left: Unity — the Go1 drives itself from the left corridor, around the central desks, to the goal at the lower right (yellow: planned path, green: camera field of view). Right: Gazebo — Nav2 drives the Go1 model from the same start to the same goal (green: path driven, about 4x speed).*
 
-<a href="docs/assets/g-twin-sim.gif"><img src="docs/assets/g-twin-sim.gif" width="49%"></a> <a href="docs/assets/g-gazebo-sim.gif"><img src="docs/assets/g-gazebo-sim.gif" width="49%"></a>
+<a href="docs/assets/g-unity-go1.gif"><img src="docs/assets/g-unity-go1.gif" width="49%"></a> <a href="docs/assets/g-gazebo-go1.gif"><img src="docs/assets/g-gazebo-go1.gif" width="49%"></a>
 
 <a href="docs/assets/readme-unity-twin.jpg"><img src="docs/assets/g-unity-twin.jpg" width="49%"></a> <a href="docs/assets/readme-unity-path.jpg"><img src="docs/assets/g-unity-path.jpg" width="49%"></a>
 

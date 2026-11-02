@@ -216,9 +216,9 @@ npm run dev
 
 #### 디지털 트윈
 
-*왼쪽: 연구실을 옮긴 Unity 디지털 트윈에서 Go1 이 걷는 모습(위에서 본 화면, 파란 영역이 이동 가능 구역, 2배속). 오른쪽: 같은 연구실을 Gazebo 로 옮긴 환경에서 Nav2 가 장애물을 피해 목표까지 자율주행하는 모습(초록: 지나온 경로).*
+*같은 연구실을 옮긴 두 트윈에서 Go1 이 같은 경로로 간다. 왼쪽: Unity — Go1 이 왼쪽 통로에서 출발해 가운데 책상 블록을 돌아 오른쪽 아래 목표까지 스스로 간다(노랑: 계획 경로, 초록: 카메라 시야). 오른쪽: Gazebo — Nav2 가 Go1 모델을 같은 출발점에서 같은 목표까지 몬다(초록: 지나온 경로, 약 4배속).*
 
-<a href="docs/assets/g-twin-sim.gif"><img src="docs/assets/g-twin-sim.gif" width="49%"></a> <a href="docs/assets/g-gazebo-sim.gif"><img src="docs/assets/g-gazebo-sim.gif" width="49%"></a>
+<a href="docs/assets/g-unity-go1.gif"><img src="docs/assets/g-unity-go1.gif" width="49%"></a> <a href="docs/assets/g-gazebo-go1.gif"><img src="docs/assets/g-gazebo-go1.gif" width="49%"></a>
 
 <a href="docs/assets/readme-unity-twin.jpg"><img src="docs/assets/g-unity-twin.jpg" width="49%"></a> <a href="docs/assets/readme-unity-path.jpg"><img src="docs/assets/g-unity-path.jpg" width="49%"></a>
 
