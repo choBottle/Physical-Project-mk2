@@ -12,6 +12,11 @@
 # 시험 도구(pytest)는 운영 이미지에 넣지 않는다 — 회귀가 필요하면 requirements-dev.lock 을
 # 컨테이너 안에서 `pip install --user --require-hashes -r requirements-dev.lock` 으로 얹는다(deploy-smoke ⑤).
 # 베이스 갱신: docker buildx imagetools inspect python:3.12-slim → Digest 를 아래에 바꿔 적는다.
+#
+# 다중 아키텍처(linux/amd64 · linux/arm64 — release.yml): 베이스 digest 는 **인덱스** digest 라 두 아키텍처를 다 가리킨다
+# (매니페스트 하나의 digest 를 적으면 한 아키텍처로 묶인다). requirements.lock 의 해시는 판마다 **모든 배포 파일**
+# (x86_64·aarch64 manylinux 휠 포함)을 담는다 — `--python-platform linux` 는 판 선택에만 쓰인다. 그래서 arm64 에서도
+# 컴파일 없이 휠로 설치된다. 락을 다시 만들면 deploy-smoke backend-image-arm64 가 이것을 PR 마다 확인한다.
 
 FROM python:3.12-slim@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159
 

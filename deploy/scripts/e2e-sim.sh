@@ -14,6 +14,7 @@
 #   ⑤ 관측   — 노드 자신의 metric(OTel → Collector → Prometheus)이 오는가
 #
 # 노드 컨테이너는 python:3.12-slim 에 Pi 와 같은 라이브러리(pi_base_setup.sh)를 받아 쓴다 — 인터넷이 필요하다.
+# 폐쇄망이면 MK2_WHEELHOUSE=<휠 디렉터리>(bundle-offline.sh 의 wheels/e2e)를 주면 PyPI 대신 거기서 설치한다.
 # 종료 코드: 0 = 전부 통과, 1 = 하나 이상 실패.
 # 시험 장치 이름은 고정(wl-e2e-probe)이다 — 실행마다 새 이름을 쓰면 레지스트리에 유령 장치가 쌓인다. 이번 실행의
 # 행은 적재 시각(TimescaleDB ingest_at · MySQL last_recorded_at 이 이번 실행 시작 이후)으로 가린다.
@@ -53,11 +54,20 @@ NEW="ingest_at >= '${T_TSDB}'::timestamptz"
 
 echo "▶ 0. 말단 노드 기동 (hardware/pi/sensor — entity=${EID})"
 docker rm -f "${NODE}" >/dev/null 2>&1
-docker run -d --name "${NODE}" --hostname e2e-pi --network "${NET}" -v "${PI_DIR}:/pi:ro" -w /pi \
+WHEELS=(); PIP_SRC=""
+if [[ -n "${MK2_WHEELHOUSE:-}" ]]; then
+  [[ -d "${MK2_WHEELHOUSE}" ]] || { bad "MK2_WHEELHOUSE 가 디렉터리가 아니다: ${MK2_WHEELHOUSE}"; exit 1; }
+  WHEELS=(-v "$(cd "${MK2_WHEELHOUSE}" && (pwd -W 2>/dev/null || pwd)):/wheels:ro")
+  PIP_SRC="--no-index --find-links /wheels"
+fi
+# 중앙 Mosquitto 가 운영 프로파일(익명 거부)이면 노드도 계정으로 붙는다 — 백엔드 계정을 빌린다(비어 있으면 익명)
+MQTT_USER="$(dc exec -T be-ingest printenv MK2_MQTT_USERNAME 2>/dev/null | tr -d '\r')"
+MQTT_PASS="$(dc exec -T be-ingest printenv MK2_MQTT_PASSWORD 2>/dev/null | tr -d '\r')"
+docker run -d --name "${NODE}" --hostname e2e-pi --network "${NET}" -v "${PI_DIR}:/pi:ro" ${WHEELS[@]+"${WHEELS[@]}"} -w /pi \
   -e HW_ENTITY_ID="${EID}" -e HW_ZONE_ID=zoneA \
-  -e HW_BROKER_HOST=mosquitto -e HW_OTEL_ENDPOINT=http://otel-collector:4317 \
+  -e HW_BROKER_HOST=mosquitto -e HW_MQTT_USER="${MQTT_USER}" -e HW_MQTT_PASS="${MQTT_PASS}" -e HW_OTEL_ENDPOINT=http://otel-collector:4317 \
   -e HW_REPORT_INTERVAL_NORMAL=5 -e HW_SPOOL_PATH=/tmp/spool.jsonl -e PYTHONUNBUFFERED=1 \
-  python:3.12-slim sh -c "pip install -q --root-user-action=ignore --disable-pip-version-check \
+  python:3.12-slim sh -c "pip install -q --root-user-action=ignore --disable-pip-version-check ${PIP_SRC} \
     paho-mqtt opentelemetry-sdk opentelemetry-exporter-otlp psutil protobuf && exec python -m sensor.sensor_node" >/dev/null \
   || { bad "노드 컨테이너 기동"; exit 1; }
 

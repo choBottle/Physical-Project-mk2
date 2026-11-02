@@ -544,6 +544,12 @@ def load_invalid(kind: str, source_id: Optional[str] = None) -> Dict[str, Any]:
     return payload
 
 
+def mqtt_auth() -> Optional[Dict[str, str]]:
+    """paho `publish.single(auth=...)` 형식. MK2_MQTT_USERNAME 이 비어 있으면 None(익명)."""
+    creds = settings.mqtt_credentials()
+    return {"username": creds[0], "password": creds[1]} if creds else None
+
+
 def publish(
     topic: str,
     payload: Dict[str, Any],
@@ -561,6 +567,7 @@ def publish(
         hostname=host or broker_host(),
         port=port if port is not None else broker_port(),
         client_id=f"mk2-pub-{uuid.uuid4().hex[:8]}",  # 노드 client_id와 겹치지 않게
+        auth=mqtt_auth(),
     )
     return payload
 

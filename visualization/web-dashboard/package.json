@@ -15,7 +15,8 @@
     "verify:pipeline": "node scripts/verify-pipeline-editor.mjs",
     "verify:mission-graph": "node scripts/verify-mission-graph.mjs",
     "verify:contract-roundtrip": "node scripts/verify-contract-roundtrip.mjs",
-    "verify:catalog-derived": "node scripts/verify-catalog-derived.mjs"
+    "verify:catalog-derived": "node scripts/verify-catalog-derived.mjs",
+    "lint": "eslint ."
   },
   "dependencies": {
     "react": "^19.1.0",
@@ -28,7 +29,10 @@
     "@types/react-dom": "^19.1.0",
     "@types/ws": "^8.18.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "10.13.0",
+    "eslint-plugin-react-hooks": "7.1.1",
     "typescript": "^5.7.0",
+    "typescript-eslint": "8.71.2",
     "vite": "^6.0.0"
   },
   "allowScripts": {

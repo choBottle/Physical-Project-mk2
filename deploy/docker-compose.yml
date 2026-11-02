@@ -33,6 +33,9 @@ x-backend: &backend
     # 접속 주소 — 컨테이너 안이라 localhost 가 아니라 compose 서비스 이름으로 붙는다
     MK2_MQTT_HOST: mosquitto
     MK2_MQTT_PORT: "1883"
+    # MQTT 계정 — opt-in. 비어 있으면 익명(기본 프로파일). 운영 프로파일(site/mosquitto/auth.conf)을 켤 때 채운다
+    MK2_MQTT_USERNAME: ${MK2_MQTT_USERNAME:-}
+    MK2_MQTT_PASSWORD: ${MK2_MQTT_PASSWORD:-}
     MK2_BROKER_HOST: mosquitto
     MK2_KAFKA_BOOTSTRAP: kafka:9094
     MK2_MYSQL_HOST: mysql
@@ -74,8 +77,12 @@ services:
       - ./site/mosquitto:/mosquitto/config/site.d:ro       # 현장 설정(gitignore) — include_dir
       - mosquitto_data:/mosquitto/data
     networks: [mk2]
+    environment:
+      # 헬스체크 전용 — 운영 프로파일(익명 거부)에서도 백엔드 계정으로 $SYS 를 읽는다. 비어 있으면 익명
+      MK2_MQTT_USERNAME: ${MK2_MQTT_USERNAME:-}
+      MK2_MQTT_PASSWORD: ${MK2_MQTT_PASSWORD:-}
     healthcheck:
-      test: ["CMD-SHELL", "mosquitto_sub -h localhost -t '$$SYS/broker/uptime' -C 1 -W 3"]
+      test: ["CMD-SHELL", "if [ -n \"$$MK2_MQTT_USERNAME\" ]; then set -- -u \"$$MK2_MQTT_USERNAME\" -P \"$$MK2_MQTT_PASSWORD\"; fi; mosquitto_sub -h localhost \"$$@\" -t '$$SYS/broker/uptime' -C 1 -W 3"]
       interval: 10s
       timeout: 5s
       retries: 6

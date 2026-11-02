@@ -77,6 +77,10 @@ docker compose up -d --build --wait
 빌드 대신 공개된 백엔드 이미지를 쓰려면 `deploy/.env` 에 `MK2_BACKEND_IMAGE=ghcr.io/chobottle/mk2-backend:<버전>` 을
 넣고 `docker compose up -d --wait` 를 실행한다. 이미지는 로그인 없이 받아진다.
 
+중앙 스택은 x86-64 와 64비트 ARM(arm64/aarch64) 호스트 둘 다에서 돈다. 릴리스 이미지는 `linux/amd64`·`linux/arm64` 로
+게시되고, `deploy/docker-compose.yml` 의 고정 서드파티 이미지도 모두 arm64 판이 있어 Docker 가 맞는 쪽을 받는다.
+arm64 에서 소스로 빌드해도 같다 — 백엔드 의존성은 미리 빌드된 휠로 설치된다.
+
 Windows 에서는 Git Bash 나 WSL2 에서 스크립트를 실행한다.
 
 ## 요구 사항
@@ -174,6 +178,8 @@ npm run dev
 | [바꿔 끼우기](docs/deployment/pluggability.md) | 다른 360 카메라, 다른 검출 모델, Unity가 아닌 트윈 |
 | [보안](docs/deployment/security.md) | 노출 정책, 토큰, 터널, 운영 전환 체크리스트 |
 | [운영](docs/deployment/operations.md) | 재기동, 업그레이드, 백업, 알림별 대응 |
+| [폐쇄망 설치](docs/deployment/offline.md) | 이미지·저장소·파이썬 휠을 한 묶음으로 반입해 인터넷 없이 설치 |
+| [English docs](docs/en/README.md) | 배포 가이드 · 운영 · 보안 · 엣지 영문판 (어긋나면 한국어 문서가 기준) |
 | [릴리스 정책](docs/RELEASE.md) | 버전 규칙, 릴리스 절차, 1.0 기준, 1.x 로드맵 |
 | [아키텍처](server/docs/be/00-architecture.md) | 백엔드 설계 원칙 |
 

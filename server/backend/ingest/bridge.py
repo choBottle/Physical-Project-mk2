@@ -73,13 +73,22 @@ def _on_delivery(err: Any, msg: Any) -> None:
         obs.count("be.kafka.produce", component=COMPONENT, channel=channel, outcome="ok")
 
 
+def make_mqtt_client(client_id: str) -> mqtt.Client:
+    """ingest 의 MQTT 클라이언트. 계정(MK2_MQTT_USERNAME/PASSWORD)이 있으면 싣고, 없으면 익명(기본 프로파일)."""
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=client_id, clean_session=True)
+    creds = settings.mqtt_credentials()
+    if creds is not None:
+        client.username_pw_set(*creds)
+    return client
+
+
 class IngestBridge:
     def __init__(self, client_id: str = DEFAULT_CLIENT_ID) -> None:
         self.client_id = client_id
         # 계약 로드와 포맷 검사기 확인을 기동 시점에 끝낸다(검증이 무력한 채로 뜨지 않게).
         validator()
         self.producer = Producer({"bootstrap.servers": settings.kafka_bootstrap(), "client.id": client_id})
-        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=client_id, clean_session=True)
+        self.client = make_mqtt_client(client_id)
         self.client.on_connect = self._on_connect
         self.client.on_subscribe = self._on_subscribe
         self.client.on_disconnect = self._on_disconnect
@@ -96,9 +105,11 @@ class IngestBridge:
     def _on_connect(self, client, userdata, flags, reason_code, properties=None):
         # paho VERSION2는 ReasonCode 객체를 준다 — 정수 비교가 아니라 값으로 본다.
         if getattr(reason_code, "value", reason_code) != 0:
-            LOG.error("MQTT 접속 실패: %s", reason_code)
+            # 운영 프로파일(allow_anonymous false)에서 계정이 없거나 틀리면 여기로 온다 — 재접속을 계속 시도한다.
+            LOG.error("MQTT 접속 실패: %s (계정=%s)", reason_code, settings.mqtt_username() or "익명")
             return
-        LOG.info("MQTT 접속: %s:%s (client_id=%s)", settings.mqtt_host(), settings.mqtt_port(), self.client_id)
+        LOG.info("MQTT 접속: %s:%s (client_id=%s, 계정=%s)", settings.mqtt_host(), settings.mqtt_port(),
+                 self.client_id, settings.mqtt_username() or "익명")
         client.subscribe(SUBSCRIPTIONS)
 
     def _on_subscribe(self, client, userdata, mid, reason_code_list, properties=None):

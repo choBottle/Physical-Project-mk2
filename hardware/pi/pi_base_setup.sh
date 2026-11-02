@@ -18,11 +18,13 @@
 #   --go1 IP   Unitree Go1 내부망(192.168.123.0/24) 연결을 eth0 에 영구 등록.
 #              IP 는 우리 쪽 주소(예: 192.168.123.162). 생략 시 이 단계를 건너뛴다
 #   --no-venv  파이썬 venv 구성 생략
+#   --wheelhouse DIR  폐쇄망 — PyPI 대신 DIR 의 휠로 설치(bundle-offline.sh 의 wheels/pi).
+#              pip 자체 업그레이드는 건너뛴다. apt 패키지(chrony·python3-venv)는 미리 깔려 있어야 한다
 #
 # 근거: HW-S-08(시각 동기), HW-C-07(device_id 채번), HW-C-03(K3s 워커 편입 전제 cgroup)
 set -euo pipefail
 
-ENTITY=""; NODE=""; ZONE=""; ROLE="sensor"; NTP=""; BROKER=""; DO_VENV=1; GO1_IP=""
+ENTITY=""; NODE=""; ZONE=""; ROLE="sensor"; NTP=""; BROKER=""; DO_VENV=1; GO1_IP=""; WHEELHOUSE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --entity) ENTITY="$2"; shift 2 ;;
@@ -33,6 +35,7 @@ while [ $# -gt 0 ]; do
     --broker) BROKER="$2"; shift 2 ;;
     --go1)    GO1_IP="$2";  shift 2 ;;
     --no-venv) DO_VENV=0;  shift ;;
+    --wheelhouse) WHEELHOUSE="$2"; shift 2 ;;
     -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
     *) echo "알 수 없는 옵션: $1" >&2; exit 1 ;;
   esac
@@ -112,8 +115,15 @@ if [ "$DO_VENV" = "1" ]; then
   fi
   # 말단에는 전송 클라이언트와 관측 SDK 만 둔다. 브로커·수집기 같은 서버형
   # 미들웨어는 설치 대상이 아니다 (AI-B-10 말단 경량 실행 경계).
-  "$VENV/bin/pip" install -q --upgrade pip
-  "$VENV/bin/pip" install -q \
+  PIP_SRC=()
+  if [ -n "$WHEELHOUSE" ]; then
+    [ -d "$WHEELHOUSE" ] || { echo "  ✗ --wheelhouse 디렉터리가 없다: $WHEELHOUSE" >&2; exit 1; }
+    PIP_SRC=(--no-index --find-links "$WHEELHOUSE")
+    ok "폐쇄망 설치: $WHEELHOUSE"
+  else
+    "$VENV/bin/pip" install -q --upgrade pip
+  fi
+  "$VENV/bin/pip" install -q ${PIP_SRC[@]+"${PIP_SRC[@]}"} \
       paho-mqtt \
       opentelemetry-sdk opentelemetry-exporter-otlp \
       psutil

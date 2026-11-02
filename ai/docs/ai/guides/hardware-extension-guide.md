@@ -166,4 +166,4 @@ L76-95)를 그대로 재사용하면 새 provider 코드에 `nvidia`/`cuda`/특�
 이 7단계를 벗어나 `perception/`·`risk/`·`execution/control.py` 같은 핵심 모듈에 조건문을
 추가해야 한다면, 그건 하드웨어 확장이 아니라 요구사항 누락이다 — 먼저
 [requirement-traceability.md](../requirement-traceability.md)에서 대응하는 ID를 찾고, 없으면
-CLAUDE.md 원칙대로 "추가 요구사항 필요"로 보고한다.
+[요구사항 정의서](../../requirements.md) §1 원칙대로 "추가 요구사항 필요"로 보고한다.

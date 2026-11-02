@@ -19,7 +19,7 @@
 
 ## 요구사항 요약
 
-상세 정의는 [CLAUDE.md](CLAUDE.md), 구현·테스트 추적은
+상세 정의는 [요구사항 정의서](docs/requirements.md), 구현·테스트 추적은
 [요구사항 추적표](docs/ai/requirement-traceability.md)를 기준으로 한다.
 
 | 구분 | ID | 수 | 요약 | 현재 상태 |
@@ -125,7 +125,8 @@ Physical-Project-mk2/
 ├── docs/ops/                # 이 PC(엣지+서버 겸용)의 네트워크·보안 운영 설정
 ├── models/                 # 실험용 AI 모델 artifact와 모델 카드
 ├── reports/                 # 개인 기록(git 미추적)
-└── CLAUDE.md               # AI 요구사항 원문과 개발 규칙
+├── docs/requirements.md    # AI 요구사항 정의서 원문(AI-* 요구사항 ID)
+└── CLAUDE.md               # AI 개발 에이전트 작업 규칙(요구사항은 docs/requirements.md)
 ```
 
 논문 노트·연구 아이디어·실험 계획(`docs/obsidian/`)은 2026-11-02 에 비공개 저장소

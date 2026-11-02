@@ -1,0 +1,10 @@
+# camera360 · osmocam 단위 시험 의존성 — CI(ci.yml 「camera360 · osmocam 단위 시험」)와 같은 판.
+#   pip install -r camera360/requirements-test.txt
+#   python -m pytest -q camera360/tests osmocam/tests
+# 수신 서버 판(fastapi · uvicorn · python-multipart)은 requirements.txt 와 같게 맞춘다.
+# GPU · 카메라 · 비전 모델(requirements-vision.txt)은 필요 없다.
+pytest==9.1.1
+httpx==0.28.1
+fastapi==0.141.1
+uvicorn==0.52.4
+python-multipart==0.0.32
