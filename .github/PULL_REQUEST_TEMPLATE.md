@@ -14,7 +14,7 @@ If any of these apply, update the documentation in the same pull request.
 - [ ] New or changed port: `docs/PORTS.md` and the Compose files
 - [ ] Database schema change: canonical SQL in `server/infra/sql/`, a file in `migrations/`, grants, `docs/deployment/database.md`
 - [ ] Data contract or MQTT/Kafka topic change: link to the agreed `rfc` issue:
-- [ ] Image version change: pinned version in the Compose files, CI `validate` passes
+- [ ] Image version change: pinned version in the Compose files, CI check `배포 설정 검증` (`deploy-config` job in `ci.yml`) passes
 - [ ] New data path: a check in `deploy/scripts/healthcheck.sh`
 - [ ] None of the above
 
