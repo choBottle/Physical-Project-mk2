@@ -28,6 +28,32 @@ ports, database migrations and image versions.
 - `anchor360_live.py` prints each destination as `host:port` instead of
   `host:port:port` when a port is given in `--unity-ip`.
 
+### Changed
+
+- Site LAN addresses are no longer hard-coded in code, unit files and
+  manifests; they come from environment variables with a `127.0.0.1`
+  fallback. Documentation and test fixtures use RFC 5737 example addresses
+  or placeholders such as `<camera-ip>`. Vendor-fixed device networks (Go1
+  `192.168.123.x`, RoboMaster EP USB, DJI Osmo AP, radar SDR link, Insta360
+  Farsight DHCP range) are unchanged.
+
+### Deployment changes
+
+- New environment variables: `MK2_UNITY_IP` and `MK2_PRO2_IP` (camera360
+  laptop), `HW_GO1_SDK_UNITY_IP` (Go1 `go1_sdk_pc`). See
+  `docs/deployment/endpoints.md`.
+- **Defaults changed** from the lab's addresses to `127.0.0.1` (or a
+  documentation address for the Pro2 camera). A device that relied on the old
+  built-in value must set it: `HW_UNITY_IP` or `HW_GO1_SDK_UNITY_IP` and
+  `HW_BROKER_HOST` in `/etc/hw-robot.env` on the Go1 Pi; `MK2_PRO2_IP` and
+  `MK2_UNITY_IP` on the 360-camera laptop.
+- `go1-detect-forward.service` and `robot-relay.service` no longer pass
+  `--unity-ip` on the command line, so `HW_UNITY_IP` now takes effect.
+  Reinstall the units with `hardware/pi/deploy/install-units.sh` and rebuild
+  `go1_sdk_pc`.
+- The `augment-analyzer` k8s manifests take `${HW_BROKER_HOST}`; render them
+  with `envsubst` before `kubectl apply`.
+
 ## [1.0.0-rc.2] - 2026-10-27
 
 Second release candidate. It adds the 1.0.x decoupling steps (marked 1.0.1,
