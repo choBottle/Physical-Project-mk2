@@ -174,6 +174,8 @@ npm run dev
 | [바꿔 끼우기](docs/deployment/pluggability.md) | 다른 360 카메라, 다른 검출 모델, Unity가 아닌 트윈 |
 | [보안](docs/deployment/security.md) | 노출 정책, 토큰, 터널, 운영 전환 체크리스트 |
 | [운영](docs/deployment/operations.md) | 재기동, 업그레이드, 백업, 알림별 대응 |
+| [폐쇄망 설치](docs/deployment/offline.md) | 이미지·저장소·파이썬 휠을 한 묶음으로 반입해 인터넷 없이 설치 |
+| [English docs](docs/en/README.md) | 배포 가이드 · 운영 · 보안 · 엣지 영문판 (어긋나면 한국어 문서가 기준) |
 | [릴리스 정책](docs/RELEASE.md) | 버전 규칙, 릴리스 절차, 1.0 기준, 1.x 로드맵 |
 | [아키텍처](server/docs/be/00-architecture.md) | 백엔드 설계 원칙 |
 
